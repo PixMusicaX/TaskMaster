@@ -1,12 +1,29 @@
 use axum::{
     routing::{get, post},
-    extract::{State, Json},
+    extract::{State, Json, Path},
     Router,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use dotenvy::dotenv;
 use std::env;
+use chrono::{NaiveDate, DateTime, Utc};
+
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
+struct DiaryEntry {
+    id: i32,
+    entry_date: NaiveDate,
+    content: String,
+    mood_rating: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
+struct Event {
+    id: i32,
+    event_name: String,
+    start_time: DateTime<Utc>,
+    end_time: DateTime<Utc>,
+}
 
 #[derive(Serialize, Deserialize)]
 struct CreateTask {
@@ -20,10 +37,51 @@ struct Task {
     is_completed: bool,
 }
 
+#[derive(Serialize)]
+struct MonthSummary {
+    days: Vec<DayData>,
+}
+
+// Update your struct definition like this:
+#[derive(serde::Serialize, sqlx::FromRow)] // Add sqlx::FromRow here!
+struct DayData {
+    target_date: chrono::NaiveDate,
+    task_count: i64,
+    has_diary: bool,
+}
+
+#[derive(Serialize)]
+struct DailySummary {
+    tasks: Vec<Task>,
+    events: Vec<Event>,
+    diary: Option<DiaryEntry>,
+}
+
+async fn get_daily_summary(
+    State(pool): State<PgPool>,
+    Path(date): Path<NaiveDate>, // Extracts date from URL: /day/2026-04-06
+) -> Json<DailySummary> {
+    // Fetch tasks for this date
+    let tasks = sqlx::query_as::<_, Task>("SELECT * FROM tasks WHERE target_date = $1")
+        .bind(date)
+        .fetch_all(&pool).await.unwrap();
+
+// Fetch diary entry for this date
+let diary = sqlx::query_as::<_, DiaryEntry>("SELECT * FROM diary_entries WHERE entry_date = $1")
+    .bind(date)
+    .fetch_optional(&pool)
+    .await
+    .unwrap();
+
+    // (Add event fetching logic here similarly)
+
+    Json(DailySummary { tasks, events: vec![], diary })
+}
+
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let database_url = env::var("DATABASE_URL_UNPOOLED").expect("DATABASE_URL must be set");
 
     // 1. Create the connection pool
     let pool = PgPool::connect(&database_url)
@@ -65,4 +123,40 @@ async fn get_tasks(State(pool): State<PgPool>) -> Json<Vec<Task>> {
         .unwrap();
 
     Json(tasks)
+}
+
+async fn get_month_view(
+    State(pool): State<PgPool>,
+    Path((year, month)): Path<(i32, u32)>,
+) -> Json<MonthSummary> {
+    // Calculate start and end of month
+    let start_date = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
+    let end_date = if month == 12 {
+        NaiveDate::from_ymd_opt(year + 1, 1, 1)
+    } else {
+        NaiveDate::from_ymd_opt(year, month + 1, 1)
+    }.unwrap();
+
+    // Explicitly tell Rust this is a Vector of DayData
+    // Switch from query_as! to query_as (no exclamation mark)
+let day_summaries = sqlx::query_as::<sqlx::Postgres, DayData>(
+    r#"
+    SELECT 
+        target_date, 
+        COUNT(id) as task_count, 
+        EXISTS(SELECT 1 FROM diary_entries WHERE entry_date = tasks.target_date) as has_diary
+    FROM tasks
+    WHERE target_date >= $1 AND target_date < $2
+    GROUP BY target_date
+    "#
+)
+.bind(start_date)
+.bind(end_date)
+.fetch_all(&pool)
+.await
+.unwrap();
+
+    // Map to your struct...
+    // (Simplified for brevity)
+    Json(MonthSummary { days: vec![] }) 
 }
