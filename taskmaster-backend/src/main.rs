@@ -8,6 +8,7 @@ use sqlx::PgPool;
 use dotenvy::dotenv;
 use std::env;
 use chrono::{NaiveDate, DateTime, Utc};
+use tower_http::cors::CorsLayer;
 
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
 struct DiaryEntry {
@@ -86,13 +87,18 @@ async fn main() {
         .await
         .expect("Failed to connect to Neon");
 
+    let cors = CorsLayer::permissive(); // For development only!
+
     let app = Router::new()
         .route("/tasks", post(create_task))
         .route("/tasks", get(get_tasks))
+        .route("/calendar/{year}/{month}", get(get_month_view))
+        .route("/day/{date}", get(get_daily_summary))
+        .layer(cors) // Add the CORS layer
         .with_state(pool);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("Backend running on http://localhost:3000");
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:5059").await.unwrap();
+    println!("Backend running on http://localhost:5059");
     axum::serve(listener, app).await.unwrap();
 }
 
