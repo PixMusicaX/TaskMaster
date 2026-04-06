@@ -61,17 +61,16 @@ async fn get_daily_summary(
     State(pool): State<PgPool>,
     Path(date): Path<NaiveDate>, // Extracts date from URL: /day/2026-04-06
 ) -> Json<DailySummary> {
-    // Fetch tasks for this date
+
     let tasks = sqlx::query_as::<_, Task>("SELECT * FROM tasks WHERE target_date = $1")
         .bind(date)
         .fetch_all(&pool).await.unwrap();
 
-// Fetch diary entry for this date
-let diary = sqlx::query_as::<_, DiaryEntry>("SELECT * FROM diary_entries WHERE entry_date = $1")
-    .bind(date)
-    .fetch_optional(&pool)
-    .await
-    .unwrap();
+    let diary = sqlx::query_as::<_, DiaryEntry>("SELECT * FROM diary_entries WHERE entry_date = $1")
+        .bind(date)
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
 
     // (Add event fetching logic here similarly)
 
@@ -83,12 +82,10 @@ async fn main() {
     dotenv().ok();
     let database_url = env::var("DATABASE_URL_UNPOOLED").expect("DATABASE_URL must be set");
 
-    // 1. Create the connection pool
     let pool = PgPool::connect(&database_url)
         .await
         .expect("Failed to connect to Neon");
 
-    // 2. Build our app with routes and shared state
     let app = Router::new()
         .route("/tasks", post(create_task))
         .route("/tasks", get(get_tasks))
@@ -137,24 +134,22 @@ async fn get_month_view(
         NaiveDate::from_ymd_opt(year, month + 1, 1)
     }.unwrap();
 
-    // Explicitly tell Rust this is a Vector of DayData
-    // Switch from query_as! to query_as (no exclamation mark)
-let day_summaries = sqlx::query_as::<sqlx::Postgres, DayData>(
-    r#"
-    SELECT 
-        target_date, 
-        COUNT(id) as task_count, 
-        EXISTS(SELECT 1 FROM diary_entries WHERE entry_date = tasks.target_date) as has_diary
-    FROM tasks
-    WHERE target_date >= $1 AND target_date < $2
-    GROUP BY target_date
-    "#
-)
-.bind(start_date)
-.bind(end_date)
-.fetch_all(&pool)
-.await
-.unwrap();
+    let day_summaries = sqlx::query_as::<sqlx::Postgres, DayData>(
+        r#"
+        SELECT 
+            target_date, 
+            COUNT(id) as task_count, 
+            EXISTS(SELECT 1 FROM diary_entries WHERE entry_date = tasks.target_date) as has_diary
+        FROM tasks
+        WHERE target_date >= $1 AND target_date < $2
+        GROUP BY target_date
+        "#
+    )
+    .bind(start_date)
+    .bind(end_date)
+    .fetch_all(&pool)
+    .await
+    .unwrap();
 
     // Map to your struct...
     // (Simplified for brevity)
