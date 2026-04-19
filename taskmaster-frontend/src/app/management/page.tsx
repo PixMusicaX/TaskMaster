@@ -12,12 +12,14 @@ export default function ManagementPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dailyData, setDailyData] = useState({ tasks: [], events: [], diary: null, is_google_connected: false });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchDailySummary(selectedDate);
   }, [selectedDate]);
 
   const fetchDailySummary = async (date: Date) => {
+    setIsLoading(true);
     try {
       const dateStr = format(date, "yyyy-MM-dd");
       const res = await fetch(`http://localhost:5059/day/${dateStr}`);
@@ -25,6 +27,8 @@ export default function ManagementPage() {
       setDailyData(data);
     } catch (err) {
       console.error("Fetch failed", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -48,10 +52,10 @@ export default function ManagementPage() {
         await fetch("http://localhost:5059/events", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            ...data, 
-            start_time: start.toISOString(), 
-            end_time: end.toISOString() 
+          body: JSON.stringify({
+            ...data,
+            start_time: start.toISOString(),
+            end_time: end.toISOString()
           }),
         });
       }
@@ -111,19 +115,31 @@ export default function ManagementPage() {
             </div>
             <div className="flex items-center gap-4">
               {!dailyData.is_google_connected ? (
-                <button 
+                <button
                   onClick={() => window.location.href = "http://localhost:5059/auth/google/login"}
                   className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white/10 active:scale-95 transition-all shadow-xl"
                 >
                   Connect Calendar
                 </button>
               ) : (
-                <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Google Connected
+                <div className="flex items-center gap-2">
+                  <div className="px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Google Connected
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await fetch("http://localhost:5059/auth/google/logout", { method: "DELETE" });
+                      fetchDailySummary(selectedDate);
+                    }}
+                    className="px-4 py-3 bg-white/5 border border-white/10 text-white rounded-2xl hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all font-black uppercase text-[10px] tracking-widest active:scale-95 shadow-xl"
+                    title="Disconnect Google Calendar"
+                  >
+                    Disconnect
+                  </button>
                 </div>
               )}
-              <button 
+              <button
                 onClick={() => setIsAddModalOpen(true)}
                 className="px-6 py-3 bg-white text-black rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
               >
@@ -146,34 +162,60 @@ export default function ManagementPage() {
           </div>
 
           <AnimatePresence mode="wait">
-            <motion.div 
-              key={selectedDate.toString()}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-              className="flex flex-col gap-8"
-            >
-              <TaskSection 
-                tasks={dailyData.tasks} 
-                onToggle={handleToggleTask} 
-                onDelete={handleDeleteTask} 
-                onAdd={() => setIsAddModalOpen(true)} 
-              />
-              <EventTimeline 
-                events={dailyData.events} 
-                onDelete={handleDeleteEvent} 
-              />
-            </motion.div>
+            {isLoading ? (
+               <motion.div
+                 key="loading"
+                 initial={{ opacity: 0 }}
+                 animate={{ opacity: 1 }}
+                 exit={{ opacity: 0 }}
+                 className="flex flex-col gap-8 w-full"
+               >
+                 <div className="w-full glass rounded-3xl p-6 h-[250px] animate-pulse flex flex-col gap-6">
+                    <div className="w-32 h-6 bg-white/10 rounded-lg" />
+                    <div className="w-full h-16 bg-white/5 rounded-2xl" />
+                    <div className="w-full h-16 bg-white/5 rounded-2xl" />
+                 </div>
+                 <div className="w-full glass rounded-3xl p-6 h-[300px] animate-pulse flex flex-col gap-6">
+                    <div className="w-32 h-6 bg-white/10 rounded-lg" />
+                    <div className="flex gap-4">
+                      <div className="w-full h-24 bg-white/5 rounded-2xl" />
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="w-full h-24 bg-white/5 rounded-2xl" />
+                    </div>
+                 </div>
+               </motion.div>
+            ) : (
+              <motion.div
+                key={selectedDate.toString()}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col gap-8"
+              >
+                <TaskSection
+                  tasks={dailyData.tasks}
+                  onToggle={handleToggleTask}
+                  onDelete={handleDeleteTask}
+                  onAdd={() => setIsAddModalOpen(true)}
+                />
+                <EventTimeline
+                  events={dailyData.events}
+                  onDelete={handleDeleteEvent}
+                />
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
       </section>
 
-      <UnifiedAddModal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        onAdd={handleAddTaskEvent} 
+      <UnifiedAddModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={handleAddTaskEvent}
         selectedDate={selectedDate}
+        isGoogleConnected={dailyData.is_google_connected}
       />
     </main>
   );

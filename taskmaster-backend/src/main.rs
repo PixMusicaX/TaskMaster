@@ -63,6 +63,10 @@ struct CreateEvent {
     end_time: DateTime<Utc>,
     category: String,
     notes: Option<String>,
+    #[serde(default)]
+    sync_to_google: bool,
+    #[serde(default)]
+    generate_meet_link: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -145,6 +149,7 @@ async fn main() {
         .route("/habits/logs", get(get_habit_logs).post(toggle_habit_log))
         .route("/auth/google/login", get(google_login))
         .route("/auth/google/callback", get(google_callback))
+        .route("/auth/google/logout", delete(google_logout))
         .layer(cors)
         .with_state(state);
 
@@ -182,6 +187,11 @@ async fn google_login(State(state): State<AppState>) -> Redirect {
 #[derive(Deserialize)]
 struct AuthRequest {
     code: String,
+}
+
+async fn google_logout(State(state): State<AppState>) -> &'static str {
+    sqlx::query("DELETE FROM google_tokens").execute(&state.pool).await.unwrap();
+    "Logged out"
 }
 
 async fn google_callback(
@@ -257,7 +267,7 @@ async fn fetch_google_events(pool: &PgPool, date: NaiveDate) -> Vec<Event> {
                             end_time: if end.contains('T') { DateTime::parse_from_rfc3339(end).ok()?.with_timezone(&Utc) } else { Utc.from_utc_datetime(&NaiveDate::parse_from_str(end, "%Y-%m-%d").ok()?.and_hms_opt(23,59,59)?) },
                             category: "External".to_string(),
                             notes: item["description"].as_str().map(|s| s.to_string()),
-                            location: item["location"].as_str().map(|s| s.to_string()),
+                            location: item["hangoutLink"].as_str().map(|s| s.to_string()).or_else(|| item["location"].as_str().map(|s| s.to_string())),
                         })
                     }).collect();
                 }
@@ -297,7 +307,64 @@ async fn get_events(State(state): State<AppState>) -> Json<Vec<Event>> {
     Json(events)
 }
 async fn create_event(State(state): State<AppState>, Json(payload): Json<CreateEvent>) -> Json<Event> {
-    let event = sqlx::query_as::<_, Event>("INSERT INTO events (event_name, start_time, end_time, category, notes) VALUES ($1, $2, $3, $4, $5) RETURNING *").bind(payload.event_name).bind(payload.start_time).bind(payload.end_time).bind(payload.category).bind(payload.notes).fetch_one(&state.pool).await.unwrap();
+    let mut event = sqlx::query_as::<_, Event>("INSERT INTO events (event_name, start_time, end_time, category, notes) VALUES ($1, $2, $3, $4, $5) RETURNING *").bind(&payload.event_name).bind(&payload.start_time).bind(&payload.end_time).bind(&payload.category).bind(&payload.notes).fetch_one(&state.pool).await.unwrap();
+    if payload.sync_to_google {
+        let token_row = sqlx::query_as::<_, GoogleTokenRow>(
+            "SELECT access_token, refresh_token, expires_at FROM google_tokens ORDER BY updated_at DESC LIMIT 1"
+        )
+        .fetch_optional(&state.pool)
+        .await
+        .unwrap();
+
+        if let Some(row) = token_row {
+            let client = reqwest::Client::new();
+            
+            let mut event_body = serde_json::json!({
+                "summary": payload.event_name,
+                "description": payload.notes.clone().unwrap_or_default(),
+                "start": {
+                    "dateTime": payload.start_time.to_rfc3339()
+                },
+                "end": {
+                    "dateTime": payload.end_time.to_rfc3339()
+                }
+            });
+
+            if payload.generate_meet_link {
+                let req_id = format!("req_{}", chrono::Utc::now().timestamp_micros());
+                event_body["conferenceData"] = serde_json::json!({
+                    "createRequest": {
+                        "requestId": req_id,
+                        "conferenceSolutionKey": {
+                            "type": "hangoutsMeet"
+                        }
+                    }
+                });
+            }
+
+            let url = if payload.generate_meet_link {
+                "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1"
+            } else {
+                "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+            };
+
+            let res = client.post(url)
+                .bearer_auth(row.access_token)
+                .json(&event_body)
+                .send()
+                .await;
+                
+            if let Ok(response) = res {
+                if let Ok(google_data) = response.json::<serde_json::Value>().await {
+                    if let Some(hangout_link) = google_data["hangoutLink"].as_str() {
+                        if let Ok(updated_event) = sqlx::query_as::<_, Event>("UPDATE events SET location = $1 WHERE id = $2 RETURNING *").bind(hangout_link).bind(event.id).fetch_one(&state.pool).await {
+                           event = updated_event;
+                        }
+                    }
+                }
+            }
+        }
+    }
     Json(event)
 }
 async fn update_event(State(state): State<AppState>, Path(id): Path<i32>, Json(payload): Json<CreateEvent>) -> Json<Event> {

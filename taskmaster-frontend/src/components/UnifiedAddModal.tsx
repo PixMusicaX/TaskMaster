@@ -13,9 +13,10 @@ interface UnifiedAddModalProps {
   onClose: () => void;
   onAdd: (type: "task" | "event", data: any) => void;
   selectedDate: Date;
+  isGoogleConnected?: boolean;
 }
 
-export default function UnifiedAddModal({ isOpen, onClose, onAdd, selectedDate }: UnifiedAddModalProps) {
+export default function UnifiedAddModal({ isOpen, onClose, onAdd, selectedDate, isGoogleConnected = false }: UnifiedAddModalProps) {
   const [activeTab, setActiveTab] = useState<"task" | "event">("task");
   
   // Task State
@@ -27,6 +28,8 @@ export default function UnifiedAddModal({ isOpen, onClose, onAdd, selectedDate }
   const [endTime, setEndTime] = useState("10:00");
   const [category, setCategory] = useState("Personal");
   const [notes, setNotes] = useState("");
+  const [syncToGoogle, setSyncToGoogle] = useState(false);
+  const [generateMeetLink, setGenerateMeetLink] = useState(false);
 
   if (!isOpen) return null;
 
@@ -41,7 +44,9 @@ export default function UnifiedAddModal({ isOpen, onClose, onAdd, selectedDate }
         start_time: startTime, 
         end_time: endTime, 
         category, 
-        notes 
+        notes,
+        sync_to_google: syncToGoogle,
+        generate_meet_link: generateMeetLink
       });
       setEventTitle("");
     }
@@ -151,6 +156,38 @@ export default function UnifiedAddModal({ isOpen, onClose, onAdd, selectedDate }
                   className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 pl-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none italic"
                 />
               </div>
+
+              {isGoogleConnected && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-2">Integrations</label>
+                  <div className="flex flex-col gap-3 bg-white/5 border border-white/10 rounded-2xl p-4">
+                    <label className="flex items-center gap-3 cursor-pointer w-fit">
+                      <input 
+                        type="checkbox" 
+                        checked={syncToGoogle}
+                        onChange={(e) => {
+                          setSyncToGoogle(e.target.checked);
+                          if (!e.target.checked) setGenerateMeetLink(false);
+                        }}
+                        className="w-4 h-4 rounded border-white/20 bg-black/20 text-primary focus:ring-primary/20 accent-primary"
+                      />
+                      <span className="text-sm font-medium text-foreground">Sync to Google Calendar</span>
+                    </label>
+                    
+                    {syncToGoogle && (
+                      <label className="flex items-center gap-3 cursor-pointer pl-7 animate-in fade-in slide-in-from-left-2 duration-200 w-fit">
+                        <input 
+                          type="checkbox" 
+                          checked={generateMeetLink}
+                          onChange={(e) => setGenerateMeetLink(e.target.checked)}
+                          className="w-4 h-4 rounded border-white/20 bg-black/20 text-primary focus:ring-primary/20 accent-primary"
+                        />
+                        <span className="text-sm text-muted-foreground">Generate a Google Meet link</span>
+                      </label>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

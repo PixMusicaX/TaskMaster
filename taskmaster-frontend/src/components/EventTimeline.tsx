@@ -1,5 +1,5 @@
 "use client";
-import { Clock, MapPin, MoreVertical, Trash2 } from "lucide-react";
+import { Clock, MapPin, MoreVertical, Trash2, Video, Cloud } from "lucide-react";
 import { format } from "date-fns";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -15,6 +15,7 @@ interface Event {
   end_time: string;
   category: string;
   notes?: string;
+  location?: string;
 }
 
 interface EventTimelineProps {
@@ -28,6 +29,7 @@ export default function EventTimeline({ events, onDelete }: EventTimelineProps) 
       case "social": return "bg-rose-500/10 text-rose-400 border-rose-500/20";
       case "work": return "bg-blue-500/10 text-blue-400 border-blue-500/20";
       case "cue": return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+      case "external": return "bg-indigo-500/10 text-indigo-400 border-indigo-500/20";
       default: return "bg-zinc-500/10 text-zinc-400 border-zinc-500/20";
     }
   };
@@ -53,9 +55,10 @@ export default function EventTimeline({ events, onDelete }: EventTimelineProps) 
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className={cn(
-                      "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border mb-2 w-fit",
+                      "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border mb-2 w-fit flex items-center gap-1",
                       getCategoryStyles(event.category)
                     )}>
+                      {event.category.toLowerCase() === 'external' && <Cloud className="w-3 h-3" />}
                       {event.category}
                     </span>
                     <h4 className="text-base font-semibold text-foreground">{event.event_name}</h4>
@@ -78,6 +81,31 @@ export default function EventTimeline({ events, onDelete }: EventTimelineProps) 
                   <p className="text-xs text-muted-foreground/70 bg-white/5 p-2 rounded-lg italic">
                     "{event.notes}"
                   </p>
+                )}
+                
+                {event.location && (
+                  <a 
+                    href={event.location.startsWith('http') ? event.location : undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "flex items-center gap-2 text-xs p-2 rounded-lg transition-all w-fit mt-1",
+                      event.location.includes('meet.google.com') 
+                        ? "text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 cursor-pointer" 
+                        : "text-muted-foreground/70 bg-white/5"
+                    )}
+                    onClick={(e) => {
+                       if (!event.location?.startsWith('http')) {
+                          e.preventDefault();
+                       }
+                    }}
+                  >
+                    {event.location.includes('meet.google.com') ? (
+                      <><Video className="w-4 h-4" /> Join Google Meet</>
+                    ) : (
+                      <><MapPin className="w-4 h-4" /> {event.location}</>
+                    )}
+                  </a>
                 )}
               </div>
             </div>
