@@ -88,6 +88,12 @@ async fn main() {
         .await
         .expect("Failed to connect to Neon");
 
+    // Run migrations
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run migrations");
+
     let cors = CorsLayer::permissive();
 
     let app = Router::new()
@@ -99,6 +105,9 @@ async fn main() {
         .route("/stats", get(get_stats))
         .route("/calendar/{year}/{month}", get(get_month_view))
         .route("/day/{date}", get(get_daily_summary))
+        .route("/habits", get(get_habits).post(create_habit))
+        .route("/habits/{id}", delete(delete_habit))
+        .route("/habits/logs", get(get_habit_logs).post(toggle_habit_log))
         .layer(cors)
         .with_state(pool);
 
@@ -121,16 +130,16 @@ async fn get_stats(State(pool): State<PgPool>) -> Json<Stats> {
     let today = Utc::now().date_naive();
 
     let pending_tasks = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE is_completed = false")
-        .fetch_one(&pool).await.unwrap();
+        .fetch_one(&pool).await.unwrap_or(0);
 
     let completed_tasks = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE is_completed = true")
-        .fetch_one(&pool).await.unwrap();
+        .fetch_one(&pool).await.unwrap_or(0);
 
     let events_today = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM events WHERE start_time::date = $1")
-        .bind(today).fetch_one(&pool).await.unwrap();
+        .bind(today).fetch_one(&pool).await.unwrap_or(0);
 
     let todays_mood = sqlx::query_scalar::<_, Option<i32>>("SELECT mood_rating FROM diary_entries WHERE entry_date = $1")
-        .bind(today).fetch_one(&pool).await.unwrap();
+        .bind(today).fetch_optional(&pool).await.unwrap_or(None).flatten();
 
     Json(Stats {
         pending_tasks,
@@ -281,4 +290,79 @@ async fn get_month_view(State(pool): State<PgPool>, Path((year, month)): Path<(i
     .fetch_all(&pool).await.unwrap();
 
     Json(MonthSummary { days })
+}
+
+// --- Habits ---
+
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
+struct Habit {
+    id: i32,
+    name: String,
+    is_active: bool,
+    days_of_week: Option<Vec<i32>>,
+}
+
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
+struct HabitLog {
+    habit_id: i32,
+    log_date: NaiveDate,
+    is_completed: bool,
+}
+
+#[derive(Deserialize)]
+struct CreateHabit {
+    name: String,
+    days_of_week: Option<Vec<i32>>,
+}
+
+#[derive(Deserialize)]
+struct ToggleHabitLog {
+    habit_id: i32,
+    log_date: NaiveDate,
+}
+
+async fn get_habits(State(pool): State<PgPool>) -> Json<Vec<Habit>> {
+    let habits = sqlx::query_as::<_, Habit>("SELECT id, name, is_active, days_of_week FROM habits ORDER BY id ASC")
+        .fetch_all(&pool).await.unwrap();
+    Json(habits)
+}
+
+async fn create_habit(State(pool): State<PgPool>, Json(payload): Json<CreateHabit>) -> Json<Habit> {
+    let days = payload.days_of_week.unwrap_or_else(|| vec![0,1,2,3,4,5,6]);
+    let habit = sqlx::query_as::<_, Habit>(
+        "INSERT INTO habits (name, days_of_week) VALUES ($1, $2) RETURNING id, name, is_active, days_of_week"
+    )
+    .bind(payload.name)
+    .bind(days)
+    .fetch_one(&pool).await.unwrap();
+    Json(habit)
+}
+
+async fn delete_habit(State(pool): State<PgPool>, Path(id): Path<i32>) -> &'static str {
+    // Soft delete
+    sqlx::query("UPDATE habits SET is_active = false WHERE id = $1")
+        .bind(id).execute(&pool).await.unwrap();
+    "Deactivated"
+}
+
+async fn get_habit_logs(State(pool): State<PgPool>) -> Json<Vec<HabitLog>> {
+    let logs = sqlx::query_as::<_, HabitLog>("SELECT * FROM habit_logs")
+        .fetch_all(&pool).await.unwrap();
+    Json(logs)
+}
+
+async fn toggle_habit_log(State(pool): State<PgPool>, Json(payload): Json<ToggleHabitLog>) -> Json<HabitLog> {
+    let log = sqlx::query_as::<_, HabitLog>(
+        r#"
+        INSERT INTO habit_logs (habit_id, log_date, is_completed)
+        VALUES ($1, $2, TRUE)
+        ON CONFLICT (habit_id, log_date)
+        DO UPDATE SET is_completed = NOT habit_logs.is_completed
+        RETURNING *
+        "#
+    )
+    .bind(payload.habit_id)
+    .bind(payload.log_date)
+    .fetch_one(&pool).await.unwrap();
+    Json(log)
 }
