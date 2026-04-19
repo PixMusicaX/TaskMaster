@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS events (
     event_name TEXT NOT NULL,
     start_time TIMESTAMPTZ NOT NULL,
     end_time TIMESTAMPTZ NOT NULL,
+    category TEXT NOT NULL DEFAULT 'Personal',
+    notes TEXT,
     location TEXT
 );
 

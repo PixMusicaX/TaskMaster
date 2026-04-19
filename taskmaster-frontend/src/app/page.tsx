@@ -1,67 +1,74 @@
-import Image from "next/image";
-import Calendar from "../components/Calender";
+"use client";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import Clock from "@/components/Clock";
+import ScrollPrompt from "@/components/ScrollPrompt";
+import AnalyticsSection from "@/components/AnalyticsSection";
+import { ArrowRight } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-        <Calendar />
-      </main>
-    </div>
+    <main className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden no-scrollbar relative scroll-smooth bg-background">
+      {/* GLOBAL BACKGROUND ELEMENTS */}
+      <div className="fixed inset-0 -z-10 h-full w-full bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+      <div className="fixed left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-indigo-500 opacity-10 blur-[100px]"></div>
+
+      {/* HERO SECTION */}
+      <section className="relative w-full min-h-[100dvh] shrink-0 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-transparent to-black/20">
+          <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
+          
+          <div className="flex flex-col items-center gap-12 z-10 text-center">
+              <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className="flex flex-col items-center gap-6"
+              >
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 1 }}
+                  >
+                    <h1 className="text-7xl md:text-8xl lg:text-[10rem] tracking-tight leading-none">
+                      Welcome to <span className="text-white">Planner!</span>
+                    </h1>
+                  </motion.div>
+                  
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.8, duration: 1 }}
+                  >
+                    <Clock />
+                  </motion.div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.2, duration: 0.8 }}
+              >
+                <Link 
+                  href="/management"
+                  className="group px-8 py-4 bg-white text-black rounded-2xl font-black uppercase text-sm tracking-[0.2em] flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                >
+                  Launch Planner
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </motion.div>
+          </div>
+
+          <ScrollPrompt />
+      </section>
+
+      {/* ANALYTICS SECTION */}
+      <div className="min-h-screen w-full flex items-center justify-center bg-black/40 border-t border-white/5 backdrop-blur-3xl">
+          <AnalyticsSection />
+      </div>
+
+      <footer className="p-12 text-center text-muted-foreground text-xs uppercase tracking-[0.4em] opacity-30">
+          TaskMaster © 2026
+      </footer>
+    </main>
   );
 }
