@@ -14,6 +14,7 @@ interface DaySummary {
   task_count: number;
   event_count: number;
   has_diary: boolean;
+  mood_rating?: number | null;
 }
 
 interface CalendarProps {
@@ -55,17 +56,25 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
 
+  const getMoodColor = (mood: number | undefined | null, isSelected: boolean) => {
+      if (isSelected) return "bg-primary-foreground";
+      if (mood === 5) return "bg-emerald-400";
+      if (mood === 3) return "bg-amber-400";
+      if (mood === 1) return "bg-rose-400";
+      return "bg-indigo-400";
+  };
+
   return (
     <div className="w-full glass rounded-3xl p-6 shadow-2xl">
       <div className="flex justify-between items-center mb-8 px-2">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground/90">
+        <h2 className="text-2xl font-semibold tracking-tight text-white/90">
           {format(monthStart, "MMMM yyyy")}
         </h2>
         <div className="flex gap-2">
-          <button onClick={prevMonth} className="p-2 hover:bg-white/10 rounded-full transition-all active:scale-95">
+          <button onClick={prevMonth} className="p-2 hover:bg-white/10 rounded-full transition-all active:scale-95 text-white/60">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <button onClick={nextMonth} className="p-2 hover:bg-white/10 rounded-full transition-all active:scale-95">
+          <button onClick={nextMonth} className="p-2 hover:bg-white/10 rounded-full transition-all active:scale-95 text-white/60">
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
@@ -89,27 +98,35 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
               key={day.toString()} 
               onClick={() => onDateSelect(day)}
               className={cn(
-                "relative group h-16 sm:h-20 p-2 rounded-2xl transition-all cursor-pointer border border-transparent",
-                isSelected ? "bg-primary text-primary-foreground shadow-lg scale-105 z-10" : "hover:bg-white/5 hover:border-white/10",
+                "relative group h-20 p-2 rounded-2xl transition-all cursor-pointer border border-transparent",
+                isSelected ? "bg-white text-black shadow-xl scale-105 z-10" : "hover:bg-white/5 hover:border-white/10",
                 !isCurrentMonth && "opacity-20 pointer-events-none"
               )}
             >
               <span className={cn(
-                "text-sm font-medium",
-                isSelected ? "text-primary-foreground" : "text-foreground/70"
+                "text-sm font-black",
+                isSelected ? "text-black" : "text-white/70"
               )}>
                 {format(day, "d")}
               </span>
 
-              <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+              <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+                {/* Task Dot */}
                 {summary && summary.task_count > 0 && (
-                  <div className={cn("w-1.5 h-1.5 rounded-full", isSelected ? "bg-primary-foreground" : "bg-emerald-400")} />
+                  <div className={cn("w-1.5 h-1.5 rounded-full", isSelected ? "bg-black/20" : "bg-white/20")} />
                 )}
+                
+                {/* Mood/Diary Dot */}
+                <div className={cn(
+                    "w-1.5 h-1.5 rounded-full transition-colors",
+                    summary?.has_diary 
+                        ? getMoodColor(summary.mood_rating, isSelected)
+                        : (isSelected ? "bg-black/5" : "bg-white/5")
+                )} />
+
+                {/* Event Dot */}
                 {summary && summary.event_count > 0 && (
-                  <div className={cn("w-1.5 h-1.5 rounded-full", isSelected ? "bg-primary-foreground" : "bg-rose-400")} />
-                )}
-                {summary && summary.has_diary && (
-                  <div className={cn("w-1.5 h-1.5 rounded-full", isSelected ? "bg-primary-foreground" : "bg-indigo-400")} />
+                  <div className={cn("w-1.5 h-1.5 rounded-full", isSelected ? "bg-rose-500" : "bg-rose-500/50")} />
                 )}
               </div>
             </div>

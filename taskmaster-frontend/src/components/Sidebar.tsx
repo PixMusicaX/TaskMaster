@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar as CalendarIcon, ClipboardCheck, Settings, UserCircle, LogOut } from "lucide-react";
+import { LayoutDashboard, Calendar as CalendarIcon, PenLine, ClipboardCheck, Settings, UserCircle, LogOut } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -15,6 +15,7 @@ export default function Sidebar() {
   const navItems = [
     { href: "/", icon: LayoutDashboard, label: "Analytics" },
     { href: "/management", icon: CalendarIcon, label: "Management" },
+    { href: "/journal", icon: PenLine, label: "Journal" },
     { href: "/routine", icon: ClipboardCheck, label: "Routine" },
   ];
 

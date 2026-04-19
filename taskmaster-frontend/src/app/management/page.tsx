@@ -6,15 +6,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import Calendar from "@/components/Calender";
 import TaskSection from "@/components/TaskSection";
 import EventTimeline from "@/components/EventTimeline";
-import MoodPicker from "@/components/MoodPicker";
 import UnifiedAddModal from "@/components/UnifiedAddModal";
 
 export default function ManagementPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [dailyData, setDailyData] = useState({ tasks: [], events: [], diary: null });
+  const [dailyData, setDailyData] = useState({ tasks: [], events: [], diary: null, is_google_connected: false });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [diaryContent, setDiaryContent] = useState("");
-  const [mood, setMood] = useState<number | null>(null);
 
   useEffect(() => {
     fetchDailySummary(selectedDate);
@@ -26,8 +23,6 @@ export default function ManagementPage() {
       const res = await fetch(`http://localhost:5059/day/${dateStr}`);
       const data = await res.json();
       setDailyData(data);
-      setDiaryContent(data.diary?.content || "");
-      setMood(data.diary?.mood_rating || null);
     } catch (err) {
       console.error("Fetch failed", err);
     }
@@ -100,23 +95,6 @@ export default function ManagementPage() {
     }
   };
 
-  const handleSaveDiary = async () => {
-    try {
-      await fetch("http://localhost:5059/diary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          entry_date: format(selectedDate, "yyyy-MM-dd"), 
-          content: diaryContent, 
-          mood_rating: mood 
-        }),
-      });
-      fetchDailySummary(selectedDate);
-    } catch (err) {
-      console.error("Diary save failed", err);
-    }
-  };
-
   return (
     <main className="flex-1 flex flex-col overflow-y-auto no-scrollbar relative p-6 md:p-12 lg:p-20 gap-12 bg-background">
       {/* Background Decorations */}
@@ -124,30 +102,37 @@ export default function ManagementPage() {
       <div className="fixed left-1/4 top-1/4 -z-10 w-96 h-96 bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
 
       <section className="flex flex-col md:flex-row gap-12 z-10">
-        {/* Left Column: Calendar & Journal */}
+        {/* Left Column: Calendar */}
         <div className="flex-1 flex flex-col gap-12">
           <header className="flex justify-between items-start">
             <div className="flex flex-col gap-1">
               <h1 className="text-5xl font-black tracking-tighter text-white text-left shadow-none filter-none">Management</h1>
               <p className="text-muted-foreground font-medium italic opacity-60">"The secret of getting ahead is getting started."</p>
             </div>
-            <button 
-              onClick={() => setIsAddModalOpen(true)}
-              className="px-6 py-3 bg-white text-black rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
-            >
-              New Event
-            </button>
+            <div className="flex items-center gap-4">
+              {!dailyData.is_google_connected ? (
+                <button 
+                  onClick={() => window.location.href = "http://localhost:5059/auth/google/login"}
+                  className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white/10 active:scale-95 transition-all shadow-xl"
+                >
+                  Connect Calendar
+                </button>
+              ) : (
+                <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Google Connected
+                </div>
+              )}
+              <button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="px-6 py-3 bg-white text-black rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+              >
+                New Item
+              </button>
+            </div>
           </header>
 
           <Calendar selectedDate={selectedDate} onDateSelect={setSelectedDate} />
-          
-          <MoodPicker 
-            mood={mood} 
-            content={diaryContent} 
-            onMoodChange={setMood} 
-            onContentChange={setDiaryContent} 
-            onSave={handleSaveDiary} 
-          />
         </div>
 
         {/* Right Column: Daily Focus & Timeline */}
