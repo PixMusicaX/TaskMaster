@@ -118,19 +118,21 @@ export default function HabitsPage() {
           <h1 className="text-4xl font-black text-tm-purple-dark dark:text-tm-yellow">Habit Tracker</h1>
           <p className="text-tm-blue-gray font-medium">Consistency is the key to mastery.</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 relative z-50">
           <button 
             onClick={() => setShowArchive(!showArchive)}
             className={cn(
-              "flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all",
-              showArchive ? "bg-tm-purple-dark text-tm-yellow shadow-lg shadow-tm-purple-dark/20" : "bg-white/5 border border-white/10 text-tm-blue-gray hover:bg-white/10"
+              "flex items-center gap-2 px-6 py-3 rounded-2xl font-black transition-all backdrop-blur-xl border shadow-2xl",
+              showArchive 
+                ? "bg-tm-purple-dark text-tm-yellow border-tm-purple-dark" 
+                : "bg-white/20 dark:bg-white/5 border-white/20 text-tm-purple-dark dark:text-tm-yellow saturate-150"
             )}
           >
             <Archive size={20} /> {showArchive ? "Hide Archive" : "View Archive"}
           </button>
           <button 
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 bg-tm-orange-dark text-white px-6 py-3 rounded-2xl font-bold hover:scale-105 transition-transform shadow-lg shadow-tm-orange-dark/20"
+            className="flex items-center gap-2 bg-tm-orange-dark/80 backdrop-blur-xl saturate-150 text-white px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl border border-tm-orange-dark/30"
           >
             <Plus size={20} /> Add Habit
           </button>

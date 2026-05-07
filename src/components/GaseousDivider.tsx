@@ -88,12 +88,12 @@ export const GaseousDivider = ({ hoveredSide, variant = "default", className = "
       }
 
       const layers = [
-        { spread: 120, alpha: 0.15, speed: 0.5, oct: 3 },
-        { spread: 80, alpha: 0.25, speed: 0.7, oct: 4 },
-        { spread: 50, alpha: 0.35, speed: 0.9, oct: 4 },
-        { spread: 35, alpha: 0.50, speed: 1.1, oct: 5 },
-        { spread: 20, alpha: 0.75, speed: 1.3, oct: 5 },
-        { spread: 10, alpha: 0.95, speed: 1.5, oct: 6 },
+        { spread: 120, alpha: 0.10, speed: 0.5, oct: 3 },
+        { spread: 80, alpha: 0.18, speed: 0.7, oct: 4 },
+        { spread: 50, alpha: 0.28, speed: 0.9, oct: 4 },
+        { spread: 35, alpha: 0.40, speed: 1.1, oct: 5 },
+        { spread: 20, alpha: 0.60, speed: 1.3, oct: 5 },
+        { spread: 10, alpha: 0.85, speed: 1.5, oct: 6 },
       ];
 
       for (const layer of layers) {

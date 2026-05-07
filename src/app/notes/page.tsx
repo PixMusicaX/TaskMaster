@@ -7,8 +7,15 @@ import { format, subDays, addDays, isSameDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { getNoteByDate, saveNote, getRecentNotes } from "@/app/actions/notes";
 
+export type NoteLine = {
+  id: string;
+  bullet: string;
+  text: string;
+};
+
 export default function NotesPage() {
-  const [content, setContent] = useState("");
+  const [lines, setLines] = useState<NoteLine[]>([]);
+  const [activeBulletPicker, setActiveBulletPicker] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [recentNotes, setRecentNotes] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -17,7 +24,20 @@ export default function NotesPage() {
   const fetchNote = useCallback(async (date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
     const data = await getNoteByDate(dateStr);
-    setContent(data?.content || "");
+    if (data?.content) {
+      try {
+        setLines(JSON.parse(data.content));
+      } catch (e) {
+        // Fallback for old plain text notes
+        setLines(data.content.split("\n").map((text: string) => ({
+          id: Math.random().toString(36).substr(2, 9),
+          bullet: "○",
+          text
+        })));
+      }
+    } else {
+      setLines([{ id: Math.random().toString(36).substr(2, 9), bullet: "○", text: "" }]);
+    }
   }, []);
 
   const fetchRecent = useCallback(async () => {
@@ -33,10 +53,43 @@ export default function NotesPage() {
   async function handleSave() {
     setIsSaving(true);
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    await saveNote(dateStr, content);
+    await saveNote(dateStr, JSON.stringify(lines));
     setLastSaved(new Date());
     setIsSaving(false);
     fetchRecent();
+  }
+
+  function updateLine(index: number, updates: Partial<NoteLine>) {
+    const newLines = [...lines];
+    newLines[index] = { ...newLines[index], ...updates };
+    setLines(newLines);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent, index: number) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const newLines = [...lines];
+      const newLine = { id: Math.random().toString(36).substr(2, 9), bullet: lines[index].bullet, text: "" };
+      newLines.splice(index + 1, 0, newLine);
+      setLines(newLines);
+      setTimeout(() => {
+        document.getElementById(`line-${newLine.id}`)?.focus();
+      }, 0);
+    } else if (e.key === "Backspace" && lines[index].text === "" && lines.length > 1) {
+      e.preventDefault();
+      const prevLineId = lines[index - 1]?.id;
+      const newLines = lines.filter((_, i) => i !== index);
+      setLines(newLines);
+      if (prevLineId) {
+        setTimeout(() => {
+          const el = document.getElementById(`line-${prevLineId}`) as HTMLInputElement;
+          if (el) {
+            el.focus();
+            el.setSelectionRange(el.value.length, el.value.length);
+          }
+        }, 0);
+      }
+    }
   }
 
   return (
@@ -46,25 +99,25 @@ export default function NotesPage() {
           <h1 className="text-4xl font-black text-tm-purple-dark dark:text-tm-yellow">Daily Notes</h1>
           <p className="text-tm-blue-gray font-medium">Capture your thoughts, plans, and reflections.</p>
         </div>
-        <div className="flex items-center gap-2 bg-tm-yellow/10 p-2 rounded-2xl border border-tm-yellow/20">
+        <GlassCard className="flex items-center gap-2 p-2 border-tm-yellow/30 relative z-50 overflow-visible">
           <button 
             onClick={() => setSelectedDate(subDays(selectedDate, 1))}
-            className="p-2 hover:bg-tm-yellow/20 rounded-xl transition-colors"
+            className="p-2 hover:bg-tm-yellow/30 rounded-xl transition-colors text-tm-purple-dark dark:text-tm-yellow"
           >
             <ChevronLeft size={20} />
           </button>
           <div className="px-4 text-center min-w-[120px]">
-            <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest">{format(selectedDate, "EEEE")}</p>
-            <p className="font-bold text-sm">{format(selectedDate, "MMM d, yyyy")}</p>
+            <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest leading-none mb-1">{format(selectedDate, "EEEE")}</p>
+            <p className="font-black text-sm text-tm-purple-dark dark:text-tm-yellow">{format(selectedDate, "MMM d, yyyy")}</p>
           </div>
           <button 
             onClick={() => setSelectedDate(addDays(selectedDate, 1))}
             disabled={isSameDay(selectedDate, new Date())}
-            className="p-2 hover:bg-tm-yellow/20 rounded-xl transition-colors disabled:opacity-30"
+            className="p-2 hover:bg-tm-yellow/30 rounded-xl transition-colors disabled:opacity-20 text-tm-purple-dark dark:text-tm-yellow"
           >
             <ChevronRight size={20} />
           </button>
-        </div>
+        </GlassCard>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
@@ -89,12 +142,63 @@ export default function NotesPage() {
               </button>
             </div>
           </div>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="What's on your mind today?"
-            className="flex-1 bg-transparent p-8 outline-none resize-none text-lg leading-relaxed placeholder:text-tm-blue-gray/30 font-medium"
-          />
+          <div className="flex-1 bg-transparent p-4 sm:p-8 overflow-y-auto space-y-2 min-h-[400px]">
+            {lines.map((line, index) => (
+              <div key={line.id} className="flex items-start gap-3 group">
+                <div className="relative mt-1">
+                  <button 
+                    onClick={() => setActiveBulletPicker(line.id)}
+                    className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-tm-yellow/20 transition-colors text-lg"
+                  >
+                    {line.bullet}
+                  </button>
+                  {activeBulletPicker === line.id && (
+                    <div className="absolute top-8 left-0 z-50 bg-background border border-tm-blue-gray/20 p-2 rounded-xl shadow-2xl flex gap-1 animate-in fade-in zoom-in duration-200">
+                      {["○", "✅", "📍", "💡", "🔥", "✨"].map(b => (
+                        <button
+                          key={b}
+                          onClick={() => {
+                            updateLine(index, { bullet: b });
+                            setActiveBulletPicker(null);
+                          }}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-tm-yellow/20 text-lg"
+                        >
+                          {b}
+                        </button>
+                      ))}
+                      <input 
+                        autoFocus
+                        placeholder="Emoji"
+                        className="w-12 bg-transparent outline-none border-b border-tm-yellow/30 text-center text-sm"
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            updateLine(index, { bullet: e.target.value });
+                            setActiveBulletPicker(null);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <input
+                  id={`line-${line.id}`}
+                  value={line.text}
+                  onChange={(e) => updateLine(index, { text: e.target.value })}
+                  onKeyDown={(e) => handleKeyDown(e, index)}
+                  placeholder={index === 0 ? "Start typing your thoughts..." : ""}
+                  className="flex-1 bg-transparent outline-none text-lg leading-relaxed placeholder:text-tm-blue-gray/20 font-medium"
+                />
+              </div>
+            ))}
+            {lines.length === 0 && (
+              <button 
+                onClick={() => setLines([{ id: Math.random().toString(36).substr(2, 9), bullet: "○", text: "" }])}
+                className="text-tm-blue-gray/40 italic hover:text-tm-yellow transition-colors"
+              >
+                + Add your first note...
+              </button>
+            )}
+          </div>
         </GlassCard>
 
         <div className="space-y-6">
@@ -120,7 +224,16 @@ export default function NotesPage() {
                 >
                   <p className="text-[10px] font-black text-tm-blue-gray uppercase tracking-widest">{format(day, "EEE, MMM d")}</p>
                   <p className={`text-sm line-clamp-1 mt-1 font-medium ${existingNote ? "text-foreground" : "text-tm-blue-gray/40 italic"}`}>
-                    {existingNote ? existingNote.content.replace(/\n/g, " • ") : "No entry yet."}
+                    {existingNote ? (
+                      (() => {
+                        try {
+                          const parsed = JSON.parse(existingNote.content);
+                          return parsed.map((l: any) => `${l.bullet} ${l.text}`).join(" • ");
+                        } catch (e) {
+                          return existingNote.content.replace(/\n/g, " • ");
+                        }
+                      })()
+                    ) : "No entry yet."}
                   </p>
                   {isSelected && (
                     <motion.div 

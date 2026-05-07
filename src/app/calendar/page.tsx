@@ -75,7 +75,7 @@ export default function CalendarPage() {
         </div>
         <button 
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 bg-tm-orange-dark text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-tm-orange-dark/20 hover:scale-105 transition-transform"
+          className="flex items-center gap-2 bg-tm-orange-dark/80 backdrop-blur-xl saturate-150 text-white px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl border border-tm-orange-dark/30 relative z-50"
         >
           <Plus size={20} /> New Item
         </button>
