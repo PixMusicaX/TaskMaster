@@ -43,6 +43,11 @@ export type Event = $Result.DefaultSelection<Prisma.$EventPayload>
  * 
  */
 export type SmartMission = $Result.DefaultSelection<Prisma.$SmartMissionPayload>
+/**
+ * Model ReliefRecommendation
+ * 
+ */
+export type ReliefRecommendation = $Result.DefaultSelection<Prisma.$ReliefRecommendationPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -221,6 +226,16 @@ export class PrismaClient<
     * ```
     */
   get smartMission(): Prisma.SmartMissionDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.reliefRecommendation`: Exposes CRUD operations for the **ReliefRecommendation** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ReliefRecommendations
+    * const reliefRecommendations = await prisma.reliefRecommendation.findMany()
+    * ```
+    */
+  get reliefRecommendation(): Prisma.ReliefRecommendationDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -667,7 +682,8 @@ export namespace Prisma {
     HabitLog: 'HabitLog',
     Note: 'Note',
     Event: 'Event',
-    SmartMission: 'SmartMission'
+    SmartMission: 'SmartMission',
+    ReliefRecommendation: 'ReliefRecommendation'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -686,7 +702,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "userProfile" | "habit" | "habitLog" | "note" | "event" | "smartMission"
+      modelProps: "userProfile" | "habit" | "habitLog" | "note" | "event" | "smartMission" | "reliefRecommendation"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1134,6 +1150,80 @@ export namespace Prisma {
           }
         }
       }
+      ReliefRecommendation: {
+        payload: Prisma.$ReliefRecommendationPayload<ExtArgs>
+        fields: Prisma.ReliefRecommendationFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ReliefRecommendationFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReliefRecommendationPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ReliefRecommendationFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReliefRecommendationPayload>
+          }
+          findFirst: {
+            args: Prisma.ReliefRecommendationFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReliefRecommendationPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ReliefRecommendationFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReliefRecommendationPayload>
+          }
+          findMany: {
+            args: Prisma.ReliefRecommendationFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReliefRecommendationPayload>[]
+          }
+          create: {
+            args: Prisma.ReliefRecommendationCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReliefRecommendationPayload>
+          }
+          createMany: {
+            args: Prisma.ReliefRecommendationCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ReliefRecommendationCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReliefRecommendationPayload>[]
+          }
+          delete: {
+            args: Prisma.ReliefRecommendationDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReliefRecommendationPayload>
+          }
+          update: {
+            args: Prisma.ReliefRecommendationUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReliefRecommendationPayload>
+          }
+          deleteMany: {
+            args: Prisma.ReliefRecommendationDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ReliefRecommendationUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.ReliefRecommendationUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReliefRecommendationPayload>[]
+          }
+          upsert: {
+            args: Prisma.ReliefRecommendationUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ReliefRecommendationPayload>
+          }
+          aggregate: {
+            args: Prisma.ReliefRecommendationAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateReliefRecommendation>
+          }
+          groupBy: {
+            args: Prisma.ReliefRecommendationGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ReliefRecommendationGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ReliefRecommendationCountArgs<ExtArgs>
+            result: $Utils.Optional<ReliefRecommendationCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1236,6 +1326,7 @@ export namespace Prisma {
     note?: NoteOmit
     event?: EventOmit
     smartMission?: SmartMissionOmit
+    reliefRecommendation?: ReliefRecommendationOmit
   }
 
   /* Types for Logging */
@@ -7815,6 +7906,1161 @@ export namespace Prisma {
 
 
   /**
+   * Model ReliefRecommendation
+   */
+
+  export type AggregateReliefRecommendation = {
+    _count: ReliefRecommendationCountAggregateOutputType | null
+    _avg: ReliefRecommendationAvgAggregateOutputType | null
+    _sum: ReliefRecommendationSumAggregateOutputType | null
+    _min: ReliefRecommendationMinAggregateOutputType | null
+    _max: ReliefRecommendationMaxAggregateOutputType | null
+  }
+
+  export type ReliefRecommendationAvgAggregateOutputType = {
+    xpReward: number | null
+  }
+
+  export type ReliefRecommendationSumAggregateOutputType = {
+    xpReward: number | null
+  }
+
+  export type ReliefRecommendationMinAggregateOutputType = {
+    id: string | null
+    title: string | null
+    description: string | null
+    type: string | null
+    date: string | null
+    completed: boolean | null
+    alt1Completed: boolean | null
+    alt2Completed: boolean | null
+    xpReward: number | null
+    stat: string | null
+    location: string | null
+    weather: string | null
+    temp: string | null
+    createdAt: Date | null
+  }
+
+  export type ReliefRecommendationMaxAggregateOutputType = {
+    id: string | null
+    title: string | null
+    description: string | null
+    type: string | null
+    date: string | null
+    completed: boolean | null
+    alt1Completed: boolean | null
+    alt2Completed: boolean | null
+    xpReward: number | null
+    stat: string | null
+    location: string | null
+    weather: string | null
+    temp: string | null
+    createdAt: Date | null
+  }
+
+  export type ReliefRecommendationCountAggregateOutputType = {
+    id: number
+    title: number
+    description: number
+    type: number
+    date: number
+    completed: number
+    alt1Completed: number
+    alt2Completed: number
+    xpReward: number
+    stat: number
+    location: number
+    weather: number
+    temp: number
+    alternatives: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type ReliefRecommendationAvgAggregateInputType = {
+    xpReward?: true
+  }
+
+  export type ReliefRecommendationSumAggregateInputType = {
+    xpReward?: true
+  }
+
+  export type ReliefRecommendationMinAggregateInputType = {
+    id?: true
+    title?: true
+    description?: true
+    type?: true
+    date?: true
+    completed?: true
+    alt1Completed?: true
+    alt2Completed?: true
+    xpReward?: true
+    stat?: true
+    location?: true
+    weather?: true
+    temp?: true
+    createdAt?: true
+  }
+
+  export type ReliefRecommendationMaxAggregateInputType = {
+    id?: true
+    title?: true
+    description?: true
+    type?: true
+    date?: true
+    completed?: true
+    alt1Completed?: true
+    alt2Completed?: true
+    xpReward?: true
+    stat?: true
+    location?: true
+    weather?: true
+    temp?: true
+    createdAt?: true
+  }
+
+  export type ReliefRecommendationCountAggregateInputType = {
+    id?: true
+    title?: true
+    description?: true
+    type?: true
+    date?: true
+    completed?: true
+    alt1Completed?: true
+    alt2Completed?: true
+    xpReward?: true
+    stat?: true
+    location?: true
+    weather?: true
+    temp?: true
+    alternatives?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type ReliefRecommendationAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ReliefRecommendation to aggregate.
+     */
+    where?: ReliefRecommendationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ReliefRecommendations to fetch.
+     */
+    orderBy?: ReliefRecommendationOrderByWithRelationInput | ReliefRecommendationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ReliefRecommendationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ReliefRecommendations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ReliefRecommendations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ReliefRecommendations
+    **/
+    _count?: true | ReliefRecommendationCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: ReliefRecommendationAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ReliefRecommendationSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ReliefRecommendationMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ReliefRecommendationMaxAggregateInputType
+  }
+
+  export type GetReliefRecommendationAggregateType<T extends ReliefRecommendationAggregateArgs> = {
+        [P in keyof T & keyof AggregateReliefRecommendation]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateReliefRecommendation[P]>
+      : GetScalarType<T[P], AggregateReliefRecommendation[P]>
+  }
+
+
+
+
+  export type ReliefRecommendationGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ReliefRecommendationWhereInput
+    orderBy?: ReliefRecommendationOrderByWithAggregationInput | ReliefRecommendationOrderByWithAggregationInput[]
+    by: ReliefRecommendationScalarFieldEnum[] | ReliefRecommendationScalarFieldEnum
+    having?: ReliefRecommendationScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ReliefRecommendationCountAggregateInputType | true
+    _avg?: ReliefRecommendationAvgAggregateInputType
+    _sum?: ReliefRecommendationSumAggregateInputType
+    _min?: ReliefRecommendationMinAggregateInputType
+    _max?: ReliefRecommendationMaxAggregateInputType
+  }
+
+  export type ReliefRecommendationGroupByOutputType = {
+    id: string
+    title: string
+    description: string | null
+    type: string | null
+    date: string
+    completed: boolean
+    alt1Completed: boolean
+    alt2Completed: boolean
+    xpReward: number
+    stat: string
+    location: string | null
+    weather: string | null
+    temp: string | null
+    alternatives: JsonValue | null
+    createdAt: Date
+    _count: ReliefRecommendationCountAggregateOutputType | null
+    _avg: ReliefRecommendationAvgAggregateOutputType | null
+    _sum: ReliefRecommendationSumAggregateOutputType | null
+    _min: ReliefRecommendationMinAggregateOutputType | null
+    _max: ReliefRecommendationMaxAggregateOutputType | null
+  }
+
+  type GetReliefRecommendationGroupByPayload<T extends ReliefRecommendationGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ReliefRecommendationGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ReliefRecommendationGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ReliefRecommendationGroupByOutputType[P]>
+            : GetScalarType<T[P], ReliefRecommendationGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ReliefRecommendationSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    title?: boolean
+    description?: boolean
+    type?: boolean
+    date?: boolean
+    completed?: boolean
+    alt1Completed?: boolean
+    alt2Completed?: boolean
+    xpReward?: boolean
+    stat?: boolean
+    location?: boolean
+    weather?: boolean
+    temp?: boolean
+    alternatives?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["reliefRecommendation"]>
+
+  export type ReliefRecommendationSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    title?: boolean
+    description?: boolean
+    type?: boolean
+    date?: boolean
+    completed?: boolean
+    alt1Completed?: boolean
+    alt2Completed?: boolean
+    xpReward?: boolean
+    stat?: boolean
+    location?: boolean
+    weather?: boolean
+    temp?: boolean
+    alternatives?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["reliefRecommendation"]>
+
+  export type ReliefRecommendationSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    title?: boolean
+    description?: boolean
+    type?: boolean
+    date?: boolean
+    completed?: boolean
+    alt1Completed?: boolean
+    alt2Completed?: boolean
+    xpReward?: boolean
+    stat?: boolean
+    location?: boolean
+    weather?: boolean
+    temp?: boolean
+    alternatives?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["reliefRecommendation"]>
+
+  export type ReliefRecommendationSelectScalar = {
+    id?: boolean
+    title?: boolean
+    description?: boolean
+    type?: boolean
+    date?: boolean
+    completed?: boolean
+    alt1Completed?: boolean
+    alt2Completed?: boolean
+    xpReward?: boolean
+    stat?: boolean
+    location?: boolean
+    weather?: boolean
+    temp?: boolean
+    alternatives?: boolean
+    createdAt?: boolean
+  }
+
+  export type ReliefRecommendationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "title" | "description" | "type" | "date" | "completed" | "alt1Completed" | "alt2Completed" | "xpReward" | "stat" | "location" | "weather" | "temp" | "alternatives" | "createdAt", ExtArgs["result"]["reliefRecommendation"]>
+
+  export type $ReliefRecommendationPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ReliefRecommendation"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      title: string
+      description: string | null
+      type: string | null
+      date: string
+      completed: boolean
+      alt1Completed: boolean
+      alt2Completed: boolean
+      xpReward: number
+      stat: string
+      location: string | null
+      weather: string | null
+      temp: string | null
+      alternatives: Prisma.JsonValue | null
+      createdAt: Date
+    }, ExtArgs["result"]["reliefRecommendation"]>
+    composites: {}
+  }
+
+  type ReliefRecommendationGetPayload<S extends boolean | null | undefined | ReliefRecommendationDefaultArgs> = $Result.GetResult<Prisma.$ReliefRecommendationPayload, S>
+
+  type ReliefRecommendationCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<ReliefRecommendationFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: ReliefRecommendationCountAggregateInputType | true
+    }
+
+  export interface ReliefRecommendationDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ReliefRecommendation'], meta: { name: 'ReliefRecommendation' } }
+    /**
+     * Find zero or one ReliefRecommendation that matches the filter.
+     * @param {ReliefRecommendationFindUniqueArgs} args - Arguments to find a ReliefRecommendation
+     * @example
+     * // Get one ReliefRecommendation
+     * const reliefRecommendation = await prisma.reliefRecommendation.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ReliefRecommendationFindUniqueArgs>(args: SelectSubset<T, ReliefRecommendationFindUniqueArgs<ExtArgs>>): Prisma__ReliefRecommendationClient<$Result.GetResult<Prisma.$ReliefRecommendationPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one ReliefRecommendation that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {ReliefRecommendationFindUniqueOrThrowArgs} args - Arguments to find a ReliefRecommendation
+     * @example
+     * // Get one ReliefRecommendation
+     * const reliefRecommendation = await prisma.reliefRecommendation.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ReliefRecommendationFindUniqueOrThrowArgs>(args: SelectSubset<T, ReliefRecommendationFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ReliefRecommendationClient<$Result.GetResult<Prisma.$ReliefRecommendationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ReliefRecommendation that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReliefRecommendationFindFirstArgs} args - Arguments to find a ReliefRecommendation
+     * @example
+     * // Get one ReliefRecommendation
+     * const reliefRecommendation = await prisma.reliefRecommendation.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ReliefRecommendationFindFirstArgs>(args?: SelectSubset<T, ReliefRecommendationFindFirstArgs<ExtArgs>>): Prisma__ReliefRecommendationClient<$Result.GetResult<Prisma.$ReliefRecommendationPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ReliefRecommendation that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReliefRecommendationFindFirstOrThrowArgs} args - Arguments to find a ReliefRecommendation
+     * @example
+     * // Get one ReliefRecommendation
+     * const reliefRecommendation = await prisma.reliefRecommendation.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ReliefRecommendationFindFirstOrThrowArgs>(args?: SelectSubset<T, ReliefRecommendationFindFirstOrThrowArgs<ExtArgs>>): Prisma__ReliefRecommendationClient<$Result.GetResult<Prisma.$ReliefRecommendationPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more ReliefRecommendations that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReliefRecommendationFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ReliefRecommendations
+     * const reliefRecommendations = await prisma.reliefRecommendation.findMany()
+     * 
+     * // Get first 10 ReliefRecommendations
+     * const reliefRecommendations = await prisma.reliefRecommendation.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const reliefRecommendationWithIdOnly = await prisma.reliefRecommendation.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ReliefRecommendationFindManyArgs>(args?: SelectSubset<T, ReliefRecommendationFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReliefRecommendationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a ReliefRecommendation.
+     * @param {ReliefRecommendationCreateArgs} args - Arguments to create a ReliefRecommendation.
+     * @example
+     * // Create one ReliefRecommendation
+     * const ReliefRecommendation = await prisma.reliefRecommendation.create({
+     *   data: {
+     *     // ... data to create a ReliefRecommendation
+     *   }
+     * })
+     * 
+     */
+    create<T extends ReliefRecommendationCreateArgs>(args: SelectSubset<T, ReliefRecommendationCreateArgs<ExtArgs>>): Prisma__ReliefRecommendationClient<$Result.GetResult<Prisma.$ReliefRecommendationPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many ReliefRecommendations.
+     * @param {ReliefRecommendationCreateManyArgs} args - Arguments to create many ReliefRecommendations.
+     * @example
+     * // Create many ReliefRecommendations
+     * const reliefRecommendation = await prisma.reliefRecommendation.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ReliefRecommendationCreateManyArgs>(args?: SelectSubset<T, ReliefRecommendationCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many ReliefRecommendations and returns the data saved in the database.
+     * @param {ReliefRecommendationCreateManyAndReturnArgs} args - Arguments to create many ReliefRecommendations.
+     * @example
+     * // Create many ReliefRecommendations
+     * const reliefRecommendation = await prisma.reliefRecommendation.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many ReliefRecommendations and only return the `id`
+     * const reliefRecommendationWithIdOnly = await prisma.reliefRecommendation.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ReliefRecommendationCreateManyAndReturnArgs>(args?: SelectSubset<T, ReliefRecommendationCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReliefRecommendationPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a ReliefRecommendation.
+     * @param {ReliefRecommendationDeleteArgs} args - Arguments to delete one ReliefRecommendation.
+     * @example
+     * // Delete one ReliefRecommendation
+     * const ReliefRecommendation = await prisma.reliefRecommendation.delete({
+     *   where: {
+     *     // ... filter to delete one ReliefRecommendation
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ReliefRecommendationDeleteArgs>(args: SelectSubset<T, ReliefRecommendationDeleteArgs<ExtArgs>>): Prisma__ReliefRecommendationClient<$Result.GetResult<Prisma.$ReliefRecommendationPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one ReliefRecommendation.
+     * @param {ReliefRecommendationUpdateArgs} args - Arguments to update one ReliefRecommendation.
+     * @example
+     * // Update one ReliefRecommendation
+     * const reliefRecommendation = await prisma.reliefRecommendation.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ReliefRecommendationUpdateArgs>(args: SelectSubset<T, ReliefRecommendationUpdateArgs<ExtArgs>>): Prisma__ReliefRecommendationClient<$Result.GetResult<Prisma.$ReliefRecommendationPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more ReliefRecommendations.
+     * @param {ReliefRecommendationDeleteManyArgs} args - Arguments to filter ReliefRecommendations to delete.
+     * @example
+     * // Delete a few ReliefRecommendations
+     * const { count } = await prisma.reliefRecommendation.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ReliefRecommendationDeleteManyArgs>(args?: SelectSubset<T, ReliefRecommendationDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ReliefRecommendations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReliefRecommendationUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ReliefRecommendations
+     * const reliefRecommendation = await prisma.reliefRecommendation.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ReliefRecommendationUpdateManyArgs>(args: SelectSubset<T, ReliefRecommendationUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ReliefRecommendations and returns the data updated in the database.
+     * @param {ReliefRecommendationUpdateManyAndReturnArgs} args - Arguments to update many ReliefRecommendations.
+     * @example
+     * // Update many ReliefRecommendations
+     * const reliefRecommendation = await prisma.reliefRecommendation.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more ReliefRecommendations and only return the `id`
+     * const reliefRecommendationWithIdOnly = await prisma.reliefRecommendation.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends ReliefRecommendationUpdateManyAndReturnArgs>(args: SelectSubset<T, ReliefRecommendationUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReliefRecommendationPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one ReliefRecommendation.
+     * @param {ReliefRecommendationUpsertArgs} args - Arguments to update or create a ReliefRecommendation.
+     * @example
+     * // Update or create a ReliefRecommendation
+     * const reliefRecommendation = await prisma.reliefRecommendation.upsert({
+     *   create: {
+     *     // ... data to create a ReliefRecommendation
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ReliefRecommendation we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ReliefRecommendationUpsertArgs>(args: SelectSubset<T, ReliefRecommendationUpsertArgs<ExtArgs>>): Prisma__ReliefRecommendationClient<$Result.GetResult<Prisma.$ReliefRecommendationPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of ReliefRecommendations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReliefRecommendationCountArgs} args - Arguments to filter ReliefRecommendations to count.
+     * @example
+     * // Count the number of ReliefRecommendations
+     * const count = await prisma.reliefRecommendation.count({
+     *   where: {
+     *     // ... the filter for the ReliefRecommendations we want to count
+     *   }
+     * })
+    **/
+    count<T extends ReliefRecommendationCountArgs>(
+      args?: Subset<T, ReliefRecommendationCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ReliefRecommendationCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ReliefRecommendation.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReliefRecommendationAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ReliefRecommendationAggregateArgs>(args: Subset<T, ReliefRecommendationAggregateArgs>): Prisma.PrismaPromise<GetReliefRecommendationAggregateType<T>>
+
+    /**
+     * Group by ReliefRecommendation.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ReliefRecommendationGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ReliefRecommendationGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ReliefRecommendationGroupByArgs['orderBy'] }
+        : { orderBy?: ReliefRecommendationGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ReliefRecommendationGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetReliefRecommendationGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ReliefRecommendation model
+   */
+  readonly fields: ReliefRecommendationFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ReliefRecommendation.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ReliefRecommendationClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ReliefRecommendation model
+   */
+  interface ReliefRecommendationFieldRefs {
+    readonly id: FieldRef<"ReliefRecommendation", 'String'>
+    readonly title: FieldRef<"ReliefRecommendation", 'String'>
+    readonly description: FieldRef<"ReliefRecommendation", 'String'>
+    readonly type: FieldRef<"ReliefRecommendation", 'String'>
+    readonly date: FieldRef<"ReliefRecommendation", 'String'>
+    readonly completed: FieldRef<"ReliefRecommendation", 'Boolean'>
+    readonly alt1Completed: FieldRef<"ReliefRecommendation", 'Boolean'>
+    readonly alt2Completed: FieldRef<"ReliefRecommendation", 'Boolean'>
+    readonly xpReward: FieldRef<"ReliefRecommendation", 'Int'>
+    readonly stat: FieldRef<"ReliefRecommendation", 'String'>
+    readonly location: FieldRef<"ReliefRecommendation", 'String'>
+    readonly weather: FieldRef<"ReliefRecommendation", 'String'>
+    readonly temp: FieldRef<"ReliefRecommendation", 'String'>
+    readonly alternatives: FieldRef<"ReliefRecommendation", 'Json'>
+    readonly createdAt: FieldRef<"ReliefRecommendation", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ReliefRecommendation findUnique
+   */
+  export type ReliefRecommendationFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReliefRecommendation
+     */
+    select?: ReliefRecommendationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReliefRecommendation
+     */
+    omit?: ReliefRecommendationOmit<ExtArgs> | null
+    /**
+     * Filter, which ReliefRecommendation to fetch.
+     */
+    where: ReliefRecommendationWhereUniqueInput
+  }
+
+  /**
+   * ReliefRecommendation findUniqueOrThrow
+   */
+  export type ReliefRecommendationFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReliefRecommendation
+     */
+    select?: ReliefRecommendationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReliefRecommendation
+     */
+    omit?: ReliefRecommendationOmit<ExtArgs> | null
+    /**
+     * Filter, which ReliefRecommendation to fetch.
+     */
+    where: ReliefRecommendationWhereUniqueInput
+  }
+
+  /**
+   * ReliefRecommendation findFirst
+   */
+  export type ReliefRecommendationFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReliefRecommendation
+     */
+    select?: ReliefRecommendationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReliefRecommendation
+     */
+    omit?: ReliefRecommendationOmit<ExtArgs> | null
+    /**
+     * Filter, which ReliefRecommendation to fetch.
+     */
+    where?: ReliefRecommendationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ReliefRecommendations to fetch.
+     */
+    orderBy?: ReliefRecommendationOrderByWithRelationInput | ReliefRecommendationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ReliefRecommendations.
+     */
+    cursor?: ReliefRecommendationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ReliefRecommendations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ReliefRecommendations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ReliefRecommendations.
+     */
+    distinct?: ReliefRecommendationScalarFieldEnum | ReliefRecommendationScalarFieldEnum[]
+  }
+
+  /**
+   * ReliefRecommendation findFirstOrThrow
+   */
+  export type ReliefRecommendationFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReliefRecommendation
+     */
+    select?: ReliefRecommendationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReliefRecommendation
+     */
+    omit?: ReliefRecommendationOmit<ExtArgs> | null
+    /**
+     * Filter, which ReliefRecommendation to fetch.
+     */
+    where?: ReliefRecommendationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ReliefRecommendations to fetch.
+     */
+    orderBy?: ReliefRecommendationOrderByWithRelationInput | ReliefRecommendationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ReliefRecommendations.
+     */
+    cursor?: ReliefRecommendationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ReliefRecommendations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ReliefRecommendations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ReliefRecommendations.
+     */
+    distinct?: ReliefRecommendationScalarFieldEnum | ReliefRecommendationScalarFieldEnum[]
+  }
+
+  /**
+   * ReliefRecommendation findMany
+   */
+  export type ReliefRecommendationFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReliefRecommendation
+     */
+    select?: ReliefRecommendationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReliefRecommendation
+     */
+    omit?: ReliefRecommendationOmit<ExtArgs> | null
+    /**
+     * Filter, which ReliefRecommendations to fetch.
+     */
+    where?: ReliefRecommendationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ReliefRecommendations to fetch.
+     */
+    orderBy?: ReliefRecommendationOrderByWithRelationInput | ReliefRecommendationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ReliefRecommendations.
+     */
+    cursor?: ReliefRecommendationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ReliefRecommendations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ReliefRecommendations.
+     */
+    skip?: number
+    distinct?: ReliefRecommendationScalarFieldEnum | ReliefRecommendationScalarFieldEnum[]
+  }
+
+  /**
+   * ReliefRecommendation create
+   */
+  export type ReliefRecommendationCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReliefRecommendation
+     */
+    select?: ReliefRecommendationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReliefRecommendation
+     */
+    omit?: ReliefRecommendationOmit<ExtArgs> | null
+    /**
+     * The data needed to create a ReliefRecommendation.
+     */
+    data: XOR<ReliefRecommendationCreateInput, ReliefRecommendationUncheckedCreateInput>
+  }
+
+  /**
+   * ReliefRecommendation createMany
+   */
+  export type ReliefRecommendationCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ReliefRecommendations.
+     */
+    data: ReliefRecommendationCreateManyInput | ReliefRecommendationCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ReliefRecommendation createManyAndReturn
+   */
+  export type ReliefRecommendationCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReliefRecommendation
+     */
+    select?: ReliefRecommendationSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReliefRecommendation
+     */
+    omit?: ReliefRecommendationOmit<ExtArgs> | null
+    /**
+     * The data used to create many ReliefRecommendations.
+     */
+    data: ReliefRecommendationCreateManyInput | ReliefRecommendationCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ReliefRecommendation update
+   */
+  export type ReliefRecommendationUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReliefRecommendation
+     */
+    select?: ReliefRecommendationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReliefRecommendation
+     */
+    omit?: ReliefRecommendationOmit<ExtArgs> | null
+    /**
+     * The data needed to update a ReliefRecommendation.
+     */
+    data: XOR<ReliefRecommendationUpdateInput, ReliefRecommendationUncheckedUpdateInput>
+    /**
+     * Choose, which ReliefRecommendation to update.
+     */
+    where: ReliefRecommendationWhereUniqueInput
+  }
+
+  /**
+   * ReliefRecommendation updateMany
+   */
+  export type ReliefRecommendationUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ReliefRecommendations.
+     */
+    data: XOR<ReliefRecommendationUpdateManyMutationInput, ReliefRecommendationUncheckedUpdateManyInput>
+    /**
+     * Filter which ReliefRecommendations to update
+     */
+    where?: ReliefRecommendationWhereInput
+    /**
+     * Limit how many ReliefRecommendations to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * ReliefRecommendation updateManyAndReturn
+   */
+  export type ReliefRecommendationUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReliefRecommendation
+     */
+    select?: ReliefRecommendationSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReliefRecommendation
+     */
+    omit?: ReliefRecommendationOmit<ExtArgs> | null
+    /**
+     * The data used to update ReliefRecommendations.
+     */
+    data: XOR<ReliefRecommendationUpdateManyMutationInput, ReliefRecommendationUncheckedUpdateManyInput>
+    /**
+     * Filter which ReliefRecommendations to update
+     */
+    where?: ReliefRecommendationWhereInput
+    /**
+     * Limit how many ReliefRecommendations to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * ReliefRecommendation upsert
+   */
+  export type ReliefRecommendationUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReliefRecommendation
+     */
+    select?: ReliefRecommendationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReliefRecommendation
+     */
+    omit?: ReliefRecommendationOmit<ExtArgs> | null
+    /**
+     * The filter to search for the ReliefRecommendation to update in case it exists.
+     */
+    where: ReliefRecommendationWhereUniqueInput
+    /**
+     * In case the ReliefRecommendation found by the `where` argument doesn't exist, create a new ReliefRecommendation with this data.
+     */
+    create: XOR<ReliefRecommendationCreateInput, ReliefRecommendationUncheckedCreateInput>
+    /**
+     * In case the ReliefRecommendation was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ReliefRecommendationUpdateInput, ReliefRecommendationUncheckedUpdateInput>
+  }
+
+  /**
+   * ReliefRecommendation delete
+   */
+  export type ReliefRecommendationDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReliefRecommendation
+     */
+    select?: ReliefRecommendationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReliefRecommendation
+     */
+    omit?: ReliefRecommendationOmit<ExtArgs> | null
+    /**
+     * Filter which ReliefRecommendation to delete.
+     */
+    where: ReliefRecommendationWhereUniqueInput
+  }
+
+  /**
+   * ReliefRecommendation deleteMany
+   */
+  export type ReliefRecommendationDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ReliefRecommendations to delete
+     */
+    where?: ReliefRecommendationWhereInput
+    /**
+     * Limit how many ReliefRecommendations to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * ReliefRecommendation without action
+   */
+  export type ReliefRecommendationDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ReliefRecommendation
+     */
+    select?: ReliefRecommendationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ReliefRecommendation
+     */
+    omit?: ReliefRecommendationOmit<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -7912,12 +9158,41 @@ export namespace Prisma {
   export type SmartMissionScalarFieldEnum = (typeof SmartMissionScalarFieldEnum)[keyof typeof SmartMissionScalarFieldEnum]
 
 
+  export const ReliefRecommendationScalarFieldEnum: {
+    id: 'id',
+    title: 'title',
+    description: 'description',
+    type: 'type',
+    date: 'date',
+    completed: 'completed',
+    alt1Completed: 'alt1Completed',
+    alt2Completed: 'alt2Completed',
+    xpReward: 'xpReward',
+    stat: 'stat',
+    location: 'location',
+    weather: 'weather',
+    temp: 'temp',
+    alternatives: 'alternatives',
+    createdAt: 'createdAt'
+  };
+
+  export type ReliefRecommendationScalarFieldEnum = (typeof ReliefRecommendationScalarFieldEnum)[keyof typeof ReliefRecommendationScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
   };
 
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+  export const NullableJsonNullValueInput: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull
+  };
+
+  export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
   export const QueryMode: {
@@ -7934,6 +9209,15 @@ export namespace Prisma {
   };
 
   export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+  export const JsonNullValueFilter: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull,
+    AnyNull: typeof AnyNull
+  };
+
+  export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
   /**
@@ -7987,6 +9271,20 @@ export namespace Prisma {
    * Reference to a field of type 'DateTime[]'
    */
   export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'Json'
+   */
+  export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+  /**
+   * Reference to a field of type 'QueryMode'
+   */
+  export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 
@@ -8420,6 +9718,110 @@ export namespace Prisma {
     stat?: StringWithAggregatesFilter<"SmartMission"> | string
     quote?: StringNullableWithAggregatesFilter<"SmartMission"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"SmartMission"> | Date | string
+  }
+
+  export type ReliefRecommendationWhereInput = {
+    AND?: ReliefRecommendationWhereInput | ReliefRecommendationWhereInput[]
+    OR?: ReliefRecommendationWhereInput[]
+    NOT?: ReliefRecommendationWhereInput | ReliefRecommendationWhereInput[]
+    id?: StringFilter<"ReliefRecommendation"> | string
+    title?: StringFilter<"ReliefRecommendation"> | string
+    description?: StringNullableFilter<"ReliefRecommendation"> | string | null
+    type?: StringNullableFilter<"ReliefRecommendation"> | string | null
+    date?: StringFilter<"ReliefRecommendation"> | string
+    completed?: BoolFilter<"ReliefRecommendation"> | boolean
+    alt1Completed?: BoolFilter<"ReliefRecommendation"> | boolean
+    alt2Completed?: BoolFilter<"ReliefRecommendation"> | boolean
+    xpReward?: IntFilter<"ReliefRecommendation"> | number
+    stat?: StringFilter<"ReliefRecommendation"> | string
+    location?: StringNullableFilter<"ReliefRecommendation"> | string | null
+    weather?: StringNullableFilter<"ReliefRecommendation"> | string | null
+    temp?: StringNullableFilter<"ReliefRecommendation"> | string | null
+    alternatives?: JsonNullableFilter<"ReliefRecommendation">
+    createdAt?: DateTimeFilter<"ReliefRecommendation"> | Date | string
+  }
+
+  export type ReliefRecommendationOrderByWithRelationInput = {
+    id?: SortOrder
+    title?: SortOrder
+    description?: SortOrderInput | SortOrder
+    type?: SortOrderInput | SortOrder
+    date?: SortOrder
+    completed?: SortOrder
+    alt1Completed?: SortOrder
+    alt2Completed?: SortOrder
+    xpReward?: SortOrder
+    stat?: SortOrder
+    location?: SortOrderInput | SortOrder
+    weather?: SortOrderInput | SortOrder
+    temp?: SortOrderInput | SortOrder
+    alternatives?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ReliefRecommendationWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    date?: string
+    AND?: ReliefRecommendationWhereInput | ReliefRecommendationWhereInput[]
+    OR?: ReliefRecommendationWhereInput[]
+    NOT?: ReliefRecommendationWhereInput | ReliefRecommendationWhereInput[]
+    title?: StringFilter<"ReliefRecommendation"> | string
+    description?: StringNullableFilter<"ReliefRecommendation"> | string | null
+    type?: StringNullableFilter<"ReliefRecommendation"> | string | null
+    completed?: BoolFilter<"ReliefRecommendation"> | boolean
+    alt1Completed?: BoolFilter<"ReliefRecommendation"> | boolean
+    alt2Completed?: BoolFilter<"ReliefRecommendation"> | boolean
+    xpReward?: IntFilter<"ReliefRecommendation"> | number
+    stat?: StringFilter<"ReliefRecommendation"> | string
+    location?: StringNullableFilter<"ReliefRecommendation"> | string | null
+    weather?: StringNullableFilter<"ReliefRecommendation"> | string | null
+    temp?: StringNullableFilter<"ReliefRecommendation"> | string | null
+    alternatives?: JsonNullableFilter<"ReliefRecommendation">
+    createdAt?: DateTimeFilter<"ReliefRecommendation"> | Date | string
+  }, "id" | "date">
+
+  export type ReliefRecommendationOrderByWithAggregationInput = {
+    id?: SortOrder
+    title?: SortOrder
+    description?: SortOrderInput | SortOrder
+    type?: SortOrderInput | SortOrder
+    date?: SortOrder
+    completed?: SortOrder
+    alt1Completed?: SortOrder
+    alt2Completed?: SortOrder
+    xpReward?: SortOrder
+    stat?: SortOrder
+    location?: SortOrderInput | SortOrder
+    weather?: SortOrderInput | SortOrder
+    temp?: SortOrderInput | SortOrder
+    alternatives?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: ReliefRecommendationCountOrderByAggregateInput
+    _avg?: ReliefRecommendationAvgOrderByAggregateInput
+    _max?: ReliefRecommendationMaxOrderByAggregateInput
+    _min?: ReliefRecommendationMinOrderByAggregateInput
+    _sum?: ReliefRecommendationSumOrderByAggregateInput
+  }
+
+  export type ReliefRecommendationScalarWhereWithAggregatesInput = {
+    AND?: ReliefRecommendationScalarWhereWithAggregatesInput | ReliefRecommendationScalarWhereWithAggregatesInput[]
+    OR?: ReliefRecommendationScalarWhereWithAggregatesInput[]
+    NOT?: ReliefRecommendationScalarWhereWithAggregatesInput | ReliefRecommendationScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"ReliefRecommendation"> | string
+    title?: StringWithAggregatesFilter<"ReliefRecommendation"> | string
+    description?: StringNullableWithAggregatesFilter<"ReliefRecommendation"> | string | null
+    type?: StringNullableWithAggregatesFilter<"ReliefRecommendation"> | string | null
+    date?: StringWithAggregatesFilter<"ReliefRecommendation"> | string
+    completed?: BoolWithAggregatesFilter<"ReliefRecommendation"> | boolean
+    alt1Completed?: BoolWithAggregatesFilter<"ReliefRecommendation"> | boolean
+    alt2Completed?: BoolWithAggregatesFilter<"ReliefRecommendation"> | boolean
+    xpReward?: IntWithAggregatesFilter<"ReliefRecommendation"> | number
+    stat?: StringWithAggregatesFilter<"ReliefRecommendation"> | string
+    location?: StringNullableWithAggregatesFilter<"ReliefRecommendation"> | string | null
+    weather?: StringNullableWithAggregatesFilter<"ReliefRecommendation"> | string | null
+    temp?: StringNullableWithAggregatesFilter<"ReliefRecommendation"> | string | null
+    alternatives?: JsonNullableWithAggregatesFilter<"ReliefRecommendation">
+    createdAt?: DateTimeWithAggregatesFilter<"ReliefRecommendation"> | Date | string
   }
 
   export type UserProfileCreateInput = {
@@ -8887,6 +10289,132 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type ReliefRecommendationCreateInput = {
+    id?: string
+    title: string
+    description?: string | null
+    type?: string | null
+    date: string
+    completed?: boolean
+    alt1Completed?: boolean
+    alt2Completed?: boolean
+    xpReward?: number
+    stat?: string
+    location?: string | null
+    weather?: string | null
+    temp?: string | null
+    alternatives?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type ReliefRecommendationUncheckedCreateInput = {
+    id?: string
+    title: string
+    description?: string | null
+    type?: string | null
+    date: string
+    completed?: boolean
+    alt1Completed?: boolean
+    alt2Completed?: boolean
+    xpReward?: number
+    stat?: string
+    location?: string | null
+    weather?: string | null
+    temp?: string | null
+    alternatives?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type ReliefRecommendationUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    type?: NullableStringFieldUpdateOperationsInput | string | null
+    date?: StringFieldUpdateOperationsInput | string
+    completed?: BoolFieldUpdateOperationsInput | boolean
+    alt1Completed?: BoolFieldUpdateOperationsInput | boolean
+    alt2Completed?: BoolFieldUpdateOperationsInput | boolean
+    xpReward?: IntFieldUpdateOperationsInput | number
+    stat?: StringFieldUpdateOperationsInput | string
+    location?: NullableStringFieldUpdateOperationsInput | string | null
+    weather?: NullableStringFieldUpdateOperationsInput | string | null
+    temp?: NullableStringFieldUpdateOperationsInput | string | null
+    alternatives?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ReliefRecommendationUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    type?: NullableStringFieldUpdateOperationsInput | string | null
+    date?: StringFieldUpdateOperationsInput | string
+    completed?: BoolFieldUpdateOperationsInput | boolean
+    alt1Completed?: BoolFieldUpdateOperationsInput | boolean
+    alt2Completed?: BoolFieldUpdateOperationsInput | boolean
+    xpReward?: IntFieldUpdateOperationsInput | number
+    stat?: StringFieldUpdateOperationsInput | string
+    location?: NullableStringFieldUpdateOperationsInput | string | null
+    weather?: NullableStringFieldUpdateOperationsInput | string | null
+    temp?: NullableStringFieldUpdateOperationsInput | string | null
+    alternatives?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ReliefRecommendationCreateManyInput = {
+    id?: string
+    title: string
+    description?: string | null
+    type?: string | null
+    date: string
+    completed?: boolean
+    alt1Completed?: boolean
+    alt2Completed?: boolean
+    xpReward?: number
+    stat?: string
+    location?: string | null
+    weather?: string | null
+    temp?: string | null
+    alternatives?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type ReliefRecommendationUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    type?: NullableStringFieldUpdateOperationsInput | string | null
+    date?: StringFieldUpdateOperationsInput | string
+    completed?: BoolFieldUpdateOperationsInput | boolean
+    alt1Completed?: BoolFieldUpdateOperationsInput | boolean
+    alt2Completed?: BoolFieldUpdateOperationsInput | boolean
+    xpReward?: IntFieldUpdateOperationsInput | number
+    stat?: StringFieldUpdateOperationsInput | string
+    location?: NullableStringFieldUpdateOperationsInput | string | null
+    weather?: NullableStringFieldUpdateOperationsInput | string | null
+    temp?: NullableStringFieldUpdateOperationsInput | string | null
+    alternatives?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ReliefRecommendationUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    type?: NullableStringFieldUpdateOperationsInput | string | null
+    date?: StringFieldUpdateOperationsInput | string
+    completed?: BoolFieldUpdateOperationsInput | boolean
+    alt1Completed?: BoolFieldUpdateOperationsInput | boolean
+    alt2Completed?: BoolFieldUpdateOperationsInput | boolean
+    xpReward?: IntFieldUpdateOperationsInput | number
+    stat?: StringFieldUpdateOperationsInput | string
+    location?: NullableStringFieldUpdateOperationsInput | string | null
+    weather?: NullableStringFieldUpdateOperationsInput | string | null
+    temp?: NullableStringFieldUpdateOperationsInput | string | null
+    alternatives?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -9309,6 +10837,115 @@ export namespace Prisma {
   export type SmartMissionSumOrderByAggregateInput = {
     xpReward?: SortOrder
   }
+  export type JsonNullableFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type ReliefRecommendationCountOrderByAggregateInput = {
+    id?: SortOrder
+    title?: SortOrder
+    description?: SortOrder
+    type?: SortOrder
+    date?: SortOrder
+    completed?: SortOrder
+    alt1Completed?: SortOrder
+    alt2Completed?: SortOrder
+    xpReward?: SortOrder
+    stat?: SortOrder
+    location?: SortOrder
+    weather?: SortOrder
+    temp?: SortOrder
+    alternatives?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ReliefRecommendationAvgOrderByAggregateInput = {
+    xpReward?: SortOrder
+  }
+
+  export type ReliefRecommendationMaxOrderByAggregateInput = {
+    id?: SortOrder
+    title?: SortOrder
+    description?: SortOrder
+    type?: SortOrder
+    date?: SortOrder
+    completed?: SortOrder
+    alt1Completed?: SortOrder
+    alt2Completed?: SortOrder
+    xpReward?: SortOrder
+    stat?: SortOrder
+    location?: SortOrder
+    weather?: SortOrder
+    temp?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ReliefRecommendationMinOrderByAggregateInput = {
+    id?: SortOrder
+    title?: SortOrder
+    description?: SortOrder
+    type?: SortOrder
+    date?: SortOrder
+    completed?: SortOrder
+    alt1Completed?: SortOrder
+    alt2Completed?: SortOrder
+    xpReward?: SortOrder
+    stat?: SortOrder
+    location?: SortOrder
+    weather?: SortOrder
+    temp?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ReliefRecommendationSumOrderByAggregateInput = {
+    xpReward?: SortOrder
+  }
+  export type JsonNullableWithAggregatesFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedJsonNullableFilter<$PrismaModel>
+    _max?: NestedJsonNullableFilter<$PrismaModel>
+  }
 
   export type StringFieldUpdateOperationsInput = {
     set?: string
@@ -9575,6 +11212,29 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+  export type NestedJsonNullableFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<NestedJsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonNullableFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type HabitLogCreateWithoutHabitInput = {

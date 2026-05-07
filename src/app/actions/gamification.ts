@@ -10,7 +10,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
     const startStr = format(startDate, "yyyy-MM-dd");
     const endStr = format(endDate, "yyyy-MM-dd");
 
-    const [habits, events, notes, smartMissions] = await Promise.all([
+    const results = await Promise.all([
       prisma.habit.findMany({
         include: {
           logs: {
@@ -38,8 +38,15 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
         ? (prisma as any).smartMission.findMany({
             where: { date: { gte: startStr, lte: endStr }, completed: true }
           })
+        : Promise.resolve([]),
+      (prisma as any).reliefRecommendation
+        ? (prisma as any).reliefRecommendation.findMany({
+            where: { date: { gte: startStr, lte: endStr } }
+          })
         : Promise.resolve([])
     ]);
+
+    const [habits, events, notes, smartMissions, reliefRecommendations] = results as any[];
 
   // Dynamic Stat XP
   const stats: any = {
@@ -105,6 +112,24 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
     else if (sm.stat === "intelligence") stats.intelligence += sm.xpReward;
     else if (sm.stat === "wealth") stats.wealth += sm.xpReward;
     else if (sm.stat === "vitality") stats.vitality += sm.xpReward;
+  });
+
+  // Add Relief Recommendation XP (3 separate tasks)
+  reliefRecommendations.forEach(rr => {
+    const awardXP = (isCompleted: boolean) => {
+      if (isCompleted) {
+        totalXP += rr.xpReward;
+        if (rr.stat === "charisma") stats.charisma += rr.xpReward;
+        else if (rr.stat === "strength") stats.strength += rr.xpReward;
+        else if (rr.stat === "intelligence") stats.intelligence += rr.xpReward;
+        else if (rr.stat === "wealth") stats.wealth += rr.xpReward;
+        else if (rr.stat === "vitality") stats.vitality += rr.xpReward;
+      }
+    };
+
+    awardXP(rr.completed);
+    awardXP(rr.alt1Completed);
+    awardXP(rr.alt2Completed);
   });
 
   // Calculate Level (Flat 100 XP per level for frequent progression)

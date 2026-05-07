@@ -10,6 +10,8 @@ import { getProfile } from "@/app/actions/gamification";
 import { getRecentNotes } from "@/app/actions/notes";
 import { cn } from "@/lib/utils";
 import { PremiumLoader } from "@/components/loader";
+import TabularViewModal, { Column } from "@/components/TabularViewModal";
+import { Search } from "lucide-react";
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -26,6 +28,8 @@ export default function CalendarPage() {
   const [newTime, setNewTime] = useState("12:00");
   const [newNotification, setNewNotification] = useState(true);
   const [newDateStr, setNewDateStr] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [isTabularOpen, setIsTabularOpen] = useState(false);
+  const [allEventsForTable, setAllEventsForTable] = useState<any[]>([]);
 
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
@@ -42,8 +46,8 @@ export default function CalendarPage() {
     return { startDate, endDate, days, monthStart };
   }, [currentDate]);
 
-  const fetchEvents = useCallback(async () => {
-    setIsLoading(true);
+  const fetchEvents = useCallback(async (showLoader = true) => {
+    if (showLoader) setIsLoading(true);
     try {
       const [eventsData, profileData, notesData] = await Promise.all([
         getEventsByDateRange(startDate, endDate),
@@ -54,13 +58,25 @@ export default function CalendarPage() {
       setProfile(profileData);
       setMoods(notesData);
     } finally {
-      setIsLoading(false);
+      if (showLoader) setIsLoading(false);
     }
   }, [startDate, endDate]);
 
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
+
+  useEffect(() => {
+    async function fetchArchive() {
+      const start = new Date();
+      start.setFullYear(start.getFullYear() - 2);
+      const end = new Date();
+      end.setFullYear(end.getFullYear() + 2);
+      const data = await getEventsByDateRange(start, end);
+      setAllEventsForTable(data);
+    }
+    fetchArchive();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -117,7 +133,7 @@ export default function CalendarPage() {
     }
 
     resetForm();
-    await fetchEvents();
+    await fetchEvents(false);
     window.dispatchEvent(new CustomEvent("profile-updated"));
   }
 
@@ -134,13 +150,13 @@ export default function CalendarPage() {
 
   async function handleDelete(id: string) {
     await deleteEvent(id);
-    await fetchEvents();
+    await fetchEvents(false);
     window.dispatchEvent(new CustomEvent("profile-updated"));
   }
 
   async function handleToggle(id: string, current: boolean) {
     await toggleEventCompletion(id, !current);
-    await fetchEvents();
+    await fetchEvents(false);
     window.dispatchEvent(new CustomEvent("profile-updated"));
   }
 
@@ -354,8 +370,8 @@ export default function CalendarPage() {
                       {format(day, "d")}
                     </span>
                     {dayMood && (
-                      <span className="text-[10px] opacity-40 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all">
-                        {dayMood === "good" ? "✨" : dayMood === "bad" ? "🌧️" : "😐"}
+                      <span className="text-sm opacity-80 group-hover:opacity-100 transition-all">
+                        {dayMood === "good" ? "😇" : dayMood === "bad" ? "😢" : "😐"}
                       </span>
                     )}
                   </div>
@@ -481,6 +497,55 @@ export default function CalendarPage() {
           </div>
         </div>
       </div>
+      <div className="flex justify-center pt-8">
+        <button
+          onClick={() => setIsTabularOpen(true)}
+          className="flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-tm-blue-gray hover:text-tm-yellow font-black uppercase tracking-widest text-xs transition-all group"
+        >
+          <Search size={16} className="group-hover:scale-110 transition-transform" />
+          View All Items in Tabular Format
+        </button>
+      </div>
+
+      <TabularViewModal
+        title="Calendar Archive"
+        isOpen={isTabularOpen}
+        onClose={() => setIsTabularOpen(false)}
+        data={allEventsForTable}
+        columns={[
+          { header: "Date", key: "date", render: (val, row) => (
+            <span className="font-mono text-tm-blue-gray">
+              {format(new Date(row.startTime || row.date), "yyyy-MM-dd")}
+            </span>
+          )},
+          { header: "Time", key: "startTime", render: (val) => (
+            <span className="text-tm-blue-gray">
+              {val ? format(new Date(val), "HH:mm") : "All Day"}
+            </span>
+          )},
+          { header: "Title", key: "title", render: (val) => (
+            <span className="font-bold text-white/90">{val}</span>
+          )},
+          { header: "Type", key: "type", render: (val) => (
+            <span className={cn(
+              "px-2 py-0.5 rounded text-[10px] font-black uppercase",
+              val === "task" ? "bg-tm-yellow/10 text-tm-yellow" : "bg-tm-orange-light/10 text-tm-orange-light"
+            )}>
+              {val}
+            </span>
+          )},
+          { header: "Status", key: "completed", render: (val, row) => (
+            row.type === "task" ? (
+              <span className={cn(
+                "px-2 py-0.5 rounded text-[10px] font-black uppercase",
+                val ? "bg-green-500/20 text-green-500" : "bg-tm-blue-gray/20 text-tm-blue-gray"
+              )}>
+                {val ? "Completed" : "Pending"}
+              </span>
+            ) : <span className="text-tm-blue-gray/30">—</span>
+          )}
+        ]}
+      />
         </>
       )}
     </div>

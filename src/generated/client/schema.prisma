@@ -49,6 +49,7 @@ model Note {
   id        String   @id @default(cuid())
   content   String   @db.Text
   date      String   @unique // Format: YYYY-MM-DD
+  mood      String   @default("neutral")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -66,4 +67,34 @@ model Event {
   completed    Boolean   @default(false)
   notification Boolean   @default(false)
   createdAt    DateTime  @default(now())
+}
+
+model SmartMission {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  date        String   @unique // Format: YYYY-MM-DD
+  completed   Boolean  @default(false)
+  xpReward    Int      @default(25)
+  stat        String   @default("charisma")
+  quote       String?  @db.Text
+  createdAt   DateTime @default(now())
+}
+
+model ReliefRecommendation {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?  @db.Text
+  type          String? // movie, song, activity, food
+  date          String   @unique // Format: YYYY-MM-DD
+  completed     Boolean  @default(false)
+  alt1Completed Boolean  @default(false)
+  alt2Completed Boolean  @default(false)
+  xpReward      Int      @default(5)
+  stat          String   @default("charisma")
+  location      String?
+  weather       String?
+  temp          String?
+  alternatives  Json? // Store alternative suggestions
+  createdAt     DateTime @default(now())
 }

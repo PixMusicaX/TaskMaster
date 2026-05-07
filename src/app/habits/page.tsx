@@ -9,6 +9,7 @@ import { getHabits, addHabit, updateHabit, archiveHabit, restoreHabit, deleteHab
 import { getProfile } from "@/app/actions/gamification";
 import { cn } from "@/lib/utils";
 import { PremiumLoader } from "@/components/loader";
+import TabularViewModal, { Column } from "@/components/TabularViewModal";
 
 export default function HabitsPage() {
   const [habits, setHabits] = useState<any[]>([]);
@@ -18,6 +19,7 @@ export default function HabitsPage() {
   const [editingHabit, setEditingHabit] = useState<any>(null);
   const [showArchive, setShowArchive] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [isTabularOpen, setIsTabularOpen] = useState(false);
 
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("✨");
@@ -452,38 +454,106 @@ export default function HabitsPage() {
           Consistency Map <span className="text-xs font-medium bg-tm-yellow/10 px-2 py-1 rounded-lg text-tm-yellow">Last 4 Weeks</span>
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {habits.map((habit) => (
-            <GlassCard key={habit.id} className="p-4 border-l-4 border-l-tm-yellow">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{habit.icon}</span>
-                  <h3 className="font-bold text-sm truncate max-w-[150px]">{habit.name}</h3>
+          {habits.map((habit) => {
+            const freq = habit.frequency || [0, 1, 2, 3, 4, 5, 6];
+            const last28Days = Array.from({ length: 28 }, (_, i) => subDays(today, i));
+            const dateStrings = last28Days.map(d => format(d, "yyyy-MM-dd"));
+            const scheduledDays = last28Days.filter(day => freq.includes(day.getDay()));
+            const completedInLast28 = habit.logs?.filter((l: any) => 
+              l.completed && dateStrings.includes(l.date)
+            ).length || 0;
+            
+            const percentage = scheduledDays.length > 0 
+              ? Math.round((completedInLast28 / scheduledDays.length) * 100) 
+              : 0;
+
+            return (
+              <GlassCard key={habit.id} className="p-4 border-l-4 border-l-tm-yellow">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{habit.icon}</span>
+                    <h3 className="font-bold text-sm truncate max-w-[150px]">{habit.name}</h3>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-black text-tm-yellow">
+                      {percentage}%
+                    </span>
+                    <span className="text-[8px] text-tm-blue-gray font-black uppercase tracking-tighter">Consistency</span>
+                  </div>
                 </div>
-                <span className="text-[10px] font-black text-tm-yellow">
-                  {Math.round((habit.logs?.filter((l: any) => l.completed).length || 0) / 28 * 100)}%
-                </span>
-              </div>
-              <div className="grid grid-cols-7 gap-1.5">
-                {Array.from({ length: 28 }, (_, i) => {
-                  const day = subDays(today, i);
-                  const dateStr = format(day, "yyyy-MM-dd");
-                  const isDone = habit.logs?.some((l: any) => l.date === dateStr && l.completed);
-                  return (
-                    <motion.div
-                      key={i}
-                      whileHover={{ scale: 1.2 }}
-                      className={cn(
-                        "aspect-square rounded-md border border-tm-blue-gray/5 transition-colors",
-                        isDone ? "bg-tm-yellow" : "bg-tm-blue-gray/10"
-                      )}
-                    />
-                  );
-                }).reverse()}
-              </div>
-            </GlassCard>
-          ))}
+                <div className="grid grid-cols-7 gap-1.5">
+                  {last28Days.map((day, i) => {
+                    const dateStr = format(day, "yyyy-MM-dd");
+                    const isDone = habit.logs?.some((l: any) => l.date === dateStr && l.completed);
+                    const isScheduled = freq.includes(day.getDay());
+                    return (
+                      <motion.div
+                        key={i}
+                        whileHover={{ scale: 1.2 }}
+                        className={cn(
+                          "aspect-square rounded-md border transition-all",
+                          isDone 
+                            ? "bg-tm-yellow border-tm-yellow/30 shadow-[0_0_8px_rgba(242,194,48,0.2)]" 
+                            : isScheduled 
+                              ? "bg-tm-blue-gray/10 border-tm-blue-gray/5" 
+                              : "bg-tm-blue-gray/[0.03] border-transparent opacity-40"
+                        )}
+                        title={isScheduled ? `${format(day, "MMM d")}: ${isDone ? "Completed" : "Missing"}` : `${format(day, "MMM d")}: Not Scheduled`}
+                      />
+                    );
+                  }).reverse()}
+                </div>
+              </GlassCard>
+            );
+          })}
         </div>
       </div>
+      <div className="flex justify-center pt-8 border-t border-white/5">
+        <button
+          onClick={() => setIsTabularOpen(true)}
+          className="flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-tm-blue-gray hover:text-tm-yellow font-black uppercase tracking-widest text-xs transition-all group"
+        >
+          <Search size={16} className="group-hover:scale-110 transition-transform" />
+          View All Habits in Tabular Format
+        </button>
+      </div>
+
+      <TabularViewModal
+        title="Habit Logs"
+        isOpen={isTabularOpen}
+        onClose={() => setIsTabularOpen(false)}
+        data={[...habits, ...archivedHabits].flatMap(h => 
+          (h.logs || []).map((l: any) => ({
+            date: l.date,
+            habitName: h.name,
+            icon: h.icon,
+            status: l.completed ? "Completed" : "Missed",
+            stat: h.stat || "intelligence"
+          }))
+        ).sort((a, b) => b.date.localeCompare(a.date))}
+        columns={[
+          { header: "Date", key: "date", render: (val) => <span className="font-mono text-tm-blue-gray">{val}</span> },
+          { header: "Habit", key: "habitName", render: (val, row) => (
+            <div className="flex items-center gap-3">
+              <span className="text-xl">{row.icon}</span>
+              <span className="font-bold text-white/90">{val}</span>
+            </div>
+          )},
+          { header: "Status", key: "status", render: (val) => (
+            <span className={cn(
+              "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+              val === "Completed" ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-orange-dark/20 text-tm-orange-dark"
+            )}>
+              {val}
+            </span>
+          )},
+          { header: "Attribute", key: "stat", render: (val) => (
+            <span className="text-[10px] font-black uppercase text-tm-blue-gray tracking-tighter italic">
+              {val}
+            </span>
+          )}
+        ]}
+      />
         </>
       )}
     </div>

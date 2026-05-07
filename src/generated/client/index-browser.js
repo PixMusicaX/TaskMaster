@@ -187,9 +187,32 @@ exports.Prisma.SmartMissionScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.ReliefRecommendationScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  description: 'description',
+  type: 'type',
+  date: 'date',
+  completed: 'completed',
+  alt1Completed: 'alt1Completed',
+  alt2Completed: 'alt2Completed',
+  xpReward: 'xpReward',
+  stat: 'stat',
+  location: 'location',
+  weather: 'weather',
+  temp: 'temp',
+  alternatives: 'alternatives',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.NullableJsonNullValueInput = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
 };
 
 exports.Prisma.QueryMode = {
@@ -202,6 +225,12 @@ exports.Prisma.NullsOrder = {
   last: 'last'
 };
 
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
+};
+
 
 exports.Prisma.ModelName = {
   UserProfile: 'UserProfile',
@@ -209,7 +238,8 @@ exports.Prisma.ModelName = {
   HabitLog: 'HabitLog',
   Note: 'Note',
   Event: 'Event',
-  SmartMission: 'SmartMission'
+  SmartMission: 'SmartMission',
+  ReliefRecommendation: 'ReliefRecommendation'
 };
 
 /**

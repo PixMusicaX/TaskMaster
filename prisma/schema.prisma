@@ -79,3 +79,21 @@ model SmartMission {
   quote       String?  @db.Text
   createdAt   DateTime @default(now())
 }
+
+model ReliefRecommendation {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  type        String?  // movie, song, activity, food
+  date        String   @unique // Format: YYYY-MM-DD
+  completed     Boolean  @default(false)
+  alt1Completed Boolean  @default(false)
+  alt2Completed Boolean  @default(false)
+  xpReward      Int      @default(5)
+  stat        String   @default("charisma")
+  location    String?
+  weather     String?
+  temp        String?
+  alternatives Json?   // Store alternative suggestions
+  createdAt   DateTime @default(now())
+}

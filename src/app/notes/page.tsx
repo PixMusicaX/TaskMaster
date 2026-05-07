@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import GlassCard from "@/components/glass-card";
-import { Save, History, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check, Brain } from "lucide-react";
+import { Save, History, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check, Brain, Search } from "lucide-react";
 import { format, subDays, addDays, isSameDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { getNoteByDate, saveNote, getRecentNotes } from "@/app/actions/notes";
 import { getProfile } from "@/app/actions/gamification";
 import { cn } from "@/lib/utils";
 import { PremiumLoader } from "@/components/loader";
+import TabularViewModal, { Column } from "@/components/TabularViewModal";
 
 export type NoteLine = {
   id: string;
@@ -27,6 +28,8 @@ export default function NotesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isNoteLoading, setIsNoteLoading] = useState(false);
   const [mood, setMood] = useState("neutral");
+  const [isTabularOpen, setIsTabularOpen] = useState(false);
+  const [allNotesForTable, setAllNotesForTable] = useState<any[]>([]);
 
   const fetchNote = useCallback(async (date: Date) => {
     setIsNoteLoading(true);
@@ -58,8 +61,9 @@ export default function NotesPage() {
   }, []);
 
   const fetchRecent = useCallback(async () => {
-    const data = await getRecentNotes();
-    setRecentNotes(data);
+    const data = await getRecentNotes(1000);
+    setRecentNotes(data.slice(0, 10));
+    setAllNotesForTable(data);
   }, []);
 
   useEffect(() => {
@@ -166,9 +170,9 @@ export default function NotesPage() {
             <div className="flex items-center gap-2">
               <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 mr-2">
                 {[
-                  { val: "good", icon: "✨", color: "text-tm-yellow", bg: "bg-tm-yellow/20" },
+                  { val: "good", icon: "😇", color: "text-tm-yellow", bg: "bg-tm-yellow/20" },
                   { val: "neutral", icon: "😐", color: "text-tm-blue-gray", bg: "bg-white/10" },
-                  { val: "bad", icon: "🌧️", color: "text-tm-orange-dark", bg: "bg-tm-orange-dark/20" }
+                  { val: "bad", icon: "😢", color: "text-tm-orange-dark", bg: "bg-tm-orange-dark/20" }
                 ].map(m => (
                   <button
                     key={m.val}
@@ -179,7 +183,7 @@ export default function NotesPage() {
                     )}
                     title={m.val.toUpperCase()}
                   >
-                    <span className="text-sm">{m.icon}</span>
+                    <span className="text-xl">{m.icon}</span>
                   </button>
                 ))}
               </div>
@@ -289,8 +293,8 @@ export default function NotesPage() {
                   <div className="flex justify-between items-start">
                     <p className="text-[10px] font-black text-tm-blue-gray uppercase tracking-widest">{format(day, "EEE, MMM d")}</p>
                     {existingNote?.mood && (
-                      <span className="text-[10px] grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all">
-                        {existingNote.mood === "good" ? "✨" : existingNote.mood === "bad" ? "🌧️" : "😐"}
+                      <span className="text-sm opacity-80 group-hover:opacity-100 transition-all">
+                        {existingNote.mood === "good" ? "😇" : existingNote.mood === "bad" ? "😢" : "😐"}
                       </span>
                     )}
                   </div>
@@ -321,6 +325,47 @@ export default function NotesPage() {
           </div>
         </div>
       </div>
+      <div className="flex justify-center pt-12">
+        <button
+          onClick={() => setIsTabularOpen(true)}
+          className="flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-tm-blue-gray hover:text-tm-yellow font-black uppercase tracking-widest text-xs transition-all group"
+        >
+          <Search size={16} className="group-hover:scale-110 transition-transform" />
+          View All Notes in Tabular Format
+        </button>
+      </div>
+
+      <TabularViewModal
+        title="Notes Archive"
+        isOpen={isTabularOpen}
+        onClose={() => setIsTabularOpen(false)}
+        data={allNotesForTable.map(n => {
+          let contentText = "";
+          try {
+            const parsed = JSON.parse(n.content);
+            contentText = parsed.map((l: any) => l.text).filter(Boolean).join(" • ");
+          } catch (e) {
+            contentText = n.content;
+          }
+          return {
+            ...n,
+            contentText
+          };
+        })}
+        columns={[
+          { header: "Date", key: "date", render: (val) => <span className="font-mono text-tm-blue-gray">{val}</span> },
+          { header: "Mood", key: "mood", render: (val) => (
+            <span className="text-2xl">
+              {val === "good" ? "😇" : val === "bad" ? "😢" : "😐"}
+            </span>
+          )},
+          { header: "Content", key: "contentText", render: (val) => (
+            <div className="max-w-md truncate font-medium text-white/80">
+              {val}
+            </div>
+          )}
+        ]}
+      />
         </>
       )}
     </div>

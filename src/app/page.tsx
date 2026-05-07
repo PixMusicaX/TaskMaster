@@ -11,12 +11,15 @@ import { getEventsByDateRange, toggleEventCompletion, getDashboardTasks } from "
 import { getProfile, getSeasonHistory } from "@/app/actions/gamification";
 import { getNoteByDate, getRecentNotes } from "@/app/actions/notes";
 import { getSmartMission, toggleSmartMission, regenerateSmartMission } from "@/app/actions/smart-missions";
+import { getReliefRecommendation, toggleReliefRecommendation, regenerateReliefRecommendation } from "@/app/actions/relief";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { RPG_TITLES } from "@/lib/constants";
 import { PremiumLoader } from "@/components/loader";
 import RecapModal from "@/components/RecapModal";
 import { addDays, subMonths } from "date-fns";
+import { Music, Film, Coffee, Dumbbell, MapPin, CloudSun, History as HistoryIcon, Sparkles } from "lucide-react";
+import MoodRadar from "@/components/mood-radar";
 
 export default function Home() {
   const [habits, setHabits] = useState<any[]>([]);
@@ -26,9 +29,11 @@ export default function Home() {
   const [recapData, setRecapData] = useState<any>(null);
   const [showRecap, setShowRecap] = useState(false);
   const [smartMission, setSmartMission] = useState<any>(null);
+  const [relief, setRelief] = useState<any>(null);
   const [moodData, setMoodData] = useState<any[]>([]);
   const [missingInfo, setMissingInfo] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reliefLoading, setReliefLoading] = useState(false);
 
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
@@ -93,6 +98,20 @@ export default function Home() {
         setSmartMission(smartData);
         setLoading(false);
       }).catch(() => setLoading(false));
+
+      // 6. Relief Recommendation
+      if (typeof window !== "undefined" && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            getReliefRecommendation(pos.coords.latitude, pos.coords.longitude).then(setRelief);
+          },
+          () => {
+            getReliefRecommendation().then(setRelief);
+          }
+        );
+      } else {
+        getReliefRecommendation().then(setRelief);
+      }
     }
     fetchData();
   }, []);
@@ -131,7 +150,44 @@ export default function Home() {
     setLoading(true);
     const newMission = await regenerateSmartMission();
     setSmartMission(newMission);
-    setLoading(false);
+    window.dispatchEvent(new CustomEvent("profile-updated"));
+  }
+
+  async function handleReliefToggle(index: number = 0) {
+    if (!relief) return;
+    const isCompleted = index === 0 ? relief.completed : index === 1 ? relief.alt1Completed : relief.alt2Completed;
+    const newStatus = !isCompleted;
+    await toggleReliefRecommendation(relief.id, newStatus, index);
+    
+    const updatedRelief = { ...relief };
+    if (index === 0) updatedRelief.completed = newStatus;
+    else if (index === 1) updatedRelief.alt1Completed = newStatus;
+    else if (index === 2) updatedRelief.alt2Completed = newStatus;
+    setRelief(updatedRelief);
+
+    const prof = await getProfile();
+    setProfile(prof);
+    window.dispatchEvent(new CustomEvent("profile-updated"));
+  }
+
+  async function handleRegenerateRelief(e: React.MouseEvent) {
+    e.stopPropagation();
+    setReliefLoading(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const newRelief = await regenerateReliefRecommendation(pos.coords.latitude, pos.coords.longitude);
+        setRelief(newRelief);
+        setReliefLoading(false);
+      }, async () => {
+        const newRelief = await regenerateReliefRecommendation();
+        setRelief(newRelief);
+        setReliefLoading(false);
+      });
+    } else {
+      const newRelief = await regenerateReliefRecommendation();
+      setRelief(newRelief);
+      setReliefLoading(false);
+    }
   }
 
   return (
@@ -301,63 +357,94 @@ export default function Home() {
                     COMPLETE NOW
                   </Link>
                 </div>
-              ) : smartMission ? (
-                <div 
-                  onClick={handleSmartToggle}
-                  className={cn(
-                    "p-4 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
-                    smartMission.completed 
-                      ? "bg-tm-yellow/20 border-tm-yellow/40 shadow-inner" 
-                      : "bg-white/40 dark:bg-tm-yellow/5 border-tm-yellow/30 dark:border-tm-yellow/20 hover:border-tm-yellow/50 hover:bg-white/60 dark:hover:bg-tm-yellow/10 shadow-sm dark:shadow-none"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
-                      smartMission.completed ? "bg-tm-yellow border-tm-yellow" : "border-tm-yellow/30"
-                    )}>
-                      {smartMission.completed && <Check size={12} className="text-tm-purple-dark" />}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-black uppercase text-tm-yellow tracking-widest flex items-center gap-1">
-                          <Users size={12} /> Smart Mission
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black text-tm-yellow/60">+{smartMission.xpReward} XP</span>
-                          {!smartMission.completed && (
-                            <button 
-                              onClick={handleRegenerate}
-                              className="p-1 hover:bg-white/10 rounded-md transition-all text-tm-yellow/40 hover:text-tm-yellow"
-                              title="Regenerate Quest"
-                            >
-                              <RotateCw size={10} className={cn(loading && "animate-spin")} />
-                            </button>
+              ) : (
+                <div className="space-y-3">
+                  {smartMission && (
+                    <div 
+                      onClick={handleSmartToggle}
+                      className={cn(
+                        "p-3 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
+                        smartMission.completed 
+                          ? "bg-tm-yellow/20 border-tm-yellow/40 shadow-inner opacity-50" 
+                          : "bg-white/40 dark:bg-tm-yellow/5 border-tm-yellow/30 dark:border-tm-yellow/20 hover:border-tm-yellow/50"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all",
+                          smartMission.completed ? "bg-tm-yellow border-tm-yellow" : "border-tm-yellow/30"
+                        )}>
+                          {smartMission.completed && <Check size={10} className="text-tm-purple-dark" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[8px] font-black uppercase text-tm-yellow tracking-widest flex items-center gap-1">
+                              <Users size={10} /> Smart Mission
+                            </span>
+                            <span className="text-[8px] font-black text-tm-yellow/60">+{smartMission.xpReward} XP</span>
+                          </div>
+                          <h3 className={cn("text-xs font-bold truncate", smartMission.completed && "line-through")}>
+                            {smartMission.title}
+                          </h3>
+                          {smartMission.description && !smartMission.completed && (
+                            <p className="text-[9px] text-tm-blue-gray mt-1 leading-relaxed line-clamp-2 italic">
+                              {smartMission.description}
+                            </p>
                           )}
                         </div>
                       </div>
-                      <h3 className={cn("text-sm font-bold text-tm-purple-dark dark:text-white", smartMission.completed && "line-through opacity-50")}>
-                        {smartMission.title}
-                      </h3>
-                      <p className="text-[10px] text-tm-blue-gray dark:text-white/60 mt-0.5 italic leading-relaxed">
-                        {smartMission.description}
-                      </p>
                     </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 rounded-2xl bg-tm-yellow/10 border border-tm-yellow/20 flex flex-col items-center gap-3 text-center">
-                  <div>
-                    <p className="text-sm font-medium text-tm-yellow">Mission unavailable</p>
-                    <p className="text-xs text-white/60 mt-1">The Game Master is currently brooding in the shadows.</p>
-                  </div>
-                  <button 
-                    onClick={handleRegenerate}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-tm-yellow/20 text-tm-yellow text-[10px] font-black uppercase rounded-lg hover:bg-tm-yellow/30 transition-all"
-                  >
-                    <RotateCw size={12} className={cn(loading && "animate-spin")} />
-                    Try Again
-                  </button>
+                  )}
+
+                  {relief && (
+                    <div 
+                      onClick={() => handleReliefToggle(0)}
+                      className={cn(
+                        "p-3 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
+                        relief.completed 
+                          ? "bg-tm-yellow/20 border-tm-yellow/40 shadow-inner opacity-50" 
+                          : "bg-white/40 dark:bg-tm-yellow/5 border-tm-yellow/30 dark:border-tm-yellow/20 hover:border-tm-yellow/50 shadow-sm"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all",
+                          relief.completed ? "bg-tm-yellow border-tm-yellow" : "border-tm-yellow/30"
+                        )}>
+                          {relief.completed && <Check size={10} className="text-tm-purple-dark" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[8px] font-black uppercase text-tm-yellow tracking-widest flex items-center gap-1">
+                              {relief.type === 'movie' && <Film size={10} />}
+                              {relief.type === 'song' && <Music size={10} />}
+                              {relief.type === 'food' && <Coffee size={10} />}
+                              {relief.type === 'activity' && <Dumbbell size={10} />}
+                              Relief: {relief.type}
+                            </span>
+                            <span className="text-[8px] font-black text-tm-yellow/60">+{relief.xpReward} XP</span>
+                          </div>
+                          <h3 className={cn("text-xs font-bold truncate", relief.completed && "line-through")}>
+                            {relief.title}
+                          </h3>
+                          {relief.description && !relief.completed && (
+                            <p className="text-[9px] text-tm-blue-gray mt-1 leading-relaxed line-clamp-2 italic">
+                              {relief.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!smartMission && !relief && (
+                    <div className="p-4 rounded-2xl bg-tm-yellow/10 border border-tm-yellow/20 flex flex-col items-center gap-3 text-center">
+                      <p className="text-sm font-medium text-tm-yellow">Missions unavailable</p>
+                      <button onClick={handleRegenerate} className="flex items-center gap-2 px-3 py-1.5 bg-tm-yellow/20 text-tm-yellow text-[10px] font-black uppercase rounded-lg hover:bg-tm-yellow/30 transition-all">
+                        <RotateCw size={12} className={cn(loading && "animate-spin")} /> Try Again
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -480,53 +567,187 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
-          <GlassCard className="p-8 border-tm-blue-gray/5 bg-white/5">
-            <h3 className="text-xl font-black mb-6 flex items-center gap-2">
-              <Zap className="text-tm-orange-dark" size={20} /> Stress Metrics (30D)
-            </h3>
-            <div className="space-y-6">
-              <div className="flex justify-between items-end gap-1 h-32 px-4">
-                {moodData.length > 0 ? moodData.slice().reverse().map((m, i) => (
-                  <div 
-                    key={i} 
-                    className={cn(
-                      "flex-1 rounded-t-sm transition-all hover:scale-110",
-                      m.mood === "good" ? "bg-tm-yellow h-[80%]" : 
-                      m.mood === "bad" ? "bg-tm-orange-dark h-[100%]" : 
-                      "bg-tm-blue-gray/20 h-[40%]"
-                    )}
-                    title={format(new Date(m.date), "MMM d") + ": " + m.mood}
-                  />
-                )) : (
-                  <div className="w-full flex items-center justify-center text-[10px] text-tm-blue-gray italic uppercase tracking-widest opacity-40">
-                    Journal your mood in Daily Notes to see metrics.
-                  </div>
-                )}
+          <GlassCard delay={0.8} className="p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
+              <Zap size={120} />
+            </div>
+
+            <div className="flex items-center justify-between relative z-10">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
+                  <Zap className="text-tm-orange-light" size={24} /> Stress Metrics
+                </h3>
+                <p className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-[0.3em]">
+                  30-Day Emotional Signature
+                </p>
               </div>
-              <div className="flex justify-between px-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-tm-yellow" />
-                  <span className="text-[10px] font-bold text-tm-blue-gray uppercase tracking-widest">Joy</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-tm-blue-gray/40" />
-                  <span className="text-[10px] font-bold text-tm-blue-gray uppercase tracking-widest">Steady</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-tm-orange-dark" />
-                  <span className="text-[10px] font-bold text-tm-blue-gray uppercase tracking-widest">Stress</span>
-                </div>
+              <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-tm-blue-gray">
+                Live Data
               </div>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center relative z-10 min-h-[220px]">
+              {moodData.length > 0 ? (
+                <MoodRadar 
+                  size={240}
+                  data={{
+                    joy: moodData.filter(m => m.mood === "joy").length,
+                    steady: moodData.filter(m => m.mood === "steady").length,
+                    stress: moodData.filter(m => m.mood === "stress").length,
+                  }} 
+                />
+              ) : (
+                <div className="text-center opacity-40">
+                  <div className="w-16 h-16 border-2 border-dashed border-tm-blue-gray rounded-full mx-auto mb-4 animate-spin-slow" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">Awaiting Pulse...</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-3 gap-2 relative z-10">
+              {[
+                { label: 'Joy', color: 'bg-tm-yellow', count: moodData.filter(m => m.mood === "joy").length },
+                { label: 'Steady', color: 'bg-tm-blue-gray/40', count: moodData.filter(m => m.mood === "steady").length },
+                { label: 'Stress', color: 'bg-tm-orange-dark', count: moodData.filter(m => m.mood === "stress").length }
+              ].map((m, i) => (
+                <div key={i} className="flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/5 border border-white/5">
+                  <div className={cn("w-1.5 h-1.5 rounded-full", m.color)} />
+                  <span className="text-[8px] font-black text-tm-blue-gray/60 uppercase tracking-tighter">{m.label}</span>
+                  <span className="text-xs font-bold">{m.count}</span>
+                </div>
+              ))}
             </div>
           </GlassCard>
 
-          <GlassCard className="p-8 border-white/5 bg-white/5 flex flex-col items-center justify-center text-center opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all group">
-            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 group-hover:bg-tm-yellow/10 transition-all">
-              <Lock className="text-tm-blue-gray group-hover:text-tm-yellow transition-all" size={32} />
+          <GlassCard className="p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
+              <Coffee size={120} />
             </div>
-            <h3 className="text-xl font-black mb-2 uppercase tracking-tighter">New Systems Incoming</h3>
-            <p className="text-xs text-tm-blue-gray font-medium max-w-[200px]">
-              Mastery takes time. New progression features are being forged in the Game Master's workshop.
+
+            <div className="flex items-center justify-between relative z-10">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
+                  <Coffee className="text-tm-blue-gray" size={24} /> Relief Hub
+                </h3>
+                {relief && (
+                  <div className="flex items-center gap-3 text-[10px] font-black uppercase text-tm-blue-gray/60 tracking-[0.2em]">
+                    <span className="flex items-center gap-1.5"><MapPin size={12} className="text-tm-yellow/40" /> {relief.location}</span>
+                    <span className="w-1 h-1 rounded-full bg-white/10" />
+                    <span className="flex items-center gap-1.5"><CloudSun size={12} className="text-tm-yellow/40" /> {relief.temp}°C {relief.weather}</span>
+                  </div>
+                )}
+              </div>
+              {!relief?.completed && relief && (
+                <button 
+                  onClick={handleRegenerateRelief}
+                  className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 text-tm-blue-gray hover:text-tm-yellow hover:border-tm-yellow/50 transition-all shadow-lg active:scale-95"
+                  title="Regenerate Hub"
+                >
+                  <RotateCw size={18} className={cn(reliefLoading && "animate-spin")} />
+                </button>
+              )}
+            </div>
+
+            <div className={cn("flex-1 flex flex-col justify-center relative z-10", reliefLoading && "items-center")}>
+              {reliefLoading ? (
+                <div className="flex flex-col items-center">
+                  <PremiumLoader />
+                  <p className="text-[10px] font-black uppercase text-tm-yellow animate-pulse -mt-16">Scanning for relief...</p>
+                </div>
+              ) : relief ? (
+                <div className="flex flex-col gap-6">
+                  {/* Primary Suggestion */}
+                  <div className="relative">
+                    <div className="absolute -top-3 left-4 px-2 bg-tm-purple-dark border border-tm-yellow/20 rounded text-[8px] font-black uppercase text-tm-yellow tracking-[0.2em] z-20">
+                      Primary Path
+                    </div>
+                    <button 
+                      onClick={() => handleReliefToggle(0)}
+                      className={cn(
+                        "w-full text-left p-6 rounded-[2rem] border transition-all relative overflow-hidden group/card shadow-2xl",
+                        relief.completed 
+                          ? "bg-tm-yellow/10 border-tm-yellow/40 shadow-inner opacity-50 grayscale-[0.5]" 
+                          : "bg-white/5 border-white/10 hover:border-tm-yellow/30 hover:bg-white/10"
+                      )}
+                    >
+                      <div className="flex items-start gap-5">
+                        <div className={cn(
+                          "w-8 h-8 rounded-2xl border-2 flex items-center justify-center transition-all mt-1 shadow-lg",
+                          relief.completed ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/30 group-hover/card:border-tm-yellow/50"
+                        )}>
+                          {relief.completed ? <Check size={18} className="text-tm-purple-dark" /> : <Sparkles size={14} className="text-tm-yellow" />}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-black uppercase text-tm-yellow tracking-[0.3em] flex items-center gap-2">
+                              {relief.type === 'movie' && <Film size={12} />}
+                              {relief.type === 'song' && <Music size={12} />}
+                              {relief.type === 'food' && <Coffee size={12} />}
+                              {relief.type === 'activity' && <Dumbbell size={12} />}
+                              {relief.type || 'Suggestion'}
+                            </span>
+                            <span className="text-xs font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">+{relief.xpReward} XP</span>
+                          </div>
+                          <h4 className={cn("text-xl font-black leading-tight tracking-tight", relief.completed && "line-through opacity-50")}>
+                            {relief.title}
+                          </h4>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Alternatives Section */}
+                  {relief.alternatives && Array.isArray(relief.alternatives) && relief.alternatives.length > 0 && (
+                    <div className="flex flex-col gap-3">
+                      <p className="text-[9px] font-black uppercase text-tm-blue-gray/40 tracking-[0.4em] ml-2">Alternative Channels</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {relief.alternatives.map((alt: any, i: number) => {
+                          const isAltCompleted = i === 0 ? relief.alt1Completed : relief.alt2Completed;
+                          return (
+                            <button 
+                              key={i} 
+                              onClick={() => handleReliefToggle(i + 1)}
+                              className={cn(
+                                "flex items-center gap-4 p-4 rounded-2xl border transition-all text-left shadow-lg active:scale-[0.98]",
+                                isAltCompleted 
+                                  ? "bg-tm-yellow/5 border-tm-yellow/20 opacity-40" 
+                                  : "bg-white/5 border-white/10 hover:border-tm-yellow/20 hover:bg-white/10"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-6 h-6 rounded-xl border flex items-center justify-center transition-all shadow-inner",
+                                isAltCompleted ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/30"
+                              )}>
+                                {isAltCompleted && <Check size={14} className="text-tm-purple-dark" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 overflow-hidden">
+                                    {alt.type === 'movie' && <Film size={12} className="text-tm-yellow/60 shrink-0" />}
+                                    {alt.type === 'song' && <Music size={12} className="text-tm-yellow/60 shrink-0" />}
+                                    {alt.type === 'food' && <Coffee size={12} className="text-tm-yellow/60 shrink-0" />}
+                                    {alt.type === 'activity' && <Dumbbell size={12} className="text-tm-yellow/60 shrink-0" />}
+                                    <span className={cn("text-[11px] font-black truncate uppercase tracking-tighter", isAltCompleted && "line-through opacity-50")}>{alt.title}</span>
+                                  </div>
+                                  <span className="text-[8px] font-black text-tm-yellow shrink-0">+{relief.xpReward} XP</span>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12 opacity-50">
+                  <p className="text-[10px] font-black uppercase text-tm-blue-gray animate-pulse">Syncing Hub...</p>
+                </div>
+              )}
+            </div>
+            
+            <p className="text-[10px] text-tm-blue-gray/40 uppercase font-black tracking-[0.5em] text-center mt-auto relative z-10">
+              Personalized Growth Neural-Link
             </p>
           </GlassCard>
         </div>
