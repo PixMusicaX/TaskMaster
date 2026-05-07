@@ -60,14 +60,14 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
   let totalXP = 0;
 
   // Add Habit XP -> Vitality
-  habits.forEach(h => {
+  habits.forEach((h: any) => {
     const xp = h.logs.length * XP_VALUES.HABIT_CHECK;
     totalXP += xp;
     stats.vitality += xp;
   });
 
   // Add Event/Task XP
-  events.forEach(e => {
+  events.forEach((e: any) => {
     let xp = 0;
     const tier = (e as any).tier?.toLowerCase() || "side";
     const reward = tier === "epic" ? XP_VALUES.QUEST_EPIC : 
@@ -90,7 +90,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
   });
 
   // Add Note XP -> Intelligence
-  notes.forEach(n => {
+  notes.forEach((n: any) => {
     try {
       const parsed = JSON.parse(n.content);
       if (Array.isArray(parsed)) {
@@ -105,7 +105,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
   });
 
   // Add Smart Mission XP
-  smartMissions.forEach(sm => {
+  smartMissions.forEach((sm: any) => {
     let reward = sm.xpReward;
     if (reward === 25) reward = 50; // Legacy doubling
     
@@ -118,7 +118,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
   });
 
   // Add Relief Recommendation XP (3 separate tasks)
-  reliefRecommendations.forEach(rr => {
+  reliefRecommendations.forEach((rr: any) => {
     const awardXP = (isCompleted: boolean) => {
       if (isCompleted) {
         let reward = rr.xpReward;

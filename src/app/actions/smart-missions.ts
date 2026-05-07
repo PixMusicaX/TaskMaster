@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { format, subDays } from "date-fns";
-import { SMART_MISSION_PROMPT, getSmartMissionPrompt } from "@/lib/prompts";
+import { getSmartMissionPrompt } from "@/lib/prompts";
 import { getProfile } from "./gamification";
 import { getHabits } from "./habits";
 import { getEventsByDateRange } from "./events";

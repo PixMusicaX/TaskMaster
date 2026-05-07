@@ -40,9 +40,9 @@ export default function Navbar() {
     
     fetchProfile(manuallySet);
     
-    // Listen for profile update events
-    window.addEventListener("profile-updated", () => fetchProfile(!!localStorage.getItem("rank_manually_set")));
-    return () => window.removeEventListener("profile-updated", fetchProfile);
+    const handleUpdate = () => fetchProfile(!!localStorage.getItem("rank_manually_set"));
+    window.addEventListener("profile-updated", handleUpdate);
+    return () => window.removeEventListener("profile-updated", handleUpdate);
   }, [pathname]); // Refresh when navigating
 
   async function fetchProfile(manualOverride: boolean) {

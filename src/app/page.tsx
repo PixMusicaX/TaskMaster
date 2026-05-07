@@ -805,9 +805,10 @@ export default function Home() {
         </div>
       </motion.section>
 
-      {showRecap && recapData && (
+      {recapData && (
         <RecapModal 
-          data={recapData} 
+          stats={recapData}
+          isOpen={showRecap}
           onClose={() => setShowRecap(false)} 
         />
       )}
