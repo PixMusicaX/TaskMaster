@@ -130,12 +130,22 @@ export default function Home() {
                   key={task.id}
                   onClick={() => handleTaskToggle(task.id, task.completed)}
                   className={cn(
-                    "w-full text-left p-3 rounded-xl border transition-all",
-                    task.completed ? "bg-tm-blue-gray/5 border-transparent opacity-50" : "bg-tm-orange-light/5 border-tm-orange-light/20 hover:border-tm-orange-light"
+                    "w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left",
+                    task.completed 
+                      ? "bg-tm-blue-gray/5 border-transparent opacity-50" 
+                      : "bg-tm-orange-light/5 border-tm-orange-light/20 hover:border-tm-orange-light shadow-sm"
                   )}
                 >
-                  <p className={cn("text-sm font-bold truncate", task.completed && "line-through")}>{task.title}</p>
-                  <p className="text-[10px] text-tm-blue-gray font-black uppercase">{task.type}</p>
+                  <div className={cn(
+                    "w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all",
+                    task.completed ? "bg-tm-blue-gray border-tm-blue-gray" : "border-tm-orange-light/40"
+                  )}>
+                    {task.completed && <Check size={12} className="text-white" />}
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className={cn("text-sm font-bold truncate", task.completed && "line-through text-tm-blue-gray")}>{task.title}</p>
+                    <p className="text-[10px] text-tm-blue-gray font-black uppercase tracking-widest">{task.type}</p>
+                  </div>
                 </button>
               ))}
               {tasks.length === 0 && !loading && (
