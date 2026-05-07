@@ -38,6 +38,11 @@ export type Note = $Result.DefaultSelection<Prisma.$NotePayload>
  * 
  */
 export type Event = $Result.DefaultSelection<Prisma.$EventPayload>
+/**
+ * Model SmartMission
+ * 
+ */
+export type SmartMission = $Result.DefaultSelection<Prisma.$SmartMissionPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -206,6 +211,16 @@ export class PrismaClient<
     * ```
     */
   get event(): Prisma.EventDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.smartMission`: Exposes CRUD operations for the **SmartMission** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more SmartMissions
+    * const smartMissions = await prisma.smartMission.findMany()
+    * ```
+    */
+  get smartMission(): Prisma.SmartMissionDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -651,7 +666,8 @@ export namespace Prisma {
     Habit: 'Habit',
     HabitLog: 'HabitLog',
     Note: 'Note',
-    Event: 'Event'
+    Event: 'Event',
+    SmartMission: 'SmartMission'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -670,7 +686,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "userProfile" | "habit" | "habitLog" | "note" | "event"
+      modelProps: "userProfile" | "habit" | "habitLog" | "note" | "event" | "smartMission"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1044,6 +1060,80 @@ export namespace Prisma {
           }
         }
       }
+      SmartMission: {
+        payload: Prisma.$SmartMissionPayload<ExtArgs>
+        fields: Prisma.SmartMissionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.SmartMissionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SmartMissionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.SmartMissionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SmartMissionPayload>
+          }
+          findFirst: {
+            args: Prisma.SmartMissionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SmartMissionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.SmartMissionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SmartMissionPayload>
+          }
+          findMany: {
+            args: Prisma.SmartMissionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SmartMissionPayload>[]
+          }
+          create: {
+            args: Prisma.SmartMissionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SmartMissionPayload>
+          }
+          createMany: {
+            args: Prisma.SmartMissionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.SmartMissionCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SmartMissionPayload>[]
+          }
+          delete: {
+            args: Prisma.SmartMissionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SmartMissionPayload>
+          }
+          update: {
+            args: Prisma.SmartMissionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SmartMissionPayload>
+          }
+          deleteMany: {
+            args: Prisma.SmartMissionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.SmartMissionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.SmartMissionUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SmartMissionPayload>[]
+          }
+          upsert: {
+            args: Prisma.SmartMissionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SmartMissionPayload>
+          }
+          aggregate: {
+            args: Prisma.SmartMissionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateSmartMission>
+          }
+          groupBy: {
+            args: Prisma.SmartMissionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<SmartMissionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.SmartMissionCountArgs<ExtArgs>
+            result: $Utils.Optional<SmartMissionCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1145,6 +1235,7 @@ export namespace Prisma {
     habitLog?: HabitLogOmit
     note?: NoteOmit
     event?: EventOmit
+    smartMission?: SmartMissionOmit
   }
 
   /* Types for Logging */
@@ -4562,6 +4653,7 @@ export namespace Prisma {
     id: string | null
     content: string | null
     date: string | null
+    mood: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -4570,6 +4662,7 @@ export namespace Prisma {
     id: string | null
     content: string | null
     date: string | null
+    mood: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -4578,6 +4671,7 @@ export namespace Prisma {
     id: number
     content: number
     date: number
+    mood: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -4588,6 +4682,7 @@ export namespace Prisma {
     id?: true
     content?: true
     date?: true
+    mood?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -4596,6 +4691,7 @@ export namespace Prisma {
     id?: true
     content?: true
     date?: true
+    mood?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -4604,6 +4700,7 @@ export namespace Prisma {
     id?: true
     content?: true
     date?: true
+    mood?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -4685,6 +4782,7 @@ export namespace Prisma {
     id: string
     content: string
     date: string
+    mood: string
     createdAt: Date
     updatedAt: Date
     _count: NoteCountAggregateOutputType | null
@@ -4710,6 +4808,7 @@ export namespace Prisma {
     id?: boolean
     content?: boolean
     date?: boolean
+    mood?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["note"]>
@@ -4718,6 +4817,7 @@ export namespace Prisma {
     id?: boolean
     content?: boolean
     date?: boolean
+    mood?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["note"]>
@@ -4726,6 +4826,7 @@ export namespace Prisma {
     id?: boolean
     content?: boolean
     date?: boolean
+    mood?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["note"]>
@@ -4734,11 +4835,12 @@ export namespace Prisma {
     id?: boolean
     content?: boolean
     date?: boolean
+    mood?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type NoteOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "content" | "date" | "createdAt" | "updatedAt", ExtArgs["result"]["note"]>
+  export type NoteOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "content" | "date" | "mood" | "createdAt" | "updatedAt", ExtArgs["result"]["note"]>
 
   export type $NotePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Note"
@@ -4747,6 +4849,7 @@ export namespace Prisma {
       id: string
       content: string
       date: string
+      mood: string
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["note"]>
@@ -5175,6 +5278,7 @@ export namespace Prisma {
     readonly id: FieldRef<"Note", 'String'>
     readonly content: FieldRef<"Note", 'String'>
     readonly date: FieldRef<"Note", 'String'>
+    readonly mood: FieldRef<"Note", 'String'>
     readonly createdAt: FieldRef<"Note", 'DateTime'>
     readonly updatedAt: FieldRef<"Note", 'DateTime'>
   }
@@ -6630,6 +6734,1087 @@ export namespace Prisma {
 
 
   /**
+   * Model SmartMission
+   */
+
+  export type AggregateSmartMission = {
+    _count: SmartMissionCountAggregateOutputType | null
+    _avg: SmartMissionAvgAggregateOutputType | null
+    _sum: SmartMissionSumAggregateOutputType | null
+    _min: SmartMissionMinAggregateOutputType | null
+    _max: SmartMissionMaxAggregateOutputType | null
+  }
+
+  export type SmartMissionAvgAggregateOutputType = {
+    xpReward: number | null
+  }
+
+  export type SmartMissionSumAggregateOutputType = {
+    xpReward: number | null
+  }
+
+  export type SmartMissionMinAggregateOutputType = {
+    id: string | null
+    title: string | null
+    description: string | null
+    date: string | null
+    completed: boolean | null
+    xpReward: number | null
+    stat: string | null
+    quote: string | null
+    createdAt: Date | null
+  }
+
+  export type SmartMissionMaxAggregateOutputType = {
+    id: string | null
+    title: string | null
+    description: string | null
+    date: string | null
+    completed: boolean | null
+    xpReward: number | null
+    stat: string | null
+    quote: string | null
+    createdAt: Date | null
+  }
+
+  export type SmartMissionCountAggregateOutputType = {
+    id: number
+    title: number
+    description: number
+    date: number
+    completed: number
+    xpReward: number
+    stat: number
+    quote: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type SmartMissionAvgAggregateInputType = {
+    xpReward?: true
+  }
+
+  export type SmartMissionSumAggregateInputType = {
+    xpReward?: true
+  }
+
+  export type SmartMissionMinAggregateInputType = {
+    id?: true
+    title?: true
+    description?: true
+    date?: true
+    completed?: true
+    xpReward?: true
+    stat?: true
+    quote?: true
+    createdAt?: true
+  }
+
+  export type SmartMissionMaxAggregateInputType = {
+    id?: true
+    title?: true
+    description?: true
+    date?: true
+    completed?: true
+    xpReward?: true
+    stat?: true
+    quote?: true
+    createdAt?: true
+  }
+
+  export type SmartMissionCountAggregateInputType = {
+    id?: true
+    title?: true
+    description?: true
+    date?: true
+    completed?: true
+    xpReward?: true
+    stat?: true
+    quote?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type SmartMissionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which SmartMission to aggregate.
+     */
+    where?: SmartMissionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of SmartMissions to fetch.
+     */
+    orderBy?: SmartMissionOrderByWithRelationInput | SmartMissionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: SmartMissionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` SmartMissions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` SmartMissions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned SmartMissions
+    **/
+    _count?: true | SmartMissionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: SmartMissionAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: SmartMissionSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: SmartMissionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: SmartMissionMaxAggregateInputType
+  }
+
+  export type GetSmartMissionAggregateType<T extends SmartMissionAggregateArgs> = {
+        [P in keyof T & keyof AggregateSmartMission]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateSmartMission[P]>
+      : GetScalarType<T[P], AggregateSmartMission[P]>
+  }
+
+
+
+
+  export type SmartMissionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: SmartMissionWhereInput
+    orderBy?: SmartMissionOrderByWithAggregationInput | SmartMissionOrderByWithAggregationInput[]
+    by: SmartMissionScalarFieldEnum[] | SmartMissionScalarFieldEnum
+    having?: SmartMissionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: SmartMissionCountAggregateInputType | true
+    _avg?: SmartMissionAvgAggregateInputType
+    _sum?: SmartMissionSumAggregateInputType
+    _min?: SmartMissionMinAggregateInputType
+    _max?: SmartMissionMaxAggregateInputType
+  }
+
+  export type SmartMissionGroupByOutputType = {
+    id: string
+    title: string
+    description: string | null
+    date: string
+    completed: boolean
+    xpReward: number
+    stat: string
+    quote: string | null
+    createdAt: Date
+    _count: SmartMissionCountAggregateOutputType | null
+    _avg: SmartMissionAvgAggregateOutputType | null
+    _sum: SmartMissionSumAggregateOutputType | null
+    _min: SmartMissionMinAggregateOutputType | null
+    _max: SmartMissionMaxAggregateOutputType | null
+  }
+
+  type GetSmartMissionGroupByPayload<T extends SmartMissionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<SmartMissionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof SmartMissionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], SmartMissionGroupByOutputType[P]>
+            : GetScalarType<T[P], SmartMissionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type SmartMissionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    title?: boolean
+    description?: boolean
+    date?: boolean
+    completed?: boolean
+    xpReward?: boolean
+    stat?: boolean
+    quote?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["smartMission"]>
+
+  export type SmartMissionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    title?: boolean
+    description?: boolean
+    date?: boolean
+    completed?: boolean
+    xpReward?: boolean
+    stat?: boolean
+    quote?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["smartMission"]>
+
+  export type SmartMissionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    title?: boolean
+    description?: boolean
+    date?: boolean
+    completed?: boolean
+    xpReward?: boolean
+    stat?: boolean
+    quote?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["smartMission"]>
+
+  export type SmartMissionSelectScalar = {
+    id?: boolean
+    title?: boolean
+    description?: boolean
+    date?: boolean
+    completed?: boolean
+    xpReward?: boolean
+    stat?: boolean
+    quote?: boolean
+    createdAt?: boolean
+  }
+
+  export type SmartMissionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "title" | "description" | "date" | "completed" | "xpReward" | "stat" | "quote" | "createdAt", ExtArgs["result"]["smartMission"]>
+
+  export type $SmartMissionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "SmartMission"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      title: string
+      description: string | null
+      date: string
+      completed: boolean
+      xpReward: number
+      stat: string
+      quote: string | null
+      createdAt: Date
+    }, ExtArgs["result"]["smartMission"]>
+    composites: {}
+  }
+
+  type SmartMissionGetPayload<S extends boolean | null | undefined | SmartMissionDefaultArgs> = $Result.GetResult<Prisma.$SmartMissionPayload, S>
+
+  type SmartMissionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<SmartMissionFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: SmartMissionCountAggregateInputType | true
+    }
+
+  export interface SmartMissionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['SmartMission'], meta: { name: 'SmartMission' } }
+    /**
+     * Find zero or one SmartMission that matches the filter.
+     * @param {SmartMissionFindUniqueArgs} args - Arguments to find a SmartMission
+     * @example
+     * // Get one SmartMission
+     * const smartMission = await prisma.smartMission.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends SmartMissionFindUniqueArgs>(args: SelectSubset<T, SmartMissionFindUniqueArgs<ExtArgs>>): Prisma__SmartMissionClient<$Result.GetResult<Prisma.$SmartMissionPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one SmartMission that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {SmartMissionFindUniqueOrThrowArgs} args - Arguments to find a SmartMission
+     * @example
+     * // Get one SmartMission
+     * const smartMission = await prisma.smartMission.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends SmartMissionFindUniqueOrThrowArgs>(args: SelectSubset<T, SmartMissionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__SmartMissionClient<$Result.GetResult<Prisma.$SmartMissionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first SmartMission that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SmartMissionFindFirstArgs} args - Arguments to find a SmartMission
+     * @example
+     * // Get one SmartMission
+     * const smartMission = await prisma.smartMission.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends SmartMissionFindFirstArgs>(args?: SelectSubset<T, SmartMissionFindFirstArgs<ExtArgs>>): Prisma__SmartMissionClient<$Result.GetResult<Prisma.$SmartMissionPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first SmartMission that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SmartMissionFindFirstOrThrowArgs} args - Arguments to find a SmartMission
+     * @example
+     * // Get one SmartMission
+     * const smartMission = await prisma.smartMission.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends SmartMissionFindFirstOrThrowArgs>(args?: SelectSubset<T, SmartMissionFindFirstOrThrowArgs<ExtArgs>>): Prisma__SmartMissionClient<$Result.GetResult<Prisma.$SmartMissionPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more SmartMissions that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SmartMissionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all SmartMissions
+     * const smartMissions = await prisma.smartMission.findMany()
+     * 
+     * // Get first 10 SmartMissions
+     * const smartMissions = await prisma.smartMission.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const smartMissionWithIdOnly = await prisma.smartMission.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends SmartMissionFindManyArgs>(args?: SelectSubset<T, SmartMissionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SmartMissionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a SmartMission.
+     * @param {SmartMissionCreateArgs} args - Arguments to create a SmartMission.
+     * @example
+     * // Create one SmartMission
+     * const SmartMission = await prisma.smartMission.create({
+     *   data: {
+     *     // ... data to create a SmartMission
+     *   }
+     * })
+     * 
+     */
+    create<T extends SmartMissionCreateArgs>(args: SelectSubset<T, SmartMissionCreateArgs<ExtArgs>>): Prisma__SmartMissionClient<$Result.GetResult<Prisma.$SmartMissionPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many SmartMissions.
+     * @param {SmartMissionCreateManyArgs} args - Arguments to create many SmartMissions.
+     * @example
+     * // Create many SmartMissions
+     * const smartMission = await prisma.smartMission.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends SmartMissionCreateManyArgs>(args?: SelectSubset<T, SmartMissionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many SmartMissions and returns the data saved in the database.
+     * @param {SmartMissionCreateManyAndReturnArgs} args - Arguments to create many SmartMissions.
+     * @example
+     * // Create many SmartMissions
+     * const smartMission = await prisma.smartMission.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many SmartMissions and only return the `id`
+     * const smartMissionWithIdOnly = await prisma.smartMission.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends SmartMissionCreateManyAndReturnArgs>(args?: SelectSubset<T, SmartMissionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SmartMissionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a SmartMission.
+     * @param {SmartMissionDeleteArgs} args - Arguments to delete one SmartMission.
+     * @example
+     * // Delete one SmartMission
+     * const SmartMission = await prisma.smartMission.delete({
+     *   where: {
+     *     // ... filter to delete one SmartMission
+     *   }
+     * })
+     * 
+     */
+    delete<T extends SmartMissionDeleteArgs>(args: SelectSubset<T, SmartMissionDeleteArgs<ExtArgs>>): Prisma__SmartMissionClient<$Result.GetResult<Prisma.$SmartMissionPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one SmartMission.
+     * @param {SmartMissionUpdateArgs} args - Arguments to update one SmartMission.
+     * @example
+     * // Update one SmartMission
+     * const smartMission = await prisma.smartMission.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends SmartMissionUpdateArgs>(args: SelectSubset<T, SmartMissionUpdateArgs<ExtArgs>>): Prisma__SmartMissionClient<$Result.GetResult<Prisma.$SmartMissionPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more SmartMissions.
+     * @param {SmartMissionDeleteManyArgs} args - Arguments to filter SmartMissions to delete.
+     * @example
+     * // Delete a few SmartMissions
+     * const { count } = await prisma.smartMission.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends SmartMissionDeleteManyArgs>(args?: SelectSubset<T, SmartMissionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more SmartMissions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SmartMissionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many SmartMissions
+     * const smartMission = await prisma.smartMission.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends SmartMissionUpdateManyArgs>(args: SelectSubset<T, SmartMissionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more SmartMissions and returns the data updated in the database.
+     * @param {SmartMissionUpdateManyAndReturnArgs} args - Arguments to update many SmartMissions.
+     * @example
+     * // Update many SmartMissions
+     * const smartMission = await prisma.smartMission.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more SmartMissions and only return the `id`
+     * const smartMissionWithIdOnly = await prisma.smartMission.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends SmartMissionUpdateManyAndReturnArgs>(args: SelectSubset<T, SmartMissionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SmartMissionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one SmartMission.
+     * @param {SmartMissionUpsertArgs} args - Arguments to update or create a SmartMission.
+     * @example
+     * // Update or create a SmartMission
+     * const smartMission = await prisma.smartMission.upsert({
+     *   create: {
+     *     // ... data to create a SmartMission
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the SmartMission we want to update
+     *   }
+     * })
+     */
+    upsert<T extends SmartMissionUpsertArgs>(args: SelectSubset<T, SmartMissionUpsertArgs<ExtArgs>>): Prisma__SmartMissionClient<$Result.GetResult<Prisma.$SmartMissionPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of SmartMissions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SmartMissionCountArgs} args - Arguments to filter SmartMissions to count.
+     * @example
+     * // Count the number of SmartMissions
+     * const count = await prisma.smartMission.count({
+     *   where: {
+     *     // ... the filter for the SmartMissions we want to count
+     *   }
+     * })
+    **/
+    count<T extends SmartMissionCountArgs>(
+      args?: Subset<T, SmartMissionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], SmartMissionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a SmartMission.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SmartMissionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends SmartMissionAggregateArgs>(args: Subset<T, SmartMissionAggregateArgs>): Prisma.PrismaPromise<GetSmartMissionAggregateType<T>>
+
+    /**
+     * Group by SmartMission.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SmartMissionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends SmartMissionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: SmartMissionGroupByArgs['orderBy'] }
+        : { orderBy?: SmartMissionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, SmartMissionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetSmartMissionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the SmartMission model
+   */
+  readonly fields: SmartMissionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for SmartMission.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__SmartMissionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the SmartMission model
+   */
+  interface SmartMissionFieldRefs {
+    readonly id: FieldRef<"SmartMission", 'String'>
+    readonly title: FieldRef<"SmartMission", 'String'>
+    readonly description: FieldRef<"SmartMission", 'String'>
+    readonly date: FieldRef<"SmartMission", 'String'>
+    readonly completed: FieldRef<"SmartMission", 'Boolean'>
+    readonly xpReward: FieldRef<"SmartMission", 'Int'>
+    readonly stat: FieldRef<"SmartMission", 'String'>
+    readonly quote: FieldRef<"SmartMission", 'String'>
+    readonly createdAt: FieldRef<"SmartMission", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * SmartMission findUnique
+   */
+  export type SmartMissionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SmartMission
+     */
+    select?: SmartMissionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SmartMission
+     */
+    omit?: SmartMissionOmit<ExtArgs> | null
+    /**
+     * Filter, which SmartMission to fetch.
+     */
+    where: SmartMissionWhereUniqueInput
+  }
+
+  /**
+   * SmartMission findUniqueOrThrow
+   */
+  export type SmartMissionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SmartMission
+     */
+    select?: SmartMissionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SmartMission
+     */
+    omit?: SmartMissionOmit<ExtArgs> | null
+    /**
+     * Filter, which SmartMission to fetch.
+     */
+    where: SmartMissionWhereUniqueInput
+  }
+
+  /**
+   * SmartMission findFirst
+   */
+  export type SmartMissionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SmartMission
+     */
+    select?: SmartMissionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SmartMission
+     */
+    omit?: SmartMissionOmit<ExtArgs> | null
+    /**
+     * Filter, which SmartMission to fetch.
+     */
+    where?: SmartMissionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of SmartMissions to fetch.
+     */
+    orderBy?: SmartMissionOrderByWithRelationInput | SmartMissionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for SmartMissions.
+     */
+    cursor?: SmartMissionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` SmartMissions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` SmartMissions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of SmartMissions.
+     */
+    distinct?: SmartMissionScalarFieldEnum | SmartMissionScalarFieldEnum[]
+  }
+
+  /**
+   * SmartMission findFirstOrThrow
+   */
+  export type SmartMissionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SmartMission
+     */
+    select?: SmartMissionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SmartMission
+     */
+    omit?: SmartMissionOmit<ExtArgs> | null
+    /**
+     * Filter, which SmartMission to fetch.
+     */
+    where?: SmartMissionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of SmartMissions to fetch.
+     */
+    orderBy?: SmartMissionOrderByWithRelationInput | SmartMissionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for SmartMissions.
+     */
+    cursor?: SmartMissionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` SmartMissions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` SmartMissions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of SmartMissions.
+     */
+    distinct?: SmartMissionScalarFieldEnum | SmartMissionScalarFieldEnum[]
+  }
+
+  /**
+   * SmartMission findMany
+   */
+  export type SmartMissionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SmartMission
+     */
+    select?: SmartMissionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SmartMission
+     */
+    omit?: SmartMissionOmit<ExtArgs> | null
+    /**
+     * Filter, which SmartMissions to fetch.
+     */
+    where?: SmartMissionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of SmartMissions to fetch.
+     */
+    orderBy?: SmartMissionOrderByWithRelationInput | SmartMissionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing SmartMissions.
+     */
+    cursor?: SmartMissionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` SmartMissions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` SmartMissions.
+     */
+    skip?: number
+    distinct?: SmartMissionScalarFieldEnum | SmartMissionScalarFieldEnum[]
+  }
+
+  /**
+   * SmartMission create
+   */
+  export type SmartMissionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SmartMission
+     */
+    select?: SmartMissionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SmartMission
+     */
+    omit?: SmartMissionOmit<ExtArgs> | null
+    /**
+     * The data needed to create a SmartMission.
+     */
+    data: XOR<SmartMissionCreateInput, SmartMissionUncheckedCreateInput>
+  }
+
+  /**
+   * SmartMission createMany
+   */
+  export type SmartMissionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many SmartMissions.
+     */
+    data: SmartMissionCreateManyInput | SmartMissionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * SmartMission createManyAndReturn
+   */
+  export type SmartMissionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SmartMission
+     */
+    select?: SmartMissionSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the SmartMission
+     */
+    omit?: SmartMissionOmit<ExtArgs> | null
+    /**
+     * The data used to create many SmartMissions.
+     */
+    data: SmartMissionCreateManyInput | SmartMissionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * SmartMission update
+   */
+  export type SmartMissionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SmartMission
+     */
+    select?: SmartMissionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SmartMission
+     */
+    omit?: SmartMissionOmit<ExtArgs> | null
+    /**
+     * The data needed to update a SmartMission.
+     */
+    data: XOR<SmartMissionUpdateInput, SmartMissionUncheckedUpdateInput>
+    /**
+     * Choose, which SmartMission to update.
+     */
+    where: SmartMissionWhereUniqueInput
+  }
+
+  /**
+   * SmartMission updateMany
+   */
+  export type SmartMissionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update SmartMissions.
+     */
+    data: XOR<SmartMissionUpdateManyMutationInput, SmartMissionUncheckedUpdateManyInput>
+    /**
+     * Filter which SmartMissions to update
+     */
+    where?: SmartMissionWhereInput
+    /**
+     * Limit how many SmartMissions to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * SmartMission updateManyAndReturn
+   */
+  export type SmartMissionUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SmartMission
+     */
+    select?: SmartMissionSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the SmartMission
+     */
+    omit?: SmartMissionOmit<ExtArgs> | null
+    /**
+     * The data used to update SmartMissions.
+     */
+    data: XOR<SmartMissionUpdateManyMutationInput, SmartMissionUncheckedUpdateManyInput>
+    /**
+     * Filter which SmartMissions to update
+     */
+    where?: SmartMissionWhereInput
+    /**
+     * Limit how many SmartMissions to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * SmartMission upsert
+   */
+  export type SmartMissionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SmartMission
+     */
+    select?: SmartMissionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SmartMission
+     */
+    omit?: SmartMissionOmit<ExtArgs> | null
+    /**
+     * The filter to search for the SmartMission to update in case it exists.
+     */
+    where: SmartMissionWhereUniqueInput
+    /**
+     * In case the SmartMission found by the `where` argument doesn't exist, create a new SmartMission with this data.
+     */
+    create: XOR<SmartMissionCreateInput, SmartMissionUncheckedCreateInput>
+    /**
+     * In case the SmartMission was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<SmartMissionUpdateInput, SmartMissionUncheckedUpdateInput>
+  }
+
+  /**
+   * SmartMission delete
+   */
+  export type SmartMissionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SmartMission
+     */
+    select?: SmartMissionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SmartMission
+     */
+    omit?: SmartMissionOmit<ExtArgs> | null
+    /**
+     * Filter which SmartMission to delete.
+     */
+    where: SmartMissionWhereUniqueInput
+  }
+
+  /**
+   * SmartMission deleteMany
+   */
+  export type SmartMissionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which SmartMissions to delete
+     */
+    where?: SmartMissionWhereInput
+    /**
+     * Limit how many SmartMissions to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * SmartMission without action
+   */
+  export type SmartMissionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SmartMission
+     */
+    select?: SmartMissionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SmartMission
+     */
+    omit?: SmartMissionOmit<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -6686,6 +7871,7 @@ export namespace Prisma {
     id: 'id',
     content: 'content',
     date: 'date',
+    mood: 'mood',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -6709,6 +7895,21 @@ export namespace Prisma {
   };
 
   export type EventScalarFieldEnum = (typeof EventScalarFieldEnum)[keyof typeof EventScalarFieldEnum]
+
+
+  export const SmartMissionScalarFieldEnum: {
+    id: 'id',
+    title: 'title',
+    description: 'description',
+    date: 'date',
+    completed: 'completed',
+    xpReward: 'xpReward',
+    stat: 'stat',
+    quote: 'quote',
+    createdAt: 'createdAt'
+  };
+
+  export type SmartMissionScalarFieldEnum = (typeof SmartMissionScalarFieldEnum)[keyof typeof SmartMissionScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -7010,6 +8211,7 @@ export namespace Prisma {
     id?: StringFilter<"Note"> | string
     content?: StringFilter<"Note"> | string
     date?: StringFilter<"Note"> | string
+    mood?: StringFilter<"Note"> | string
     createdAt?: DateTimeFilter<"Note"> | Date | string
     updatedAt?: DateTimeFilter<"Note"> | Date | string
   }
@@ -7018,6 +8220,7 @@ export namespace Prisma {
     id?: SortOrder
     content?: SortOrder
     date?: SortOrder
+    mood?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -7029,6 +8232,7 @@ export namespace Prisma {
     OR?: NoteWhereInput[]
     NOT?: NoteWhereInput | NoteWhereInput[]
     content?: StringFilter<"Note"> | string
+    mood?: StringFilter<"Note"> | string
     createdAt?: DateTimeFilter<"Note"> | Date | string
     updatedAt?: DateTimeFilter<"Note"> | Date | string
   }, "id" | "date">
@@ -7037,6 +8241,7 @@ export namespace Prisma {
     id?: SortOrder
     content?: SortOrder
     date?: SortOrder
+    mood?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: NoteCountOrderByAggregateInput
@@ -7051,6 +8256,7 @@ export namespace Prisma {
     id?: StringWithAggregatesFilter<"Note"> | string
     content?: StringWithAggregatesFilter<"Note"> | string
     date?: StringWithAggregatesFilter<"Note"> | string
+    mood?: StringWithAggregatesFilter<"Note"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Note"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Note"> | Date | string
   }
@@ -7140,6 +8346,80 @@ export namespace Prisma {
     completed?: BoolWithAggregatesFilter<"Event"> | boolean
     notification?: BoolWithAggregatesFilter<"Event"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"Event"> | Date | string
+  }
+
+  export type SmartMissionWhereInput = {
+    AND?: SmartMissionWhereInput | SmartMissionWhereInput[]
+    OR?: SmartMissionWhereInput[]
+    NOT?: SmartMissionWhereInput | SmartMissionWhereInput[]
+    id?: StringFilter<"SmartMission"> | string
+    title?: StringFilter<"SmartMission"> | string
+    description?: StringNullableFilter<"SmartMission"> | string | null
+    date?: StringFilter<"SmartMission"> | string
+    completed?: BoolFilter<"SmartMission"> | boolean
+    xpReward?: IntFilter<"SmartMission"> | number
+    stat?: StringFilter<"SmartMission"> | string
+    quote?: StringNullableFilter<"SmartMission"> | string | null
+    createdAt?: DateTimeFilter<"SmartMission"> | Date | string
+  }
+
+  export type SmartMissionOrderByWithRelationInput = {
+    id?: SortOrder
+    title?: SortOrder
+    description?: SortOrderInput | SortOrder
+    date?: SortOrder
+    completed?: SortOrder
+    xpReward?: SortOrder
+    stat?: SortOrder
+    quote?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type SmartMissionWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    date?: string
+    AND?: SmartMissionWhereInput | SmartMissionWhereInput[]
+    OR?: SmartMissionWhereInput[]
+    NOT?: SmartMissionWhereInput | SmartMissionWhereInput[]
+    title?: StringFilter<"SmartMission"> | string
+    description?: StringNullableFilter<"SmartMission"> | string | null
+    completed?: BoolFilter<"SmartMission"> | boolean
+    xpReward?: IntFilter<"SmartMission"> | number
+    stat?: StringFilter<"SmartMission"> | string
+    quote?: StringNullableFilter<"SmartMission"> | string | null
+    createdAt?: DateTimeFilter<"SmartMission"> | Date | string
+  }, "id" | "date">
+
+  export type SmartMissionOrderByWithAggregationInput = {
+    id?: SortOrder
+    title?: SortOrder
+    description?: SortOrderInput | SortOrder
+    date?: SortOrder
+    completed?: SortOrder
+    xpReward?: SortOrder
+    stat?: SortOrder
+    quote?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: SmartMissionCountOrderByAggregateInput
+    _avg?: SmartMissionAvgOrderByAggregateInput
+    _max?: SmartMissionMaxOrderByAggregateInput
+    _min?: SmartMissionMinOrderByAggregateInput
+    _sum?: SmartMissionSumOrderByAggregateInput
+  }
+
+  export type SmartMissionScalarWhereWithAggregatesInput = {
+    AND?: SmartMissionScalarWhereWithAggregatesInput | SmartMissionScalarWhereWithAggregatesInput[]
+    OR?: SmartMissionScalarWhereWithAggregatesInput[]
+    NOT?: SmartMissionScalarWhereWithAggregatesInput | SmartMissionScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"SmartMission"> | string
+    title?: StringWithAggregatesFilter<"SmartMission"> | string
+    description?: StringNullableWithAggregatesFilter<"SmartMission"> | string | null
+    date?: StringWithAggregatesFilter<"SmartMission"> | string
+    completed?: BoolWithAggregatesFilter<"SmartMission"> | boolean
+    xpReward?: IntWithAggregatesFilter<"SmartMission"> | number
+    stat?: StringWithAggregatesFilter<"SmartMission"> | string
+    quote?: StringNullableWithAggregatesFilter<"SmartMission"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"SmartMission"> | Date | string
   }
 
   export type UserProfileCreateInput = {
@@ -7359,6 +8639,7 @@ export namespace Prisma {
     id?: string
     content: string
     date: string
+    mood?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -7367,6 +8648,7 @@ export namespace Prisma {
     id?: string
     content: string
     date: string
+    mood?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -7375,6 +8657,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     date?: StringFieldUpdateOperationsInput | string
+    mood?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -7383,6 +8666,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     date?: StringFieldUpdateOperationsInput | string
+    mood?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -7391,6 +8675,7 @@ export namespace Prisma {
     id?: string
     content: string
     date: string
+    mood?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -7399,6 +8684,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     date?: StringFieldUpdateOperationsInput | string
+    mood?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -7407,6 +8693,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     date?: StringFieldUpdateOperationsInput | string
+    mood?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -7513,6 +8800,90 @@ export namespace Prisma {
     stat?: NullableStringFieldUpdateOperationsInput | string | null
     completed?: BoolFieldUpdateOperationsInput | boolean
     notification?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type SmartMissionCreateInput = {
+    id?: string
+    title: string
+    description?: string | null
+    date: string
+    completed?: boolean
+    xpReward?: number
+    stat?: string
+    quote?: string | null
+    createdAt?: Date | string
+  }
+
+  export type SmartMissionUncheckedCreateInput = {
+    id?: string
+    title: string
+    description?: string | null
+    date: string
+    completed?: boolean
+    xpReward?: number
+    stat?: string
+    quote?: string | null
+    createdAt?: Date | string
+  }
+
+  export type SmartMissionUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    date?: StringFieldUpdateOperationsInput | string
+    completed?: BoolFieldUpdateOperationsInput | boolean
+    xpReward?: IntFieldUpdateOperationsInput | number
+    stat?: StringFieldUpdateOperationsInput | string
+    quote?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type SmartMissionUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    date?: StringFieldUpdateOperationsInput | string
+    completed?: BoolFieldUpdateOperationsInput | boolean
+    xpReward?: IntFieldUpdateOperationsInput | number
+    stat?: StringFieldUpdateOperationsInput | string
+    quote?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type SmartMissionCreateManyInput = {
+    id?: string
+    title: string
+    description?: string | null
+    date: string
+    completed?: boolean
+    xpReward?: number
+    stat?: string
+    quote?: string | null
+    createdAt?: Date | string
+  }
+
+  export type SmartMissionUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    date?: StringFieldUpdateOperationsInput | string
+    completed?: BoolFieldUpdateOperationsInput | boolean
+    xpReward?: IntFieldUpdateOperationsInput | number
+    stat?: StringFieldUpdateOperationsInput | string
+    quote?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type SmartMissionUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    title?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    date?: StringFieldUpdateOperationsInput | string
+    completed?: BoolFieldUpdateOperationsInput | boolean
+    xpReward?: IntFieldUpdateOperationsInput | number
+    stat?: StringFieldUpdateOperationsInput | string
+    quote?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -7802,6 +9173,7 @@ export namespace Prisma {
     id?: SortOrder
     content?: SortOrder
     date?: SortOrder
+    mood?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -7810,6 +9182,7 @@ export namespace Prisma {
     id?: SortOrder
     content?: SortOrder
     date?: SortOrder
+    mood?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -7818,6 +9191,7 @@ export namespace Prisma {
     id?: SortOrder
     content?: SortOrder
     date?: SortOrder
+    mood?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -7890,6 +9264,50 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type SmartMissionCountOrderByAggregateInput = {
+    id?: SortOrder
+    title?: SortOrder
+    description?: SortOrder
+    date?: SortOrder
+    completed?: SortOrder
+    xpReward?: SortOrder
+    stat?: SortOrder
+    quote?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type SmartMissionAvgOrderByAggregateInput = {
+    xpReward?: SortOrder
+  }
+
+  export type SmartMissionMaxOrderByAggregateInput = {
+    id?: SortOrder
+    title?: SortOrder
+    description?: SortOrder
+    date?: SortOrder
+    completed?: SortOrder
+    xpReward?: SortOrder
+    stat?: SortOrder
+    quote?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type SmartMissionMinOrderByAggregateInput = {
+    id?: SortOrder
+    title?: SortOrder
+    description?: SortOrder
+    date?: SortOrder
+    completed?: SortOrder
+    xpReward?: SortOrder
+    stat?: SortOrder
+    quote?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type SmartMissionSumOrderByAggregateInput = {
+    xpReward?: SortOrder
   }
 
   export type StringFieldUpdateOperationsInput = {

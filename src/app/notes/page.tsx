@@ -25,9 +25,11 @@ export default function NotesPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isNoteLoading, setIsNoteLoading] = useState(false);
+  const [mood, setMood] = useState("neutral");
 
   const fetchNote = useCallback(async (date: Date) => {
-    setIsLoading(true);
+    setIsNoteLoading(true);
     const dateStr = format(date, "yyyy-MM-dd");
     try {
       const [data, profileData] = await Promise.all([
@@ -35,6 +37,7 @@ export default function NotesPage() {
         getProfile()
       ]);
       setProfile(profileData);
+      setMood(data?.mood || "neutral");
       if (data?.content) {
         try {
           setLines(JSON.parse(data.content));
@@ -49,6 +52,7 @@ export default function NotesPage() {
         setLines([{ id: Math.random().toString(36).substr(2, 9), bullet: "○", text: "" }]);
       }
     } finally {
+      setIsNoteLoading(false);
       setIsLoading(false);
     }
   }, []);
@@ -66,7 +70,7 @@ export default function NotesPage() {
   async function handleSave() {
     setIsSaving(true);
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    await saveNote(dateStr, JSON.stringify(lines));
+    await saveNote(dateStr, JSON.stringify(lines), mood);
     setLastSaved(new Date());
     setIsSaving(false);
     fetchRecent();
@@ -147,15 +151,41 @@ export default function NotesPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
-        <GlassCard className="min-h-[500px] flex flex-col p-0 overflow-hidden border-tm-yellow/20">
-          <div className="border-b border-tm-blue-gray/10 p-4 flex items-center justify-between bg-white/5">
+        <GlassCard className={cn(
+          "min-h-[500px] flex flex-col p-0 overflow-hidden transition-all duration-500",
+          "shadow-xl shadow-tm-purple-dark/5 dark:shadow-none",
+          mood === "good" ? "border-tm-yellow/40 shadow-[0_0_20px_rgba(242,194,48,0.15)]" : 
+          mood === "bad" ? "border-tm-orange-dark/40 shadow-[0_0_20px_rgba(191,49,0,0.15)]" : 
+          "border-tm-yellow/20"
+        )}>
+          <div className="border-b border-tm-blue-gray/10 p-4 flex items-center justify-between bg-white/40 dark:bg-white/5 backdrop-blur-sm">
             <div className="flex items-center gap-2 text-tm-blue-gray">
               <CalendarIcon size={16} />
               <span className="text-[10px] font-black uppercase tracking-widest">{format(selectedDate, "MMMM d")} Entry</span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 mr-2">
+                {[
+                  { val: "good", icon: "✨", color: "text-tm-yellow", bg: "bg-tm-yellow/20" },
+                  { val: "neutral", icon: "😐", color: "text-tm-blue-gray", bg: "bg-white/10" },
+                  { val: "bad", icon: "🌧️", color: "text-tm-orange-dark", bg: "bg-tm-orange-dark/20" }
+                ].map(m => (
+                  <button
+                    key={m.val}
+                    onClick={() => setMood(m.val)}
+                    className={cn(
+                      "p-2 rounded-lg transition-all flex items-center justify-center w-9 h-9",
+                      mood === m.val ? m.bg + " " + m.color + " shadow-inner scale-95" : "text-tm-blue-gray/40 hover:bg-white/5"
+                    )}
+                    title={m.val.toUpperCase()}
+                  >
+                    <span className="text-sm">{m.icon}</span>
+                  </button>
+                ))}
+              </div>
+
               {lastSaved && (
-                <span className="text-[10px] text-tm-blue-gray font-bold italic flex items-center gap-1">
+                <span className="text-[10px] text-tm-blue-gray font-bold italic hidden sm:flex items-center gap-1 mr-2">
                   <Check size={12} /> Saved at {format(lastSaved, "HH:mm")}
                 </span>
               )}
@@ -168,7 +198,13 @@ export default function NotesPage() {
               </button>
             </div>
           </div>
-          <div className="flex-1 bg-transparent p-4 sm:p-8 overflow-y-auto space-y-2 min-h-[400px]">
+          <div className="flex-1 bg-transparent p-4 sm:p-8 overflow-y-auto space-y-2 min-h-[400px] relative">
+            {isNoteLoading ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/20 backdrop-blur-[2px] z-10">
+                <div className="w-12 h-12 border-4 border-tm-yellow/20 border-t-tm-yellow rounded-full animate-spin mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-tm-blue-gray">Consulting the Archives...</p>
+              </div>
+            ) : null}
             {lines.map((line, index) => (
               <div key={line.id} className="flex items-start gap-3 group">
                 <div className="relative mt-1">
@@ -237,18 +273,27 @@ export default function NotesPage() {
               const dateStr = format(day, "yyyy-MM-dd");
               const existingNote = recentNotes.find(n => n.date === dateStr);
               const isSelected = isSameDay(day, selectedDate);
+              const cardMood = existingNote?.mood || "neutral";
               
               return (
                 <button
                   key={dateStr}
                   onClick={() => setSelectedDate(day)}
-                  className={`w-full text-left p-4 rounded-2xl border transition-all relative overflow-hidden group ${
-                    isSelected
-                      ? "bg-tm-yellow/20 border-tm-yellow shadow-md"
-                      : "bg-white/5 border-white/10 hover:bg-white/10"
-                  }`}
+                  className={cn(
+                    "w-full text-left p-4 rounded-2xl border transition-all relative overflow-hidden group",
+                    isSelected ? "bg-tm-yellow/20 border-tm-yellow shadow-lg scale-[1.02]" : "bg-white/40 dark:bg-white/5 border-white/20 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10 shadow-sm",
+                    !isSelected && cardMood === "good" && "bg-tm-yellow/10 border-tm-yellow/30",
+                    !isSelected && cardMood === "bad" && "bg-tm-orange-dark/10 border-tm-orange-dark/30"
+                  )}
                 >
-                  <p className="text-[10px] font-black text-tm-blue-gray uppercase tracking-widest">{format(day, "EEE, MMM d")}</p>
+                  <div className="flex justify-between items-start">
+                    <p className="text-[10px] font-black text-tm-blue-gray uppercase tracking-widest">{format(day, "EEE, MMM d")}</p>
+                    {existingNote?.mood && (
+                      <span className="text-[10px] grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all">
+                        {existingNote.mood === "good" ? "✨" : existingNote.mood === "bad" ? "🌧️" : "😐"}
+                      </span>
+                    )}
+                  </div>
                   <p className={`text-sm line-clamp-1 mt-1 font-medium ${existingNote ? "text-foreground" : "text-tm-blue-gray/40 italic"}`}>
                     {existingNote ? (
                       (() => {
@@ -264,7 +309,10 @@ export default function NotesPage() {
                   {isSelected && (
                     <motion.div 
                       layoutId="note-indicator"
-                      className="absolute left-0 top-0 bottom-0 w-1 bg-tm-yellow"
+                      className={cn(
+                        "absolute left-0 top-0 bottom-0 w-1",
+                        cardMood === "good" ? "bg-tm-yellow" : cardMood === "bad" ? "bg-tm-orange-dark" : "bg-tm-yellow"
+                      )}
                     />
                   )}
                 </button>

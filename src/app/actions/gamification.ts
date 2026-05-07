@@ -3,40 +3,43 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { XP_VALUES } from "@/lib/constants";
-import { startOfMonth, format } from "date-fns";
+import { startOfMonth, endOfMonth, format, subMonths, isSameMonth } from "date-fns";
 
-export async function getProfile() {
-  const windowStart = startOfMonth(new Date());
-  const windowStartStr = format(windowStart, "yyyy-MM-dd");
+export async function getStatsForPeriod(startDate: Date, endDate: Date) {
+  try {
+    const startStr = format(startDate, "yyyy-MM-dd");
+    const endStr = format(endDate, "yyyy-MM-dd");
 
-  // Calculate Habit XP
-  const habits = await prisma.habit.findMany({
-    include: {
-      logs: {
-        where: {
-          completed: true,
-          date: { gte: windowStartStr }
+    const [habits, events, notes, smartMissions] = await Promise.all([
+      prisma.habit.findMany({
+        include: {
+          logs: {
+            where: {
+              completed: true,
+              date: { gte: startStr, lte: endStr }
+            }
+          }
         }
-      }
-    }
-  });
-
-  // Calculate Event XP
-  const events = await prisma.event.findMany({
-    where: {
-      OR: [
-        { startTime: { gte: windowStart } },
-        { date: { gte: windowStartStr } }
-      ]
-    }
-  });
-
-  // Calculate Note XP
-  const notes = await prisma.note.findMany({
-    where: {
-      date: { gte: windowStartStr }
-    }
-  });
+      }),
+      prisma.event.findMany({
+        where: {
+          AND: [{
+            OR: [
+              { startTime: { gte: startDate, lte: endDate } },
+              { date: { gte: startStr, lte: endStr } }
+            ]
+          }]
+        }
+      }),
+      prisma.note.findMany({
+        where: { date: { gte: startStr, lte: endStr } }
+      }),
+      (prisma as any).smartMission 
+        ? (prisma as any).smartMission.findMany({
+            where: { date: { gte: startStr, lte: endStr }, completed: true }
+          })
+        : Promise.resolve([])
+    ]);
 
   // Dynamic Stat XP
   const stats: any = {
@@ -59,14 +62,20 @@ export async function getProfile() {
   // Add Event/Task XP
   events.forEach(e => {
     let xp = 0;
+    const tier = (e as any).tier?.toLowerCase() || "side";
+    const reward = tier === "epic" ? XP_VALUES.QUEST_EPIC : 
+                   tier === "main" ? XP_VALUES.QUEST_MAIN : 
+                   XP_VALUES.QUEST_SIDE;
+
     if (e.type === "task" && e.completed) {
-      xp = XP_VALUES.TASK_COMPLETE;
+      xp = reward;
       totalXP += xp;
       stats.strength += xp;
     } else if (e.type === "event") {
       const eventTime = e.startTime ? new Date(e.startTime) : null;
+      // If it's a past event or a completed event in this period
       if (eventTime && eventTime < new Date()) {
-        xp = XP_VALUES.EVENT_PASSED;
+        xp = reward;
         totalXP += xp;
         stats.wealth += xp;
       }
@@ -88,25 +97,79 @@ export async function getProfile() {
     }
   });
 
-  // Calculate Level based on 4-week window
-  // Level 1: 0-100, Level 2: 100-300, Level 3: 300-600...
-  // Or just use the level * 100 curve for each level step
+  // Add Smart Mission XP
+  smartMissions.forEach(sm => {
+    totalXP += sm.xpReward;
+    if (sm.stat === "charisma") stats.charisma += sm.xpReward;
+    else if (sm.stat === "strength") stats.strength += sm.xpReward;
+    else if (sm.stat === "intelligence") stats.intelligence += sm.xpReward;
+    else if (sm.stat === "wealth") stats.wealth += sm.xpReward;
+    else if (sm.stat === "vitality") stats.vitality += sm.xpReward;
+  });
+
+  // Calculate Level (Flat 100 XP per level for frequent progression)
   let currentLevel = 1;
   let remainingXP = totalXP;
-  while (remainingXP >= currentLevel * 100) {
-    remainingXP -= currentLevel * 100;
+  while (remainingXP >= 100) {
+    remainingXP -= 100;
     currentLevel++;
   }
 
-  return {
-    xp: totalXP,
-    level: currentLevel,
-    ...stats
-  };
+  // Identify Top and Weakest stats
+  const statEntries = Object.entries(stats).map(([name, val]) => ({ name, val: val as number }));
+  const sortedStats = [...statEntries].sort((a, b) => b.val - a.val);
+  const topStat = sortedStats[0].name;
+  const weakStat = sortedStats[sortedStats.length - 1].name;
+
+    return {
+      xp: totalXP,
+      level: currentLevel,
+      levelProgress: remainingXP,
+      nextLevelXP: 100,
+      topStat,
+      weakStat,
+      ...stats,
+      stats,
+      monthName: format(startDate, "MMMM"),
+      year: startDate.getFullYear()
+    };
+  } catch (error) {
+    console.error("Database error in getStatsForPeriod:", error);
+    return {
+      xp: 0,
+      level: 1,
+      levelProgress: 0,
+      nextLevelXP: 100,
+      topStat: "none",
+      weakStat: "none",
+      stats: { strength: 0, intelligence: 0, wealth: 0, vitality: 0, charisma: 0 },
+      strength: 0, intelligence: 0, wealth: 0, vitality: 0, charisma: 0,
+      monthName: format(startDate, "MMMM"),
+      year: startDate.getFullYear()
+    };
+  }
 }
 
-// addXP is no longer needed as XP is dynamic based on logs
+export async function getProfile() {
+  const now = new Date();
+  return getStatsForPeriod(startOfMonth(now), endOfMonth(now));
+}
+
+export async function getSeasonHistory(monthsCount: number = 6) {
+  const history = [];
+  const now = new Date();
+  
+  // We start from last month to current month
+  // Actually, Hall of Fame should show completed seasons.
+  for (let i = 0; i < monthsCount; i++) {
+    const date = subMonths(now, i);
+    const stats = await getStatsForPeriod(startOfMonth(date), endOfMonth(date));
+    history.push(stats);
+  }
+  
+  return history;
+}
+
 export async function addXP(amount: number, stat?: string) {
-  // Placeholder to avoid breaking imports, though it should be removed from callers
   return { xp: 0, level: 1 };
 }

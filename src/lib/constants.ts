@@ -1,10 +1,8 @@
 export const XP_VALUES = {
   HABIT_CHECK: 10,
-  QUEST_SIDE: 15, // Default for non-specified
-  QUEST_MAIN: 75, // Default for non-specified
-  QUEST_EPIC: 300, // Default for non-specified
-  EVENT_PASSED: 30,
-  TASK_COMPLETE: 40,
+  QUEST_SIDE: 20,
+  QUEST_MAIN: 30,
+  QUEST_EPIC: 50,
   NOTE_ENTRY: 5,
 };
 
@@ -17,6 +15,4 @@ export const RPG_TITLES = [
   { minLevel: 30, title: "Sentinel" },
   { minLevel: 40, title: "Paladin" },
   { minLevel: 50, title: "Grandmaster" },
-  { minLevel: 75, title: "Legend" },
-  { minLevel: 100, title: "Mythic" },
 ];

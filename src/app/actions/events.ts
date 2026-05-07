@@ -19,6 +19,40 @@ export async function getEventsByDateRange(start: Date, end: Date) {
   });
 }
 
+export async function getDashboardTasks(targetDate: Date) {
+  const startOfToday = new Date(targetDate);
+  startOfToday.setHours(0, 0, 0, 0);
+  
+  const endOfToday = new Date(targetDate);
+  endOfToday.setHours(23, 59, 59, 999);
+  
+  return await prisma.event.findMany({
+    where: {
+      OR: [
+        // 1. Events for today (always show regardless of completion)
+        {
+          type: "event",
+          startTime: {
+            gte: startOfToday,
+            lte: endOfToday,
+          }
+        },
+        // 2. Unfinished Tasks (today or overdue from the past)
+        {
+          type: "task",
+          completed: false,
+          startTime: {
+            lte: endOfToday,
+          }
+        }
+      ]
+    },
+    orderBy: {
+      startTime: "asc",
+    },
+  });
+}
+
 export async function addEvent(data: {
   title: string;
   description?: string;
@@ -46,9 +80,9 @@ export async function toggleEventCompletion(id: string, completed: boolean) {
   });
 
   if (completed) {
-    let xp = XP_VALUES.SIDE_QUEST;
-    if (event.tier === "main") xp = XP_VALUES.MAIN_QUEST;
-    if (event.tier === "epic") xp = XP_VALUES.EPIC_QUEST;
+    let xp = XP_VALUES.QUEST_SIDE;
+    if (event.tier === "main") xp = XP_VALUES.QUEST_MAIN;
+    if (event.tier === "epic") xp = XP_VALUES.QUEST_EPIC;
     
     await addXP(xp, event.stat || undefined);
   }

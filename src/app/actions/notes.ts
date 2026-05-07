@@ -9,11 +9,11 @@ export async function getNoteByDate(date: string) {
   });
 }
 
-export async function saveNote(date: string, content: string) {
+export async function saveNote(date: string, content: string, mood: string = "neutral") {
   const note = await prisma.note.upsert({
     where: { date },
-    update: { content },
-    create: { date, content },
+    update: { content, mood },
+    create: { date, content, mood },
   });
   revalidatePath("/notes");
   revalidatePath("/");

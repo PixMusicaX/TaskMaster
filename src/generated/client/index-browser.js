@@ -155,6 +155,7 @@ exports.Prisma.NoteScalarFieldEnum = {
   id: 'id',
   content: 'content',
   date: 'date',
+  mood: 'mood',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -171,6 +172,18 @@ exports.Prisma.EventScalarFieldEnum = {
   stat: 'stat',
   completed: 'completed',
   notification: 'notification',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.SmartMissionScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  description: 'description',
+  date: 'date',
+  completed: 'completed',
+  xpReward: 'xpReward',
+  stat: 'stat',
+  quote: 'quote',
   createdAt: 'createdAt'
 };
 
@@ -195,7 +208,8 @@ exports.Prisma.ModelName = {
   Habit: 'Habit',
   HabitLog: 'HabitLog',
   Note: 'Note',
-  Event: 'Event'
+  Event: 'Event',
+  SmartMission: 'SmartMission'
 };
 
 /**

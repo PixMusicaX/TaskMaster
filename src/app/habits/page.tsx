@@ -50,6 +50,7 @@ export default function HabitsPage() {
       setHabits(data);
       setArchivedHabits(archivedData);
       setProfile(profileData);
+      window.dispatchEvent(new CustomEvent("profile-updated"));
     } finally {
       setIsLoading(false);
     }
@@ -109,11 +110,47 @@ export default function HabitsPage() {
     }
   }
 
+  const [pendingToggles, setPendingToggles] = useState<string[]>([]);
+
   async function handleToggle(habitId: string, date: Date, currentStatus: boolean, habitFrequency: number[]) {
     if (!habitFrequency.includes(date.getDay())) return;
     const dateStr = format(date, "yyyy-MM-dd");
-    await toggleHabitLog(habitId, dateStr, !currentStatus);
-    fetchHabits();
+    const toggleKey = `${habitId}-${dateStr}`;
+    
+    // 1. Optimistic Update
+    const newStatus = !currentStatus;
+    setHabits(prevHabits => prevHabits.map(h => {
+      if (h.id === habitId) {
+        const newLogs = h.logs ? [...h.logs] : [];
+        const existingLogIdx = newLogs.findIndex((l:any) => l.date === dateStr);
+        if (existingLogIdx >= 0) {
+          newLogs[existingLogIdx] = { ...newLogs[existingLogIdx], completed: newStatus };
+        } else {
+          newLogs.push({ date: dateStr, completed: newStatus });
+        }
+        return { ...h, logs: newLogs };
+      }
+      return h;
+    }));
+
+    setPendingToggles(prev => [...prev, toggleKey]);
+
+    try {
+      // 2. Background Sync
+      await toggleHabitLog(habitId, dateStr, newStatus);
+      
+      // 3. Refresh profile stats in parallel with habits
+      const [data, prof] = await Promise.all([getHabits(), getProfile()]);
+      setHabits(data);
+      setProfile(prof);
+      window.dispatchEvent(new CustomEvent("profile-updated"));
+    } catch (e) {
+      // 4. Rollback on error
+      console.error("Failed to toggle habit:", e);
+      fetchHabits(); 
+    } finally {
+      setPendingToggles(prev => prev.filter(k => k !== toggleKey));
+    }
   }
 
   function getFrequencyLabel(freq: number[]) {
@@ -359,19 +396,22 @@ export default function HabitsPage() {
                   const dateStr = format(day, "yyyy-MM-dd");
                   const isDone = habit.logs?.some((l: any) => l.date === dateStr && l.completed);
                   const isActive = !habit.frequency || habit.frequency.includes(day.getDay());
+                  const toggleKey = `${habit.id}-${dateStr}`;
+                  const isPending = pendingToggles.includes(toggleKey);
 
                   return (
                     <div key={day.toISOString()} className="flex justify-center">
                       <button
                         onClick={() => handleToggle(habit.id, day, isDone, habit.frequency || [0, 1, 2, 3, 4, 5, 6])}
-                        disabled={!isActive}
+                        disabled={!isActive || isPending}
                         className={cn(
                           "relative w-10 h-10 rounded-2xl border-2 transition-all flex items-center justify-center group/check overflow-hidden",
                           !isActive ? "opacity-20 cursor-not-allowed border-transparent bg-tm-blue-gray/5" : (
                             isDone
                               ? "bg-tm-yellow border-tm-yellow shadow-lg shadow-tm-yellow/20"
                               : "border-tm-blue-gray/10 hover:border-tm-yellow/40 bg-white/5"
-                          )
+                          ),
+                          isPending && "animate-pulse opacity-60"
                         )}
                       >
                         {isActive && (

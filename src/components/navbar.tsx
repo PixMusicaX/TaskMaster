@@ -20,14 +20,24 @@ import { GaseousDivider } from "./GaseousDivider";
 import { useState, useEffect } from "react";
 import { getProfile } from "@/app/actions/gamification";
 import { Swords, Brain, Coins, HeartPulse, Users } from "lucide-react";
+import { RPG_TITLES } from "@/lib/constants";
+
+import { differenceInDays, endOfMonth } from "date-fns";
 
 export default function Navbar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const [profile, setProfile] = useState<any>(null);
 
+  const today = new Date();
+  const daysLeft = differenceInDays(endOfMonth(today), today);
+
   useEffect(() => {
     fetchProfile();
+    
+    // Listen for profile update events
+    window.addEventListener("profile-updated", fetchProfile);
+    return () => window.removeEventListener("profile-updated", fetchProfile);
   }, [pathname]); // Refresh when navigating
 
   async function fetchProfile() {
@@ -36,7 +46,10 @@ export default function Navbar() {
   }
 
   const xpForNextLevel = profile ? profile.level * 100 : 100;
-  const progress = profile ? (profile.xp % (profile.level * 100)) / (profile.level * 100) * 100 : 0;
+  const progress = profile ? (profile.levelProgress / profile.nextLevelXP) * 100 : 0;
+  const currentClass = profile 
+    ? [...RPG_TITLES].reverse().find(t => profile.level >= t.minLevel)?.title 
+    : "Novice";
 
   return (
     <div className="sticky top-0 z-50 w-full">
@@ -45,9 +58,17 @@ export default function Navbar() {
           <div className="w-8 h-8 bg-tm-orange-dark rounded-full flex items-center justify-center text-white font-bold text-lg">
             T
           </div>
-          <span className="font-bold text-xl hidden sm:inline-block text-tm-purple-dark dark:text-tm-yellow">
-            TaskMaster
-          </span>
+          <div className="flex flex-col">
+            <span className="font-bold text-xl hidden sm:inline-block text-tm-purple-dark dark:text-tm-yellow leading-none">
+              TaskMaster
+            </span>
+            <div className="flex items-center gap-1.5 leading-none mt-1">
+              <span className="text-tm-orange-dark text-[10px] font-black uppercase tracking-widest">[{currentClass}]</span>
+              <span className="text-[9px] text-tm-blue-gray font-bold uppercase tracking-tighter border-l border-white/10 pl-1.5 ml-0.5">
+                {daysLeft} DAYS LEFT
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">

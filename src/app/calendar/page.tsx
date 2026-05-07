@@ -7,6 +7,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInte
 import { motion, AnimatePresence } from "framer-motion";
 import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent } from "@/app/actions/events";
 import { getProfile } from "@/app/actions/gamification";
+import { getRecentNotes } from "@/app/actions/notes";
 import { cn } from "@/lib/utils";
 import { PremiumLoader } from "@/components/loader";
 
@@ -14,6 +15,7 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
+  const [moods, setMoods] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -43,10 +45,14 @@ export default function CalendarPage() {
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getEventsByDateRange(startDate, endDate);
-      const profileData = await getProfile();
-      setEvents(data);
+      const [eventsData, profileData, notesData] = await Promise.all([
+        getEventsByDateRange(startDate, endDate),
+        getProfile(),
+        getRecentNotes(60)
+      ]);
+      setEvents(eventsData);
       setProfile(profileData);
+      setMoods(notesData);
     } finally {
       setIsLoading(false);
     }
@@ -95,28 +101,24 @@ export default function CalendarPage() {
     const baseDate = new Date(newDateStr);
     const eventTime = setMinutes(setHours(baseDate, hours), minutes);
 
+    const eventData = {
+      title: newTitle,
+      date: newDateStr,
+      type: newType,
+      tier: newType === "task" ? "side" : newTier,
+      startTime: eventTime,
+      notification: newNotification,
+    };
+
     if (editingEvent) {
-      await updateEvent(editingEvent.id, {
-        title: newTitle,
-        type: newType,
-        tier: newTier,
-        startTime: eventTime,
-        date: newDateStr,
-        notification: newNotification,
-      });
+      await updateEvent(editingEvent.id, eventData);
     } else {
-      await addEvent({
-        title: newTitle,
-        date: newDateStr,
-        type: newType,
-        tier: newTier,
-        startTime: eventTime,
-        notification: newNotification,
-      });
+      await addEvent(eventData);
     }
 
     resetForm();
-    fetchEvents();
+    await fetchEvents();
+    window.dispatchEvent(new CustomEvent("profile-updated"));
   }
 
   function resetForm() {
@@ -132,12 +134,14 @@ export default function CalendarPage() {
 
   async function handleDelete(id: string) {
     await deleteEvent(id);
-    fetchEvents();
+    await fetchEvents();
+    window.dispatchEvent(new CustomEvent("profile-updated"));
   }
 
   async function handleToggle(id: string, current: boolean) {
     await toggleEventCompletion(id, !current);
-    fetchEvents();
+    await fetchEvents();
+    window.dispatchEvent(new CustomEvent("profile-updated"));
   }
 
   const selectedEvents = events.filter(e => isSameDay(new Date(e.startTime || e.date), selectedDate));
@@ -188,28 +192,6 @@ export default function CalendarPage() {
                 <button onClick={resetForm}><X /></button>
               </div>
               <div className="space-y-4">
-                <div className="flex flex-col gap-2">
-                  <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest px-1">Quest Tier</p>
-                  <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
-                    {[
-                      { id: "side", label: "Side", color: "bg-tm-yellow", text: "text-tm-purple-dark" },
-                      { id: "main", label: "Main", color: "bg-tm-orange-light", text: "text-white" },
-                      { id: "epic", label: "Epic", color: "bg-tm-orange-dark", text: "text-white" },
-                    ].map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => setNewTier(t.id)}
-                        className={cn(
-                          "flex-1 py-2 rounded-lg font-bold text-xs transition-all",
-                          newTier === t.id ? `${t.color} ${t.text} shadow-lg` : "text-tm-blue-gray hover:bg-white/5"
-                        )}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
                   <button
                     onClick={() => setNewType("task")}
@@ -224,6 +206,30 @@ export default function CalendarPage() {
                     Event
                   </button>
                 </div>
+
+                {newType === "event" && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest px-1">Quest Tier</p>
+                    <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
+                      {[
+                        { id: "side", label: "Side", color: "bg-tm-yellow", text: "text-tm-purple-dark" },
+                        { id: "main", label: "Main", color: "bg-tm-orange-light", text: "text-white" },
+                        { id: "epic", label: "Epic", color: "bg-tm-orange-dark", text: "text-white" },
+                      ].map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => setNewTier(t.id)}
+                          className={cn(
+                            "flex-1 py-2 rounded-lg font-bold text-xs transition-all",
+                            newTier === t.id ? `${t.color} ${t.text} shadow-lg` : "text-tm-blue-gray hover:bg-white/5"
+                          )}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <input
                   autoFocus
                   placeholder="Title"
@@ -326,6 +332,7 @@ export default function CalendarPage() {
               const isCurrentMonth = isSameMonth(day, monthStart);
               const isSelected = isSameDay(day, selectedDate);
               const dayEvents = events.filter(e => isSameDay(new Date(e.startTime || e.date), day));
+              const dayMood = moods.find(m => m.date === format(day, "yyyy-MM-dd"))?.mood;
 
               return (
                 <button
@@ -334,15 +341,24 @@ export default function CalendarPage() {
                   className={cn(
                     "relative p-2 border-r border-b border-tm-blue-gray/5 text-left transition-all flex flex-col gap-1 min-h-[100px]",
                     !isCurrentMonth ? "text-tm-blue-gray/20 bg-tm-blue-gray/5" : "text-foreground",
-                    isSelected ? "bg-tm-yellow/10" : "hover:bg-tm-yellow/5"
+                    isSelected ? "bg-tm-yellow/10" : "hover:bg-tm-yellow/5",
+                    dayMood === "good" && "bg-tm-yellow/[0.03]",
+                    dayMood === "bad" && "bg-tm-orange-dark/[0.03]"
                   )}
                 >
-                  <span className={cn(
-                    "text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full transition-all",
-                    isToday ? "bg-tm-orange-dark text-white shadow-lg shadow-tm-orange-dark/20 scale-110" : ""
-                  )}>
-                    {format(day, "d")}
-                  </span>
+                  <div className="flex justify-between items-start">
+                    <span className={cn(
+                      "text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full transition-all",
+                      isToday ? "bg-tm-orange-dark text-white shadow-lg shadow-tm-orange-dark/20 scale-110" : ""
+                    )}>
+                      {format(day, "d")}
+                    </span>
+                    {dayMood && (
+                      <span className="text-[10px] opacity-40 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all">
+                        {dayMood === "good" ? "✨" : dayMood === "bad" ? "🌧️" : "😐"}
+                      </span>
+                    )}
+                  </div>
 
                   <div className="flex flex-col gap-1 mt-1 overflow-hidden">
                     {dayEvents.slice(0, 3).map((event) => (
@@ -398,7 +414,10 @@ export default function CalendarPage() {
                 >
                   <GlassCard className={cn(
                     "p-4 space-y-3 group",
-                    event.type === "task" ? "border-l-4 border-l-tm-yellow" : "border-l-4 border-l-tm-orange-light"
+                    event.type === "task" ? "border-l-4 border-l-tm-blue-gray/30" :
+                    event.tier === "epic" ? "border-l-4 border-l-tm-orange-dark shadow-[0_0_15px_rgba(239,68,68,0.1)]" :
+                    event.tier === "main" ? "border-l-4 border-l-tm-orange-light" :
+                    "border-l-4 border-l-tm-yellow"
                   )}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -438,8 +457,14 @@ export default function CalendarPage() {
                         <div className="flex items-center gap-1.5">
                           <Clock size={12} /> <span>{event.startTime ? format(new Date(event.startTime), "HH:mm") : "All Day"}</span>
                         </div>
-                        <span className={cn("px-2 py-0.5 rounded", event.type === "task" ? "bg-tm-yellow/10 text-tm-yellow" : "bg-tm-orange-light/10 text-tm-orange-light")}>
-                          {event.type}
+                        <span className={cn(
+                          "px-2 py-0.5 rounded",
+                          event.type === "task" ? "bg-tm-blue-gray/10 text-tm-blue-gray/60" :
+                          event.tier === "epic" ? "bg-tm-orange-dark/20 text-tm-orange-dark border border-tm-orange-dark/30" :
+                          event.tier === "main" ? "bg-tm-orange-light/10 text-tm-orange-light" :
+                          "bg-tm-yellow/10 text-tm-yellow"
+                        )}>
+                          {event.type === "event" ? `${event.tier} ` : ""}{event.type}
                         </span>
                       </div>
                       {event.notification && (
