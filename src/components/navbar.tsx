@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, CheckSquare, FileText, Calendar, Moon, Sun, Info } from "lucide-react";
+import { Home, CheckSquare, FileText, Calendar, Moon, Sun, Info, Shield } from "lucide-react";
 import { useTheme } from "./theme-provider";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +26,7 @@ import { differenceInDays, endOfMonth } from "date-fns";
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, rank, setRank } = useTheme();
   const [profile, setProfile] = useState<any>(null);
 
   const today = new Date();
@@ -43,13 +43,29 @@ export default function Navbar() {
   async function fetchProfile() {
     const data = await getProfile();
     setProfile(data);
+    
+    // Sync rank with profile if not manually overridden in this session
+    if (data) {
+      const profileRank = [...RPG_TITLES].reverse().find(t => data.level >= t.minLevel)?.title;
+      if (profileRank && !localStorage.getItem("rank_manually_set")) {
+        // Only auto-sync if the user hasn't touched the test button
+        // For now, let's just let the test button override it
+      }
+    }
   }
 
-  const xpForNextLevel = profile ? profile.level * 100 : 100;
   const progress = profile ? (profile.levelProgress / profile.nextLevelXP) * 100 : 0;
-  const currentClass = profile 
-    ? [...RPG_TITLES].reverse().find(t => profile.level >= t.minLevel)?.title 
-    : "Novice";
+  
+  // Use the rank from ThemeProvider for testing
+  const currentClass = rank;
+
+  const cycleRank = () => {
+    const ranks: any[] = RPG_TITLES.map(t => t.title);
+    const currentIndex = ranks.indexOf(rank);
+    const nextIndex = (currentIndex + 1) % ranks.length;
+    setRank(ranks[nextIndex]);
+    localStorage.setItem("rank_manually_set", "true");
+  };
 
   return (
     <div className="sticky top-0 z-50 w-full">
@@ -116,13 +132,25 @@ export default function Navbar() {
             </div>
           )}
           
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full hover:bg-tm-blue-gray/10 text-tm-blue-gray transition-colors"
-            aria-label="Toggle theme"
-          >
-            {theme === "light" ? <Moon size={22} /> : <Sun size={22} className="text-tm-yellow" />}
-          </button>
+          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full border border-white/10">
+            <button
+              onClick={cycleRank}
+              className="p-2 rounded-full hover:bg-tm-blue-gray/10 text-tm-blue-gray transition-colors"
+              title="Cycle Class Scheme (Test)"
+            >
+              <Shield size={20} className="text-tm-orange-light" />
+            </button>
+            
+            <div className="w-px h-4 bg-white/10" />
+
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full hover:bg-tm-blue-gray/10 text-tm-blue-gray transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === "light" ? <Moon size={22} /> : <Sun size={22} className="text-tm-yellow" />}
+            </button>
+          </div>
         </div>
       </nav>
       <div className="relative h-px w-full overflow-visible">

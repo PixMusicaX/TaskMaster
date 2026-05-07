@@ -2,11 +2,25 @@
 
 import * as React from "react";
 
+type Rank = "Novice" | "Squire" | "Vanguard" | "Veteran" | "Knight" | "Sentinel" | "Paladin" | "Grandmaster";
+
+interface ThemeContextType {
+  theme: "light" | "dark";
+  toggleTheme: () => void;
+  rank: Rank;
+  setRank: (rank: Rank) => void;
+}
+
+const ThemeContext = React.createContext<ThemeContextType | null>(null);
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = React.useState<"light" | "dark">("light");
+  const [rank, setRankState] = React.useState<Rank>("Novice");
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
+    const savedRank = localStorage.getItem("rank") as Rank | null;
+    
     const hour = new Date().getHours();
     const isNight = hour < 6 || hour >= 18;
     
@@ -17,6 +31,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     setTheme(initialTheme);
     document.documentElement.classList.toggle("dark", initialTheme === "dark");
+
+    if (savedRank) {
+      setRankState(savedRank);
+      document.documentElement.setAttribute("data-rank", savedRank);
+    } else {
+      document.documentElement.setAttribute("data-rank", "Novice");
+    }
   }, []);
 
   const toggleTheme = () => {
@@ -26,17 +47,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
 
+  const setRank = (newRank: Rank) => {
+    setRankState(newRank);
+    localStorage.setItem("rank", newRank);
+    document.documentElement.setAttribute("data-rank", newRank);
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, rank, setRank }}>
       {children}
     </ThemeContext.Provider>
   );
 }
-
-const ThemeContext = React.createContext<{
-  theme: "light" | "dark";
-  toggleTheme: () => void;
-} | null>(null);
 
 export function useTheme() {
   const context = React.useContext(ThemeContext);

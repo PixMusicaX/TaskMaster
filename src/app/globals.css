@@ -3,11 +3,78 @@
 :root {
   --background: #ffffff;
   --foreground: #1a1a1a;
+}
+
+/* Base Rank Colors (Novice) */
+:root, :root[data-rank="Novice"] {
   --tm-yellow: #F2C230;
   --tm-orange-light: #F2921D;
   --tm-orange-dark: #F24F13;
   --tm-blue-gray: #8082A6;
   --tm-purple-dark: #2D1B33;
+  --tm-red: #f43f5e;
+}
+
+:root[data-rank="Squire"] {
+  --tm-yellow: #84CC16; /* Sage/Lime */
+  --tm-orange-light: #A16207; /* Antique Bronze */
+  --tm-orange-dark: #3F6212; /* Deep Olive */
+  --tm-blue-gray: #71717A; /* Zinc */
+  --tm-purple-dark: #18181B; /* Zinc Deep */
+  --tm-red: #ef4444;
+}
+
+:root[data-rank="Vanguard"] {
+  --tm-yellow: #708090;
+  --tm-orange-light: #4682B4;
+  --tm-orange-dark: #1E3A8A;
+  --tm-blue-gray: #94A3B8;
+  --tm-purple-dark: #0F172A;
+  --tm-red: #f43f5e;
+}
+
+:root[data-rank="Veteran"] {
+  --tm-yellow: #3B82F6;
+  --tm-orange-light: #60A5FA;
+  --tm-orange-dark: #1D4ED8;
+  --tm-blue-gray: #94A3B8;
+  --tm-purple-dark: #1E293B;
+  --tm-red: #f43f5e;
+}
+
+:root[data-rank="Knight"] {
+  --tm-yellow: #FACC15;
+  --tm-orange-light: #EAB308;
+  --tm-orange-dark: #B91C1C;
+  --tm-blue-gray: #64748B;
+  --tm-purple-dark: #450A0A;
+  --tm-red: #ef4444;
+}
+
+:root[data-rank="Sentinel"] {
+  --tm-yellow: #10B981;
+  --tm-orange-light: #34D399;
+  --tm-orange-dark: #065F46;
+  --tm-blue-gray: #64748B;
+  --tm-purple-dark: #064E3B;
+  --tm-red: #ef4444;
+}
+
+:root[data-rank="Paladin"] {
+  --tm-yellow: #FDE047;
+  --tm-orange-light: #7DD3FC;
+  --tm-orange-dark: #0EA5E9;
+  --tm-blue-gray: #94A3B8;
+  --tm-purple-dark: #0C4A6E;
+  --tm-red: #f43f5e;
+}
+
+:root[data-rank="Grandmaster"] {
+  --tm-yellow: #F59E0B;
+  --tm-orange-light: #A855F7;
+  --tm-orange-dark: #7E22CE;
+  --tm-blue-gray: #94A3B8;
+  --tm-purple-dark: #2E1065;
   --tm-red: #f43f5e;
 }
 

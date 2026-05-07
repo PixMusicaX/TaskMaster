@@ -93,8 +93,8 @@ export default function MoodRadar({ data, size = 200 }: MoodRadarProps) {
 
         <defs>
           <linearGradient id="moodGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FFD700" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#FF4500" stopOpacity="0.8" />
+            <stop offset="0%" stopColor="var(--tm-yellow)" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="var(--tm-orange-dark)" stopOpacity="0.8" />
           </linearGradient>
         </defs>
 
