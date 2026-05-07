@@ -106,24 +106,30 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
 
   // Add Smart Mission XP
   smartMissions.forEach(sm => {
-    totalXP += sm.xpReward;
-    if (sm.stat === "charisma") stats.charisma += sm.xpReward;
-    else if (sm.stat === "strength") stats.strength += sm.xpReward;
-    else if (sm.stat === "intelligence") stats.intelligence += sm.xpReward;
-    else if (sm.stat === "wealth") stats.wealth += sm.xpReward;
-    else if (sm.stat === "vitality") stats.vitality += sm.xpReward;
+    let reward = sm.xpReward;
+    if (reward === 25) reward = 50; // Legacy doubling
+    
+    totalXP += reward;
+    if (sm.stat === "charisma") stats.charisma += reward;
+    else if (sm.stat === "strength") stats.strength += reward;
+    else if (sm.stat === "intelligence") stats.intelligence += reward;
+    else if (sm.stat === "wealth") stats.wealth += reward;
+    else if (sm.stat === "vitality") stats.vitality += reward;
   });
 
   // Add Relief Recommendation XP (3 separate tasks)
   reliefRecommendations.forEach(rr => {
     const awardXP = (isCompleted: boolean) => {
       if (isCompleted) {
-        totalXP += rr.xpReward;
-        if (rr.stat === "charisma") stats.charisma += rr.xpReward;
-        else if (rr.stat === "strength") stats.strength += rr.xpReward;
-        else if (rr.stat === "intelligence") stats.intelligence += rr.xpReward;
-        else if (rr.stat === "wealth") stats.wealth += rr.xpReward;
-        else if (rr.stat === "vitality") stats.vitality += rr.xpReward;
+        let reward = rr.xpReward;
+        if (reward === 5) reward = 10; // Legacy doubling
+        
+        totalXP += reward;
+        if (rr.stat === "charisma") stats.charisma += reward;
+        else if (rr.stat === "strength") stats.strength += reward;
+        else if (rr.stat === "intelligence") stats.intelligence += reward;
+        else if (rr.stat === "wealth") stats.wealth += reward;
+        else if (rr.stat === "vitality") stats.vitality += reward;
       }
     };
 
@@ -132,11 +138,11 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
     awardXP(rr.alt2Completed);
   });
 
-  // Calculate Level (Flat 100 XP per level for frequent progression)
+  // Calculate Level (Flat 70 XP per level for frequent progression)
   let currentLevel = 1;
   let remainingXP = totalXP;
-  while (remainingXP >= 100) {
-    remainingXP -= 100;
+  while (remainingXP >= 70) {
+    remainingXP -= 70;
     currentLevel++;
   }
 
@@ -150,7 +156,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
       xp: totalXP,
       level: currentLevel,
       levelProgress: remainingXP,
-      nextLevelXP: 100,
+      nextLevelXP: 70,
       topStat,
       weakStat,
       ...stats,
@@ -164,7 +170,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
       xp: 0,
       level: 1,
       levelProgress: 0,
-      nextLevelXP: 100,
+      nextLevelXP: 70,
       topStat: "none",
       weakStat: "none",
       stats: { strength: 0, intelligence: 0, wealth: 0, vitality: 0, charisma: 0 },
@@ -184,8 +190,6 @@ export async function getSeasonHistory(monthsCount: number = 6) {
   const history = [];
   const now = new Date();
   
-  // We start from last month to current month
-  // Actually, Hall of Fame should show completed seasons.
   for (let i = 0; i < monthsCount; i++) {
     const date = subMonths(now, i);
     const stats = await getStatsForPeriod(startOfMonth(date), endOfMonth(date));

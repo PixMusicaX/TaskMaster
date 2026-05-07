@@ -28,43 +28,63 @@ export default function Navbar() {
   const pathname = usePathname();
   const { theme, toggleTheme, rank, setRank } = useTheme();
   const [profile, setProfile] = useState<any>(null);
+  const [isManuallySet, setIsManuallySet] = useState(false);
 
   const today = new Date();
   const daysLeft = differenceInDays(endOfMonth(today), today);
 
   useEffect(() => {
-    fetchProfile();
+    // Check localStorage on client side only
+    const manuallySet = !!localStorage.getItem("rank_manually_set");
+    setIsManuallySet(manuallySet);
+    
+    fetchProfile(manuallySet);
     
     // Listen for profile update events
-    window.addEventListener("profile-updated", fetchProfile);
+    window.addEventListener("profile-updated", () => fetchProfile(!!localStorage.getItem("rank_manually_set")));
     return () => window.removeEventListener("profile-updated", fetchProfile);
   }, [pathname]); // Refresh when navigating
 
-  async function fetchProfile() {
+  async function fetchProfile(manualOverride: boolean) {
     const data = await getProfile();
     setProfile(data);
     
-    // Sync rank with profile if not manually overridden in this session
     if (data) {
       const profileRank = [...RPG_TITLES].reverse().find(t => data.level >= t.minLevel)?.title;
-      if (profileRank && !localStorage.getItem("rank_manually_set")) {
-        // Only auto-sync if the user hasn't touched the test button
-        // For now, let's just let the test button override it
+      
+      // LOGIC: If we are not manually overriding, OR if we are "Novice" but should be higher, sync it.
+      // This helps users who got stuck in Novice due to previous manual testing.
+      if (profileRank) {
+        if (!manualOverride || (rank === "Novice" && profileRank !== "Novice")) {
+          setRank(profileRank as any);
+          // If we forced a sync because they were stuck in Novice, clear the manual flag
+          if (rank === "Novice" && profileRank !== "Novice") {
+            localStorage.removeItem("rank_manually_set");
+            setIsManuallySet(false);
+          }
+        }
       }
     }
   }
 
   const progress = profile ? (profile.levelProgress / profile.nextLevelXP) * 100 : 0;
-  
-  // Use the rank from ThemeProvider for testing
   const currentClass = rank;
 
   const cycleRank = () => {
     const ranks: any[] = RPG_TITLES.map(t => t.title);
     const currentIndex = ranks.indexOf(rank);
     const nextIndex = (currentIndex + 1) % ranks.length;
-    setRank(ranks[nextIndex]);
+    const newRank = ranks[nextIndex];
+    setRank(newRank);
+    
     localStorage.setItem("rank_manually_set", "true");
+    setIsManuallySet(true);
+  };
+
+  const resetRank = () => {
+    localStorage.removeItem("rank_manually_set");
+    setIsManuallySet(false);
+    fetchProfile(false);
   };
 
   return (
@@ -135,10 +155,11 @@ export default function Navbar() {
           <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full border border-white/10">
             <button
               onClick={cycleRank}
+              onContextMenu={(e) => { e.preventDefault(); resetRank(); }}
               className="p-2 rounded-full hover:bg-tm-blue-gray/10 text-tm-blue-gray transition-colors"
-              title="Cycle Class Scheme (Test)"
+              title="Cycle Class Scheme (Left Click) | Reset to Auto (Right Click)"
             >
-              <Shield size={20} className="text-tm-orange-light" />
+              <Shield size={20} className={cn("transition-colors", isManuallySet ? "text-tm-yellow" : "text-tm-orange-light")} />
             </button>
             
             <div className="w-px h-4 bg-white/10" />

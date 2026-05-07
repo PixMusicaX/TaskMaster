@@ -10,77 +10,121 @@
   --tm-yellow: #F2C230;
   --tm-orange-light: #F2921D;
   --tm-orange-dark: #F24F13;
-  --tm-blue-gray: #8082A6;
+  --tm-blue-gray: #64748B;
   --tm-purple-dark: #2D1B33;
   --tm-red: #f43f5e;
 }
 
 :root[data-rank="Squire"] {
-  --tm-yellow: #84CC16; /* Sage/Lime */
-  --tm-orange-light: #A16207; /* Antique Bronze */
-  --tm-orange-dark: #3F6212; /* Deep Olive */
-  --tm-blue-gray: #71717A; /* Zinc */
-  --tm-purple-dark: #18181B; /* Zinc Deep */
-  --tm-red: #ef4444;
+  --tm-yellow: #84CC16;
+  --tm-orange-light: #A16207;
+  --tm-orange-dark: #3F6212;
+  --tm-blue-gray: #52525B;
+  --tm-purple-dark: #18181B;
+  --tm-red: #4D7C0F;
 }
 
 :root[data-rank="Vanguard"] {
-  --tm-yellow: #708090;
-  --tm-orange-light: #4682B4;
+  --tm-yellow: #475569;
+  --tm-orange-light: #334155;
   --tm-orange-dark: #1E3A8A;
-  --tm-blue-gray: #94A3B8;
+  --tm-blue-gray: #475569;
   --tm-purple-dark: #0F172A;
-  --tm-red: #f43f5e;
+  --tm-red: #334155;
 }
 
 :root[data-rank="Veteran"] {
-  --tm-yellow: #3B82F6;
-  --tm-orange-light: #60A5FA;
+  --tm-yellow: #2563EB;
+  --tm-orange-light: #3B82F6;
   --tm-orange-dark: #1D4ED8;
-  --tm-blue-gray: #94A3B8;
+  --tm-blue-gray: #475569;
   --tm-purple-dark: #1E293B;
-  --tm-red: #f43f5e;
+  --tm-red: #1E3A8A;
 }
 
 :root[data-rank="Knight"] {
-  --tm-yellow: #FACC15;
-  --tm-orange-light: #EAB308;
+  --tm-yellow: #CA8A04;
+  --tm-orange-light: #B45309;
   --tm-orange-dark: #B91C1C;
-  --tm-blue-gray: #64748B;
+  --tm-blue-gray: #475569;
   --tm-purple-dark: #450A0A;
-  --tm-red: #ef4444;
+  --tm-red: #991B1B;
+}
+
+:root[data-rank="Champion"] {
+  --tm-yellow: #D97706;
+  --tm-orange-light: #B45309;
+  --tm-orange-dark: #92400E;
+  --tm-blue-gray: #78350F;
+  --tm-purple-dark: #451A03;
+  --tm-red: #F97316;
 }
 
 :root[data-rank="Sentinel"] {
-  --tm-yellow: #10B981;
-  --tm-orange-light: #34D399;
-  --tm-orange-dark: #065F46;
-  --tm-blue-gray: #64748B;
+  --tm-yellow: #059669;
+  --tm-orange-light: #10B981;
+  --tm-orange-dark: #064E3B;
+  --tm-blue-gray: #475569;
   --tm-purple-dark: #064E3B;
-  --tm-red: #ef4444;
+  --tm-red: #065F46;
 }
 
 :root[data-rank="Paladin"] {
-  --tm-yellow: #FDE047;
-  --tm-orange-light: #7DD3FC;
-  --tm-orange-dark: #0EA5E9;
-  --tm-blue-gray: #94A3B8;
+  --tm-yellow: #B45309;
+  --tm-orange-light: #0EA5E9;
+  --tm-orange-dark: #0284C7;
+  --tm-blue-gray: #475569;
   --tm-purple-dark: #0C4A6E;
-  --tm-red: #f43f5e;
+  --tm-red: #0369A1;
 }
 
 :root[data-rank="Grandmaster"] {
-  --tm-yellow: #F59E0B;
-  --tm-orange-light: #A855F7;
+  --tm-yellow: #D97706;
+  --tm-orange-light: #9333EA;
   --tm-orange-dark: #7E22CE;
-  --tm-blue-gray: #94A3B8;
+  --tm-blue-gray: #475569;
   --tm-purple-dark: #2E1065;
-  --tm-red: #f43f5e;
+  --tm-red: #A21CAF;
+}
+
+:root[data-rank="Ascendant"] {
+  --tm-yellow: #F43F5E; /* Rose/Red */
+  --tm-orange-light: #F59E0B; /* Amber/Orange */
+  --tm-orange-dark: #10B981; /* Emerald/Green */
+  --tm-blue-gray: #3B82F6; /* Blue */
+  --tm-purple-dark: #8B5CF6; /* Purple */
+  --tm-red: #EC4899; /* Pink */
 }
 
 .dark {
   --background: #0F0912;
   --foreground: #ffffff;
+}
+
+/* Dark mode overrides */
+.dark[data-rank="Novice"] { --tm-blue-gray: #8082A6; }
+.dark[data-rank="Squire"] { --tm-blue-gray: #A1A1AA; }
+.dark[data-rank="Vanguard"] { --tm-blue-gray: #94A3B8; --tm-yellow: #94A3B8; --tm-red: #64748B; }
+.dark[data-rank="Veteran"] { --tm-blue-gray: #94A3B8; --tm-yellow: #60A5FA; --tm-red: #3B82F6; }
+.dark[data-rank="Knight"] { --tm-blue-gray: #94A3B8; --tm-yellow: #FACC15; --tm-red: #EF4444; }
+.dark[data-rank="Champion"] { --tm-blue-gray: #A1A1AA; --tm-yellow: #B45309; --tm-red: #EA580C; }
+.dark[data-rank="Sentinel"] { --tm-blue-gray: #94A3B8; --tm-yellow: #34D399; --tm-red: #10B981; }
+.dark[data-rank="Paladin"] { --tm-blue-gray: #94A3B8; --tm-yellow: #FDE047; --tm-red: #38BDF8; }
+.dark[data-rank="Grandmaster"] { 
+  --tm-yellow: #FCD34D;
+  --tm-orange-light: #C084FC;
+  --tm-orange-dark: #A855F7;
+  --tm-blue-gray: #94A3B8;
+  --tm-purple-dark: #4C1D95;
+  --tm-red: #E879F9;
+}
+.dark[data-rank="Ascendant"] { 
+  --tm-yellow: #F87171;
+  --tm-orange-light: #FBBF24;
+  --tm-orange-dark: #34D399;
+  --tm-blue-gray: #60A5FA;
+  --tm-purple-dark: #A78BFA;
+  --tm-red: #F472B6;
 }
 
 @theme inline {

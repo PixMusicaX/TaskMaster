@@ -14,7 +14,7 @@ import { getSmartMission, toggleSmartMission, regenerateSmartMission } from "@/a
 import { getReliefRecommendation, toggleReliefRecommendation, regenerateReliefRecommendation } from "@/app/actions/relief";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { RPG_TITLES } from "@/lib/constants";
+import { RPG_TITLES, XP_VALUES } from "@/lib/constants";
 import { PremiumLoader } from "@/components/loader";
 import RecapModal from "@/components/RecapModal";
 import { addDays, subMonths } from "date-fns";
@@ -282,7 +282,7 @@ export default function Home() {
                 <div className="space-y-3">
                   {tasks.map(task => {
                   const isEvent = task.type === "event";
-                  const xp = task.tier === "epic" ? 50 : task.tier === "main" ? 30 : 20;
+                  const xp = task.tier === "epic" ? XP_VALUES.QUEST_EPIC : task.tier === "main" ? XP_VALUES.QUEST_MAIN : XP_VALUES.QUEST_SIDE;
                   
                   return (
                     <button 
@@ -414,7 +414,7 @@ export default function Home() {
                                   Reload
                                 </button>
                               )}
-                              <span className="text-[8px] font-black text-tm-yellow/60">+{smartMission.xpReward} XP</span>
+                              <span className="text-[8px] font-black text-tm-yellow/60">+{smartMission.xpReward === 25 ? 50 : smartMission.xpReward} XP</span>
                             </div>
                           </div>
                           <h3 className={cn("text-xs font-black text-foreground truncate", smartMission.completed && "line-through opacity-50")}>
@@ -465,7 +465,7 @@ export default function Home() {
                                   Reload
                                 </button>
                               )}
-                              <span className="text-[8px] font-black text-tm-yellow/60">+{relief.xpReward} XP</span>
+                              <span className="text-[8px] font-black text-tm-yellow/60">+{relief.xpReward === 5 ? 10 : relief.xpReward} XP</span>
                             </div>
                           </div>
                           <h3 className={cn("text-xs font-black text-foreground truncate", relief.completed && "line-through opacity-50")}>
@@ -549,7 +549,7 @@ export default function Home() {
                 { label: "Charisma", stat: "charisma", icon: Users, color: "tm-blue-gray" },
               ].map((s) => {
                 const val = profile ? (profile as any)[s.stat] : 0;
-                const max = (profile?.level || 1) * 500;
+                const max = (profile?.level || 1) * 350; // Adjusted for 70 XP per level (5 * 70 = 350)
                 const pct = Math.min((val / max) * 100, 100);
                 
                 return (
@@ -604,7 +604,7 @@ export default function Home() {
                 }
               </p>
               <p className="text-xs text-tm-blue-gray font-medium">
-                Earn { (profile?.nextLevelXP || 100) - (profile?.levelProgress || 0) } more XP to reach Level { (profile?.level || 1) + 1 }.
+                Earn { (profile?.nextLevelXP || 70) - (profile?.levelProgress || 0) } more XP to reach Level { (profile?.level || 1) + 1 }.
               </p>
             </div>
           </GlassCard>
@@ -730,7 +730,7 @@ export default function Home() {
                               {relief.type === 'activity' && <Dumbbell size={12} />}
                               {relief.type || 'Suggestion'}
                             </span>
-                            <span className="text-xs font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">+{relief.xpReward} XP</span>
+                            <span className="text-xs font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">+{relief.xpReward === 5 ? 10 : relief.xpReward} XP</span>
                           </div>
                           <h4 className={cn("text-xl font-black leading-tight tracking-tight", relief.completed && "line-through opacity-50")}>
                             {relief.title}
@@ -777,7 +777,7 @@ export default function Home() {
                                     </>
                                   )}
                                 </div>
-                                <span className="text-[9px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/10">+{relief.xpReward} XP</span>
+                                <span className="text-[9px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/10">+{relief.xpReward === 5 ? 10 : relief.xpReward} XP</span>
                               </div>
                               <div className="relative z-10">
                                 <span className="text-[8px] font-black uppercase text-tm-blue-gray/40 tracking-widest block mb-0.5">{alt.type}</span>
@@ -804,12 +804,12 @@ export default function Home() {
         </div>
       </motion.section>
 
-      <RecapModal 
-        isOpen={showRecap} 
-        stats={recapData} 
-        onClose={() => setShowRecap(false)} 
-      />
+      {showRecap && recapData && (
+        <RecapModal 
+          data={recapData} 
+          onClose={() => setShowRecap(false)} 
+        />
+      )}
     </div>
   );
 }
-

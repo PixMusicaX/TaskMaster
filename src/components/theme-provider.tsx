@@ -18,20 +18,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [rank, setRankState] = React.useState<Rank>("Novice");
 
   React.useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
     const savedRank = localStorage.getItem("rank") as Rank | null;
     
+    // THEME LOGIC: Always follow the clock on reload, no persistence.
     const hour = new Date().getHours();
     const isNight = hour < 6 || hour >= 18;
-    
-    let initialTheme: "light" | "dark" = isNight ? "dark" : "light";
-    if (savedTheme) {
-      initialTheme = savedTheme;
-    }
+    const initialTheme: "light" | "dark" = isNight ? "dark" : "light";
 
     setTheme(initialTheme);
     document.documentElement.classList.toggle("dark", initialTheme === "dark");
 
+    // Rank still persists as it represents character progression
     if (savedRank) {
       setRankState(savedRank);
       document.documentElement.setAttribute("data-rank", savedRank);
@@ -43,7 +40,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
+    // No localStorage.setItem for theme - we don't want to remember it!
     document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
 

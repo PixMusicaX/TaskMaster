@@ -70,7 +70,7 @@ export async function getSmartMission() {
                 title: data.title,
                 description: data.description,
                 quote: data.quote,
-                xpReward: 25,
+                xpReward: 50,
                 stat: "charisma"
               }
             });
@@ -102,7 +102,7 @@ export async function getSmartMission() {
             title: selected.title,
             description: selected.description,
             quote: "Every grand legend begins with a single modest step.",
-            xpReward: 25,
+            xpReward: 50,
             stat: "charisma"
           }
         });
@@ -147,15 +147,11 @@ export async function regenerateSmartMission() {
   const today = format(new Date(), "yyyy-MM-dd");
   try {
     if (!(prisma as any).smartMission) return null;
-    // Safely attempt to delete any existing mission for today
     try {
       await (prisma as any).smartMission.deleteMany({
         where: { date: today }
       });
-    } catch (e) {
-      // Ignore delete errors if the record doesn't exist
-    }
-    // Generate/Fetch new one
+    } catch (e) {}
     return await getSmartMission();
   } catch (e) {
     console.error("Error in regenerateSmartMission:", e);

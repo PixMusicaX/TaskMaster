@@ -22,7 +22,6 @@ export async function getReliefRecommendation(lat?: number, lon?: number) {
     if (!recommendation) {
       let weatherInfo = { weather: "Clear", temp: "22", location: "No location found" };
       
-      // Try to fetch real weather and area if coordinates provided
       if (lat && lon) {
         try {
           const [weatherRes, geoRes] = await Promise.all([
@@ -100,7 +99,7 @@ export async function getReliefRecommendation(lat?: number, lon?: number) {
                 weather: weatherInfo.weather,
                 temp: weatherInfo.temp,
                 alternatives: data.alternatives || [],
-                xpReward: 5,
+                xpReward: 10,
                 stat: "charisma"
               }
             });
@@ -110,7 +109,6 @@ export async function getReliefRecommendation(lat?: number, lon?: number) {
         }
       }
 
-      // Fallback
       if (!recommendation) {
         recommendation = await (prisma as any).reliefRecommendation.create({
           data: {
@@ -125,7 +123,7 @@ export async function getReliefRecommendation(lat?: number, lon?: number) {
               { title: "Quick 5-min Stretch", type: "activity" },
               { title: "Hot Herbal Tea", type: "food" }
             ],
-            xpReward: 5,
+            xpReward: 10,
             stat: "charisma"
           }
         });

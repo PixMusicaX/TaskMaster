@@ -9,6 +9,7 @@ import { getSmartMissionHistory } from "@/app/actions/smart-missions";
 import { getReliefHistory } from "@/app/actions/relief";
 import { format } from "date-fns";
 import { Music, Film, Coffee, Dumbbell } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function AboutPage() {
   const [seasonHistory, setSeasonHistory] = useState<any[]>([]);
@@ -40,21 +41,6 @@ export default function AboutPage() {
     { label: "Security", value: "Robust", icon: Shield },
     { label: "Built for", value: "Creatives", icon: Sparkles },
   ];
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
-  };
 
   return (
     <div className="p-6 md:p-12 max-w-6xl mx-auto space-y-16 pb-24">
@@ -92,7 +78,7 @@ export default function AboutPage() {
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {seasonHistory.slice(0, seasonsLimit).map((season, idx) => (
-                <GlassCard key={idx} delay={idx * 0.1} className="p-6 border-tm-blue-gray/10 dark:border-white/5 bg-tm-purple-dark/[0.02] dark:bg-white/5 hover:bg-tm-purple-dark/[0.05] dark:hover:bg-white/10 transition-all group">
+                <GlassCard key={idx} delay={idx * 0.1} className="p-6 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.04] dark:bg-white/5 hover:bg-tm-purple-dark/[0.06] dark:hover:bg-white/10 transition-all group">
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h4 className="text-xl font-black text-tm-yellow leading-tight">{season.monthName}</h4>
@@ -110,10 +96,10 @@ export default function AboutPage() {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-1 bg-white/5 rounded text-[8px] font-black uppercase tracking-widest text-tm-yellow border border-white/5">
+                      <span className="px-2 py-1 bg-tm-yellow/10 rounded text-[8px] font-black uppercase tracking-widest text-tm-yellow border border-tm-yellow/20">
                         LVL {season.level}
                       </span>
-                      <span className="px-2 py-1 bg-white/5 rounded text-[8px] font-black uppercase tracking-widest text-tm-blue-gray border border-white/5">
+                      <span className="px-2 py-1 bg-tm-blue-gray/10 rounded text-[8px] font-black uppercase tracking-widest text-tm-blue-gray border border-tm-blue-gray/20">
                         {season.title}
                       </span>
                     </div>
@@ -125,7 +111,7 @@ export default function AboutPage() {
               <div className="flex justify-center pt-4">
                 <button 
                   onClick={() => setSeasonsLimit(prev => prev + 6)}
-                  className="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-yellow/10 hover:text-tm-yellow transition-all"
+                  className="px-8 py-3 bg-white/5 border border-tm-blue-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-yellow/10 hover:text-tm-yellow transition-all"
                 >
                   Load More Seasons
                 </button>
@@ -157,11 +143,11 @@ export default function AboutPage() {
           <div className="space-y-6">
             <div className="space-y-4">
               {missionHistory.slice(0, missionsLimit).map((mission, idx) => (
-                <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/10 dark:border-white/5 bg-tm-purple-dark/[0.02] dark:bg-white/5 hover:border-tm-orange-light/30 transition-all">
+                <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:border-tm-orange-light/40 transition-all">
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                      mission.completed ? "bg-tm-yellow/20 text-tm-yellow" : "bg-white/5 text-tm-blue-gray"
+                      mission.completed ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-blue-gray/10 text-tm-blue-gray"
                     )}>
                       {mission.completed ? <CheckCircle2 size={20} /> : <Zap size={20} />}
                     </div>
@@ -170,10 +156,10 @@ export default function AboutPage() {
                         <h4 className="font-bold text-sm leading-tight text-tm-purple-dark dark:text-white">{mission.title}</h4>
                         <span className="text-[10px] font-black text-tm-blue-gray uppercase">{format(new Date(mission.date), "MMM d, yyyy")}</span>
                       </div>
-                      <p className="text-xs text-tm-blue-gray/80 line-clamp-1 mt-0.5 italic">{mission.description}</p>
+                      <p className="text-xs text-tm-blue-gray/90 line-clamp-1 mt-0.5 italic">{mission.description}</p>
                     </div>
                     {mission.completed && (
-                      <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-1 rounded-lg">
+                      <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-1 rounded-lg border border-tm-yellow/20">
                         +25 XP
                       </div>
                     )}
@@ -185,7 +171,7 @@ export default function AboutPage() {
               <div className="flex justify-center pt-4">
                 <button 
                   onClick={() => setMissionsLimit(prev => prev + 5)}
-                  className="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-orange-light/10 hover:text-tm-orange-light transition-all"
+                  className="px-8 py-3 bg-white/5 border border-tm-blue-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-orange-light/10 hover:text-tm-orange-light transition-all"
                 >
                   Load More Quests
                 </button>
@@ -216,11 +202,11 @@ export default function AboutPage() {
         ) : reliefHistory.length > 0 ? (
           <div className="space-y-4">
             {reliefHistory.slice(0, 10).map((r, idx) => (
-              <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/10 dark:border-white/5 bg-tm-purple-dark/[0.02] dark:bg-white/5 hover:bg-tm-purple-dark/[0.05] dark:hover:bg-white/10 transition-all">
+              <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:bg-tm-purple-dark/[0.06] dark:hover:bg-white/10 transition-all">
                 <div className="flex items-center gap-4">
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                    r.completed || r.alt1Completed || r.alt2Completed ? "bg-tm-yellow/20 text-tm-yellow" : "bg-white/5 text-tm-blue-gray"
+                    r.completed || r.alt1Completed || r.alt2Completed ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-blue-gray/10 text-tm-blue-gray"
                   )}>
                     {r.type === 'movie' && <Film size={20} />}
                     {r.type === 'song' && <Music size={20} />}
@@ -240,8 +226,8 @@ export default function AboutPage() {
                         { label: "Alt 2", done: r.alt2Completed }
                       ].map((task, i) => (
                         <div key={i} className="flex items-center gap-1.5">
-                          <div className={cn("w-1.5 h-1.5 rounded-full", task.done ? "bg-tm-yellow" : "bg-white/10")} />
-                          <span className={cn("text-[8px] font-black uppercase tracking-widest", task.done ? "text-tm-yellow" : "text-tm-blue-gray/40")}>
+                          <div className={cn("w-1.5 h-1.5 rounded-full", task.done ? "bg-tm-yellow" : "bg-tm-blue-gray/20")} />
+                          <span className={cn("text-[8px] font-black uppercase tracking-widest", task.done ? "text-tm-yellow" : "text-tm-blue-gray/50")}>
                             {task.label}
                           </span>
                         </div>
@@ -249,7 +235,7 @@ export default function AboutPage() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className="text-[10px] font-black text-tm-blue-gray/60 uppercase tracking-tighter italic">{r.location || "Global"}</span>
+                    <span className="text-[10px] font-black text-tm-blue-gray/70 uppercase tracking-tighter italic">{r.location || "Global"}</span>
                     <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">
                       +{([r.completed, r.alt1Completed, r.alt2Completed].filter(Boolean).length * 5)} XP
                     </div>
@@ -286,8 +272,4 @@ export default function AboutPage() {
       </div>
     </div>
   );
-}
-
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(" ");
 }
