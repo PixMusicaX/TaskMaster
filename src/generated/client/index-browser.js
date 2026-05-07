@@ -121,6 +121,17 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.UserProfileScalarFieldEnum = {
+  id: 'id',
+  xp: 'xp',
+  level: 'level',
+  strength: 'strength',
+  intelligence: 'intelligence',
+  wealth: 'wealth',
+  vitality: 'vitality',
+  charisma: 'charisma'
+};
+
 exports.Prisma.HabitScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -128,6 +139,8 @@ exports.Prisma.HabitScalarFieldEnum = {
   color: 'color',
   frequency: 'frequency',
   archived: 'archived',
+  stat: 'stat',
+  streak: 'streak',
   createdAt: 'createdAt'
 };
 
@@ -154,6 +167,8 @@ exports.Prisma.EventScalarFieldEnum = {
   endTime: 'endTime',
   date: 'date',
   type: 'type',
+  tier: 'tier',
+  stat: 'stat',
   completed: 'completed',
   notification: 'notification',
   createdAt: 'createdAt'
@@ -176,6 +191,7 @@ exports.Prisma.NullsOrder = {
 
 
 exports.Prisma.ModelName = {
+  UserProfile: 'UserProfile',
   Habit: 'Habit',
   HabitLog: 'HabitLog',
   Note: 'Note',

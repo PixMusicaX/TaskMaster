@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import GlassCard from "@/components/glass-card";
-import { Plus, Trash2, Check, X, Edit2, Archive, RotateCcw, Search } from "lucide-react";
+import { Plus, Trash2, Check, X, Edit2, Archive, RotateCcw, Search, Swords, Brain, Coins, HeartPulse, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { getHabits, addHabit, updateHabit, archiveHabit, restoreHabit, deleteHabitPermanently, toggleHabitLog, getArchivedHabits } from "@/app/actions/habits";
@@ -17,6 +17,7 @@ export default function HabitsPage() {
   
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("✨");
+  const [newStat, setNewStat] = useState("intelligence");
   const [newFrequency, setNewFrequency] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
 
   const today = new Date();
@@ -46,7 +47,7 @@ export default function HabitsPage() {
 
   async function handleAddHabit() {
     if (!newName) return;
-    await addHabit(newName, newIcon, undefined, newFrequency);
+    await addHabit(newName, newIcon, undefined, newFrequency, newStat);
     resetForm();
     fetchHabits();
   }
@@ -56,7 +57,8 @@ export default function HabitsPage() {
     await updateHabit(editingHabit.id, {
       name: newName,
       icon: newIcon,
-      frequency: newFrequency
+      frequency: newFrequency,
+      stat: newStat
     });
     resetForm();
     fetchHabits();
@@ -65,6 +67,7 @@ export default function HabitsPage() {
   function resetForm() {
     setNewName("");
     setNewIcon("✨");
+    setNewStat("intelligence");
     setNewFrequency([0, 1, 2, 3, 4, 5, 6]);
     setShowAdd(false);
     setEditingHabit(null);
@@ -74,6 +77,7 @@ export default function HabitsPage() {
     setEditingHabit(habit);
     setNewName(habit.name);
     setNewIcon(habit.icon);
+    setNewStat(habit.stat || "intelligence");
     setNewFrequency(habit.frequency || [0, 1, 2, 3, 4, 5, 6]);
     setShowAdd(true);
   }
@@ -153,6 +157,31 @@ export default function HabitsPage() {
                 <button onClick={resetForm}><X /></button>
               </div>
               <div className="space-y-6">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest pl-1">Associate Skill</p>
+                  <div className="grid grid-cols-5 gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
+                    {[
+                      { id: "strength", icon: Swords },
+                      { id: "intelligence", icon: Brain },
+                      { id: "wealth", icon: Coins },
+                      { id: "vitality", icon: HeartPulse },
+                      { id: "charisma", icon: Users },
+                    ].map((s) => (
+                      <button 
+                        key={s.id}
+                        onClick={() => setNewStat(s.id)}
+                        className={cn(
+                          "py-2 rounded-lg flex items-center justify-center transition-all",
+                          newStat === s.id ? "bg-tm-yellow text-tm-purple-dark shadow-lg" : "text-tm-blue-gray hover:bg-white/5"
+                        )}
+                        title={s.id}
+                      >
+                        <s.icon size={16} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest pl-1">Name</p>
                   <input 

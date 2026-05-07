@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import GlassCard from "@/components/glass-card";
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Brain, Coins, HeartPulse, Users, Calendar as CalendarIcon } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent } from "@/app/actions/events";
@@ -16,6 +16,7 @@ export default function CalendarPage() {
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newType, setNewType] = useState("task");
+  const [newTier, setNewTier] = useState("main");
   const [newTime, setNewTime] = useState("12:00");
   const [newNotification, setNewNotification] = useState(true);
   const [newDateStr, setNewDateStr] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -67,6 +68,7 @@ export default function CalendarPage() {
     setEditingEvent(event);
     setNewTitle(event.title);
     setNewType(event.type);
+    setNewTier(event.tier || "main");
     const dateObj = new Date(event.startTime || event.date);
     setNewTime(format(dateObj, "HH:mm"));
     setNewDateStr(format(dateObj, "yyyy-MM-dd"));
@@ -86,6 +88,7 @@ export default function CalendarPage() {
       await updateEvent(editingEvent.id, {
         title: newTitle,
         type: newType,
+        tier: newTier,
         startTime: eventTime,
         date: newDateStr,
         notification: newNotification,
@@ -95,6 +98,7 @@ export default function CalendarPage() {
         title: newTitle,
         date: newDateStr,
         type: newType,
+        tier: newTier,
         startTime: eventTime,
         notification: newNotification,
       });
@@ -107,6 +111,7 @@ export default function CalendarPage() {
   function resetForm() {
     setNewTitle("");
     setNewType("task");
+    setNewTier("main");
     setNewTime("12:00");
     setNewDateStr(format(selectedDate, "yyyy-MM-dd"));
     setNewNotification(true);
@@ -155,12 +160,34 @@ export default function CalendarPage() {
                 <button onClick={resetForm}><X /></button>
               </div>
               <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest px-1">Quest Tier</p>
+                  <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
+                    {[
+                      { id: "side", label: "Side", color: "bg-tm-yellow", text: "text-tm-purple-dark" },
+                      { id: "main", label: "Main", color: "bg-tm-orange-light", text: "text-white" },
+                      { id: "epic", label: "Epic", color: "bg-tm-orange-dark", text: "text-white" },
+                    ].map((t) => (
+                      <button 
+                        key={t.id}
+                        onClick={() => setNewTier(t.id)}
+                        className={cn(
+                          "flex-1 py-2 rounded-lg font-bold text-xs transition-all",
+                          newTier === t.id ? `${t.color} ${t.text} shadow-lg` : "text-tm-blue-gray hover:bg-white/5"
+                        )}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
                   <button 
                     onClick={() => setNewType("task")}
                     className={cn("flex-1 py-2 rounded-lg font-bold text-sm transition-all", newType === "task" ? "bg-tm-yellow text-tm-purple-dark" : "text-tm-blue-gray")}
                   >
-                    Task
+                    Quest
                   </button>
                   <button 
                     onClick={() => setNewType("event")}

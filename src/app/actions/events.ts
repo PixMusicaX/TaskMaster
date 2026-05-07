@@ -36,11 +36,23 @@ export async function addEvent(data: {
   return event;
 }
 
+import { addXP } from "./gamification";
+import { XP_VALUES } from "@/lib/constants";
+
 export async function toggleEventCompletion(id: string, completed: boolean) {
   const event = await prisma.event.update({
     where: { id },
     data: { completed },
   });
+
+  if (completed) {
+    let xp = XP_VALUES.SIDE_QUEST;
+    if (event.tier === "main") xp = XP_VALUES.MAIN_QUEST;
+    if (event.tier === "epic") xp = XP_VALUES.EPIC_QUEST;
+    
+    await addXP(xp, event.stat || undefined);
+  }
+
   revalidatePath("/calendar");
   revalidatePath("/");
   return event;

@@ -93,6 +93,17 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.UserProfileScalarFieldEnum = {
+  id: 'id',
+  xp: 'xp',
+  level: 'level',
+  strength: 'strength',
+  intelligence: 'intelligence',
+  wealth: 'wealth',
+  vitality: 'vitality',
+  charisma: 'charisma'
+};
+
 exports.Prisma.HabitScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -100,6 +111,8 @@ exports.Prisma.HabitScalarFieldEnum = {
   color: 'color',
   frequency: 'frequency',
   archived: 'archived',
+  stat: 'stat',
+  streak: 'streak',
   createdAt: 'createdAt'
 };
 
@@ -126,6 +139,8 @@ exports.Prisma.EventScalarFieldEnum = {
   endTime: 'endTime',
   date: 'date',
   type: 'type',
+  tier: 'tier',
+  stat: 'stat',
   completed: 'completed',
   notification: 'notification',
   createdAt: 'createdAt'
@@ -148,6 +163,7 @@ exports.Prisma.NullsOrder = {
 
 
 exports.Prisma.ModelName = {
+  UserProfile: 'UserProfile',
   Habit: 'Habit',
   HabitLog: 'HabitLog',
   Note: 'Note',
@@ -192,6 +208,7 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
@@ -200,13 +217,13 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Habit {\n  id        String     @id @default(cuid())\n  name      String\n  icon      String?\n  color     String?\n  frequency Int[]      @default([0, 1, 2, 3, 4, 5, 6])\n  archived  Boolean    @default(false)\n  logs      HabitLog[]\n  createdAt DateTime   @default(now())\n}\n\nmodel HabitLog {\n  id        String  @id @default(cuid())\n  habitId   String\n  habit     Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)\n  date      String // Format: YYYY-MM-DD\n  completed Boolean @default(false)\n\n  @@unique([habitId, date])\n}\n\nmodel Note {\n  id        String   @id @default(cuid())\n  content   String   @db.Text\n  date      String   @unique // Format: YYYY-MM-DD\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n}\n\nmodel Event {\n  id           String    @id @default(cuid())\n  title        String\n  description  String?   @db.Text\n  startTime    DateTime?\n  endTime      DateTime?\n  date         String // Format: YYYY-MM-DD\n  type         String // \"task\" or \"event\"\n  completed    Boolean   @default(false)\n  notification Boolean   @default(false)\n  createdAt    DateTime  @default(now())\n}\n",
-  "inlineSchemaHash": "601c0273c33a012d66bfe74ed9724474ede012c82fcc8a4d2a5a543fe0c48f9a",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel UserProfile {\n  id           String @id @default(\"me\")\n  xp           Int    @default(0)\n  level        Int    @default(1)\n  strength     Int    @default(0)\n  intelligence Int    @default(0)\n  wealth       Int    @default(0)\n  vitality     Int    @default(0)\n  charisma     Int    @default(0)\n}\n\nmodel Habit {\n  id        String     @id @default(cuid())\n  name      String\n  icon      String?\n  color     String?\n  frequency Int[]      @default([0, 1, 2, 3, 4, 5, 6])\n  archived  Boolean    @default(false)\n  stat      String? // strength, intelligence, wealth, vitality, charisma\n  streak    Int        @default(0)\n  logs      HabitLog[]\n  createdAt DateTime   @default(now())\n}\n\nmodel HabitLog {\n  id        String  @id @default(cuid())\n  habitId   String\n  habit     Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)\n  date      String // Format: YYYY-MM-DD\n  completed Boolean @default(false)\n\n  @@unique([habitId, date])\n}\n\nmodel Note {\n  id        String   @id @default(cuid())\n  content   String   @db.Text\n  date      String   @unique // Format: YYYY-MM-DD\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n}\n\nmodel Event {\n  id           String    @id @default(cuid())\n  title        String\n  description  String?   @db.Text\n  startTime    DateTime?\n  endTime      DateTime?\n  date         String // Format: YYYY-MM-DD\n  type         String // \"task\" or \"event\"\n  tier         String    @default(\"side\") // side, main, epic\n  stat         String? // strength, intelligence, wealth, vitality, charisma\n  completed    Boolean   @default(false)\n  notification Boolean   @default(false)\n  createdAt    DateTime  @default(now())\n}\n",
+  "inlineSchemaHash": "f79e324b07906b729dad4d49ffa26fd0b3c177246e3cc5eedd61c019f66388af",
   "copyEngine": true
 }
 config.dirname = '/'
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"Habit\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"icon\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"color\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"frequency\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"archived\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"logs\",\"kind\":\"object\",\"type\":\"HabitLog\",\"relationName\":\"HabitToHabitLog\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"HabitLog\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"habitId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"habit\",\"kind\":\"object\",\"type\":\"Habit\",\"relationName\":\"HabitToHabitLog\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"completed\",\"kind\":\"scalar\",\"type\":\"Boolean\"}],\"dbName\":null},\"Note\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"content\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"Event\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"startTime\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"endTime\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"completed\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"notification\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"UserProfile\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"xp\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"level\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"strength\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"intelligence\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"wealth\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"vitality\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"charisma\",\"kind\":\"scalar\",\"type\":\"Int\"}],\"dbName\":null},\"Habit\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"icon\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"color\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"frequency\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"archived\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"stat\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"streak\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"logs\",\"kind\":\"object\",\"type\":\"HabitLog\",\"relationName\":\"HabitToHabitLog\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"HabitLog\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"habitId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"habit\",\"kind\":\"object\",\"type\":\"Habit\",\"relationName\":\"HabitToHabitLog\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"completed\",\"kind\":\"scalar\",\"type\":\"Boolean\"}],\"dbName\":null},\"Note\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"content\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"Event\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"startTime\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"endTime\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tier\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"stat\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"completed\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"notification\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
 defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
 config.engineWasm = {
   getRuntime: async () => require('./query_engine_bg.js'),

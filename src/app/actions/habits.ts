@@ -27,15 +27,18 @@ export async function getArchivedHabits() {
   });
 }
 
-export async function addHabit(name: string, icon?: string, color?: string, frequency?: number[]) {
+import { addXP } from "./gamification";
+import { XP_VALUES } from "@/lib/constants";
+
+export async function addHabit(name: string, icon?: string, color?: string, frequency?: number[], stat?: string) {
   const habit = await prisma.habit.create({
-    data: { name, icon, color, frequency },
+    data: { name, icon, color, frequency, stat },
   });
   revalidatePath("/habits");
   return habit;
 }
 
-export async function updateHabit(id: string, data: { name?: string; icon?: string; color?: string; frequency?: number[] }) {
+export async function updateHabit(id: string, data: { name?: string; icon?: string; color?: string; frequency?: number[]; stat?: string }) {
   const habit = await prisma.habit.update({
     where: { id },
     data,
@@ -82,6 +85,12 @@ export async function toggleHabitLog(habitId: string, date: string, completed: b
       completed,
     },
   });
+
+  if (completed) {
+    const habit = await prisma.habit.findUnique({ where: { id: habitId } });
+    await addXP(XP_VALUES.HABIT_CHECK, habit?.stat || undefined);
+  }
+
   revalidatePath("/habits");
   revalidatePath("/");
   return log;
