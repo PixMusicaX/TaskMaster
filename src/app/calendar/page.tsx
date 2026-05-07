@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import GlassCard from "@/components/glass-card";
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Calendar as CalendarIcon } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent } from "@/app/actions/events";
+import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent } from "@/app/actions/events";
 import { cn } from "@/lib/utils";
 
 export default function CalendarPage() {
@@ -13,10 +13,18 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newType, setNewType] = useState("task");
   const [newTime, setNewTime] = useState("12:00");
-  const [newNotification, setNewNotification] = useState(false);
+  const [newNotification, setNewNotification] = useState(true);
+  const [newDateStr, setNewDateStr] = useState(format(new Date(), "yyyy-MM-dd"));
+
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const { startDate, endDate, days, monthStart } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -36,22 +44,74 @@ export default function CalendarPage() {
     fetchEvents();
   }, [fetchEvents]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      events.forEach(event => {
+        if (event.notification && event.startTime && !event.completed) {
+          const startTime = new Date(event.startTime);
+          const diff = startTime.getTime() - now.getTime();
+          if (diff > 0 && diff < 60000) {
+            new Notification(`TaskMaster: ${event.title}`, {
+              body: `Starts at ${format(startTime, "HH:mm")}`,
+              icon: "/file.svg"
+            });
+          }
+        }
+      });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [events]);
+
+  function openEdit(event: any) {
+    setEditingEvent(event);
+    setNewTitle(event.title);
+    setNewType(event.type);
+    const dateObj = new Date(event.startTime || event.date);
+    setNewTime(format(dateObj, "HH:mm"));
+    setNewDateStr(format(dateObj, "yyyy-MM-dd"));
+    setNewNotification(event.notification ?? true);
+    setSelectedDate(dateObj);
+    setShowAdd(true);
+  }
+
   async function handleAddEvent() {
     if (!newTitle) return;
     
     const [hours, minutes] = newTime.split(":").map(Number);
-    const eventTime = setMinutes(setHours(selectedDate, hours), minutes);
+    const baseDate = new Date(newDateStr);
+    const eventTime = setMinutes(setHours(baseDate, hours), minutes);
 
-    await addEvent({
-      title: newTitle,
-      date: format(selectedDate, "yyyy-MM-dd"),
-      type: newType,
-      startTime: eventTime,
-      notification: newNotification,
-    });
-    setNewTitle("");
-    setShowAdd(false);
+    if (editingEvent) {
+      await updateEvent(editingEvent.id, {
+        title: newTitle,
+        type: newType,
+        startTime: eventTime,
+        date: newDateStr,
+        notification: newNotification,
+      });
+    } else {
+      await addEvent({
+        title: newTitle,
+        date: newDateStr,
+        type: newType,
+        startTime: eventTime,
+        notification: newNotification,
+      });
+    }
+    
+    resetForm();
     fetchEvents();
+  }
+
+  function resetForm() {
+    setNewTitle("");
+    setNewType("task");
+    setNewTime("12:00");
+    setNewDateStr(format(selectedDate, "yyyy-MM-dd"));
+    setNewNotification(true);
+    setEditingEvent(null);
+    setShowAdd(false);
   }
 
   async function handleDelete(id: string) {
@@ -87,12 +147,12 @@ export default function CalendarPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/20 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-md"
           >
             <GlassCard className="w-full max-w-md space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">New {newType === "task" ? "Task" : "Event"}</h2>
-                <button onClick={() => setShowAdd(false)}><X /></button>
+                <h2 className="text-2xl font-bold">{editingEvent ? "Edit" : "New"} {newType === "task" ? "Task" : "Event"}</h2>
+                <button onClick={resetForm}><X /></button>
               </div>
               <div className="space-y-4">
                 <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
@@ -112,14 +172,19 @@ export default function CalendarPage() {
                 <input 
                   autoFocus
                   placeholder="Title"
-                  className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-tm-yellow font-bold"
+                  className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-tm-yellow font-bold text-lg"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
                     <p className="text-[10px] font-black uppercase text-tm-blue-gray mb-1">Date</p>
-                    <p className="font-bold text-sm">{format(selectedDate, "MMM d, yyyy")}</p>
+                    <input 
+                      type="date"
+                      value={newDateStr}
+                      onChange={(e) => setNewDateStr(e.target.value)}
+                      className="bg-transparent font-bold text-lg outline-none w-full [color-scheme:light] dark:[color-scheme:dark]"
+                    />
                   </div>
                   <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
                     <p className="text-[10px] font-black uppercase text-tm-blue-gray mb-1">Time</p>
@@ -127,7 +192,7 @@ export default function CalendarPage() {
                       type="time"
                       value={newTime}
                       onChange={(e) => setNewTime(e.target.value)}
-                      className="bg-transparent font-bold text-sm outline-none w-full"
+                      className="bg-transparent font-bold text-lg outline-none w-full [color-scheme:light] dark:[color-scheme:dark]"
                     />
                   </div>
                 </div>
@@ -141,7 +206,7 @@ export default function CalendarPage() {
                 >
                   <div className="flex items-center gap-3">
                     {newNotification ? <Bell size={18} /> : <BellOff size={18} />}
-                    <span className="text-sm font-bold">Enable Notification</span>
+                    <span className="text-sm font-bold">Browser Notification</span>
                   </div>
                   <div className={cn("w-10 h-5 rounded-full relative transition-colors", newNotification ? "bg-tm-orange-dark" : "bg-tm-blue-gray/30")}>
                     <motion.div 
@@ -155,7 +220,7 @@ export default function CalendarPage() {
                   onClick={handleAddEvent}
                   className="w-full bg-tm-yellow text-tm-purple-dark font-black py-4 rounded-2xl shadow-xl hover:bg-tm-yellow/80 transition-colors"
                 >
-                  SAVE
+                  {editingEvent ? "UPDATE ITEM" : "SAVE ITEM"}
                 </button>
               </div>
             </GlassCard>
@@ -295,12 +360,20 @@ export default function CalendarPage() {
                         )}
                         <h4 className={cn("font-bold text-sm", event.completed && "line-through text-tm-blue-gray")}>{event.title}</h4>
                       </div>
-                      <button 
-                        onClick={() => handleDelete(event.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-red-500 transition-all"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex gap-2 items-center">
+                        <button 
+                          onClick={() => openEdit(event)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-tm-yellow transition-all"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(event.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-red-500 transition-all"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                     {event.description && (
                       <p className="text-xs text-tm-blue-gray line-clamp-2">{event.description}</p>

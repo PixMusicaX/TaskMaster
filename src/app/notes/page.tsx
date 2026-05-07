@@ -228,7 +228,7 @@ export default function NotesPage() {
                       (() => {
                         try {
                           const parsed = JSON.parse(existingNote.content);
-                          return parsed.map((l: any) => `${l.bullet} ${l.text}`).join(" • ");
+                          return parsed.map((l: any) => l.text).filter(Boolean).join(" • ");
                         } catch (e) {
                           return existingNote.content.replace(/\n/g, " • ");
                         }

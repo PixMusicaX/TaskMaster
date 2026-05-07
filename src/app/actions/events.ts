@@ -50,3 +50,12 @@ export async function deleteEvent(id: string) {
   await prisma.event.delete({ where: { id } });
   revalidatePath("/calendar");
 }
+export async function updateEvent(id: string, data: any) {
+  const event = await prisma.event.update({
+    where: { id },
+    data,
+  });
+  revalidatePath("/calendar");
+  revalidatePath("/");
+  return event;
+}
