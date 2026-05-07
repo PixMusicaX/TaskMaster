@@ -58,7 +58,7 @@ export async function getReliefRecommendation(lat?: number, lon?: number) {
         try {
           const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
           const model = genAI.getGenerativeModel({ 
-            model: "gemini-flash-latest",
+            model: "gemini-3.1-flash-lite",
             generationConfig: { responseMimeType: "application/json" }
           });
 

@@ -136,7 +136,7 @@ Return ONLY a valid JSON object. No preamble, no markdown, no extra keys.
     {
       "title": "Specific name of the movie/song/food/activity",
       "type": "movie | song | activity | food",
-      "description": "1–2 sentences. Why this is the perfect relief given their weather, mood, and recent activity."
+      "description": "1-2 sentences. Why this is the perfect relief given their weather, mood, and recent activity."
     }
   ],
   "alternatives": [

@@ -42,6 +42,12 @@ export default function Home() {
   const analyticsOpacity = useTransform(scrollYProgress, [0.3, 0.6], [0, 1]);
   const analyticsY = useTransform(scrollYProgress, [0.3, 0.6], [100, 0]);
 
+  const processedMoodData = {
+    joy: moodData.filter(m => m.mood === 'good').length,
+    steady: moodData.filter(m => m.mood === 'neutral').length,
+    stress: moodData.filter(m => m.mood === 'bad').length,
+  };
+
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
 
@@ -92,25 +98,29 @@ export default function Home() {
         }
       });
 
-      // 5. Smart Mission (AI might be slow)
+      // 5. Smart Mission & Relief (Sequentialized to avoid rate limits)
       setLoading(true);
-      getSmartMission().then(smartData => {
+      try {
+        const smartData = await getSmartMission();
         setSmartMission(smartData);
-        setLoading(false);
-      }).catch(() => setLoading(false));
+        
+        const finishRelief = async (lat?: number, lon?: number) => {
+          const reliefData = await getReliefRecommendation(lat, lon);
+          setRelief(reliefData);
+          setLoading(false);
+        };
 
-      // 6. Relief Recommendation
-      if (typeof window !== "undefined" && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            getReliefRecommendation(pos.coords.latitude, pos.coords.longitude).then(setRelief);
-          },
-          () => {
-            getReliefRecommendation().then(setRelief);
-          }
-        );
-      } else {
-        getReliefRecommendation().then(setRelief);
+        if (typeof window !== "undefined" && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => finishRelief(pos.coords.latitude, pos.coords.longitude),
+            () => finishRelief()
+          );
+        } else {
+          await finishRelief();
+        }
+      } catch (err) {
+        console.error("AI Fetch error:", err);
+        setLoading(false);
       }
     }
     fetchData();
@@ -123,6 +133,20 @@ export default function Home() {
     setProfile(prof);
     window.dispatchEvent(new CustomEvent("profile-updated"));
   }
+
+  // Midnight Reload Logic
+  useEffect(() => {
+    const checkMidnight = setInterval(() => {
+      const now = new Date();
+      const currentDayStr = format(now, "yyyy-MM-dd");
+      if (currentDayStr !== todayStr) {
+        console.log("Day change detected. Reloading for the new quest...");
+        window.location.reload();
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(checkMidnight);
+  }, [todayStr]);
 
   async function handleTaskToggle(id: string, current: boolean) {
     await toggleEventCompletion(id, !current);
@@ -145,8 +169,8 @@ export default function Home() {
     window.dispatchEvent(new CustomEvent("profile-updated"));
   }
 
-  async function handleRegenerate(e: React.MouseEvent) {
-    e.stopPropagation();
+  async function handleRegenerate(e?: React.MouseEvent) {
+    if (e) e.stopPropagation();
     setLoading(true);
     const newMission = await regenerateSmartMission();
     setSmartMission(newMission);
@@ -170,8 +194,8 @@ export default function Home() {
     window.dispatchEvent(new CustomEvent("profile-updated"));
   }
 
-  async function handleRegenerateRelief(e: React.MouseEvent) {
-    e.stopPropagation();
+  async function handleRegenerateRelief(e?: React.MouseEvent) {
+    if (e) e.stopPropagation();
     setReliefLoading(true);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -321,10 +345,10 @@ export default function Home() {
             </Link>
           </GlassCard>
 
-          <GlassCard delay={0.6} className="bg-tm-purple-dark text-white border-none shadow-2xl shadow-tm-purple-dark/40 overflow-visible flex flex-col gap-4">
+          <GlassCard delay={0.6} className="overflow-visible flex flex-col gap-4 border-tm-yellow/20">
             <div className="flex items-center justify-between min-h-[60px]">
               <div className="flex flex-col gap-1.5">
-                <h2 className="text-xl font-bold text-tm-yellow">Attention</h2>
+                <h2 className="text-xl font-black text-tm-yellow uppercase tracking-tighter">Attention</h2>
                 {profile && (
                   <div className="flex items-center gap-2 bg-tm-blue-gray/20 px-2.5 py-1 rounded-xl border border-tm-blue-gray/30 w-fit">
                     <Users size={12} className="text-tm-blue-gray" />
@@ -381,13 +405,23 @@ export default function Home() {
                             <span className="text-[8px] font-black uppercase text-tm-yellow tracking-widest flex items-center gap-1">
                               <Users size={10} /> Smart Mission
                             </span>
-                            <span className="text-[8px] font-black text-tm-yellow/60">+{smartMission.xpReward} XP</span>
+                            <div className="flex items-center gap-2">
+                              {!smartMission.completed && (
+                                <button 
+                                  onClick={handleRegenerate}
+                                  className="text-[8px] font-black text-tm-yellow/40 hover:text-tm-yellow uppercase tracking-widest bg-tm-yellow/5 px-1.5 py-0.5 rounded transition-all"
+                                >
+                                  Reload
+                                </button>
+                              )}
+                              <span className="text-[8px] font-black text-tm-yellow/60">+{smartMission.xpReward} XP</span>
+                            </div>
                           </div>
-                          <h3 className={cn("text-xs font-bold truncate", smartMission.completed && "line-through")}>
+                          <h3 className={cn("text-xs font-black text-foreground truncate", smartMission.completed && "line-through opacity-50")}>
                             {smartMission.title}
                           </h3>
                           {smartMission.description && !smartMission.completed && (
-                            <p className="text-[9px] text-tm-blue-gray mt-1 leading-relaxed line-clamp-2 italic">
+                            <p className="text-[9px] text-tm-blue-gray/80 dark:text-tm-blue-gray/60 mt-1 leading-relaxed line-clamp-2 italic">
                               {smartMission.description}
                             </p>
                           )}
@@ -422,13 +456,23 @@ export default function Home() {
                               {relief.type === 'activity' && <Dumbbell size={10} />}
                               Relief: {relief.type}
                             </span>
-                            <span className="text-[8px] font-black text-tm-yellow/60">+{relief.xpReward} XP</span>
+                            <div className="flex items-center gap-2">
+                              {!relief.completed && (
+                                <button 
+                                  onClick={handleRegenerateRelief}
+                                  className="text-[8px] font-black text-tm-yellow/40 hover:text-tm-yellow uppercase tracking-widest bg-tm-yellow/5 px-1.5 py-0.5 rounded transition-all"
+                                >
+                                  Reload
+                                </button>
+                              )}
+                              <span className="text-[8px] font-black text-tm-yellow/60">+{relief.xpReward} XP</span>
+                            </div>
                           </div>
-                          <h3 className={cn("text-xs font-bold truncate", relief.completed && "line-through")}>
+                          <h3 className={cn("text-xs font-black text-foreground truncate", relief.completed && "line-through opacity-50")}>
                             {relief.title}
                           </h3>
                           {relief.description && !relief.completed && (
-                            <p className="text-[9px] text-tm-blue-gray mt-1 leading-relaxed line-clamp-2 italic">
+                            <p className="text-[9px] text-tm-blue-gray/80 dark:text-tm-blue-gray/60 mt-1 leading-relaxed line-clamp-2 italic">
                               {relief.description}
                             </p>
                           )}
@@ -591,9 +635,9 @@ export default function Home() {
                 <MoodRadar 
                   size={240}
                   data={{
-                    joy: moodData.filter(m => m.mood === "joy").length,
-                    steady: moodData.filter(m => m.mood === "steady").length,
-                    stress: moodData.filter(m => m.mood === "stress").length,
+                    joy: moodData.filter(m => m.mood === "good").length,
+                    steady: moodData.filter(m => m.mood === "neutral").length,
+                    stress: moodData.filter(m => m.mood === "bad").length,
                   }} 
                 />
               ) : (
@@ -604,16 +648,16 @@ export default function Home() {
               )}
             </div>
             
-            <div className="grid grid-cols-3 gap-2 relative z-10">
+            <div className="grid grid-cols-3 gap-4 relative z-10">
               {[
-                { label: 'Joy', color: 'bg-tm-yellow', count: moodData.filter(m => m.mood === "joy").length },
-                { label: 'Steady', color: 'bg-tm-blue-gray/40', count: moodData.filter(m => m.mood === "steady").length },
-                { label: 'Stress', color: 'bg-tm-orange-dark', count: moodData.filter(m => m.mood === "stress").length }
-              ].map((m, i) => (
-                <div key={i} className="flex flex-col items-center gap-1 p-2 rounded-2xl bg-white/5 border border-white/5">
-                  <div className={cn("w-1.5 h-1.5 rounded-full", m.color)} />
-                  <span className="text-[8px] font-black text-tm-blue-gray/60 uppercase tracking-tighter">{m.label}</span>
-                  <span className="text-xs font-bold">{m.count}</span>
+                { label: 'Joy', value: moodData.filter(m => m.mood === "good").length, color: 'text-tm-yellow', bg: 'bg-tm-yellow/10 dark:bg-tm-yellow/5' },
+                { label: 'Steady', value: moodData.filter(m => m.mood === "neutral").length, color: 'text-tm-blue-gray', bg: 'bg-tm-blue-gray/10 dark:bg-tm-blue-gray/5' },
+                { label: 'Stress', value: moodData.filter(m => m.mood === "bad").length, color: 'text-tm-orange-dark', bg: 'bg-tm-orange-dark/10 dark:bg-tm-orange-dark/5' },
+              ].map((stat, i) => (
+                <div key={i} className={cn("p-4 rounded-3xl border border-tm-blue-gray/5 dark:border-white/5 flex flex-col items-center gap-1", stat.bg)}>
+                  <div className={cn("w-2 h-2 rounded-full", stat.color.replace('text-', 'bg-'))} />
+                  <span className="text-[10px] font-black uppercase text-tm-blue-gray/60 dark:text-tm-blue-gray/40 tracking-widest">{stat.label}</span>
+                  <span className="text-2xl font-black text-foreground">{stat.value}</span>
                 </div>
               ))}
             </div>
@@ -698,9 +742,12 @@ export default function Home() {
 
                   {/* Alternatives Section */}
                   {relief.alternatives && Array.isArray(relief.alternatives) && relief.alternatives.length > 0 && (
-                    <div className="flex flex-col gap-3">
-                      <p className="text-[9px] font-black uppercase text-tm-blue-gray/40 tracking-[0.4em] ml-2">Alternative Channels</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-5">
+                      <div className="flex items-center gap-4">
+                        <p className="text-[10px] font-black uppercase text-tm-blue-gray/30 tracking-[0.4em] shrink-0">Alternative Channels</p>
+                        <div className="h-px flex-1 bg-white/[0.03]" />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {relief.alternatives.map((alt: any, i: number) => {
                           const isAltCompleted = i === 0 ? relief.alt1Completed : relief.alt2Completed;
                           return (
@@ -708,29 +755,33 @@ export default function Home() {
                               key={i} 
                               onClick={() => handleReliefToggle(i + 1)}
                               className={cn(
-                                "flex items-center gap-4 p-4 rounded-2xl border transition-all text-left shadow-lg active:scale-[0.98]",
+                                "flex flex-col gap-3 p-5 rounded-[1.5rem] border transition-all text-left group/alt relative overflow-hidden",
                                 isAltCompleted 
-                                  ? "bg-tm-yellow/5 border-tm-yellow/20 opacity-40" 
-                                  : "bg-white/5 border-white/10 hover:border-tm-yellow/20 hover:bg-white/10"
+                                  ? "bg-tm-yellow/5 border-tm-yellow/10 opacity-40 grayscale" 
+                                  : "bg-white/[0.02] border-white/5 hover:border-tm-yellow/20 hover:bg-white/[0.05] shadow-lg"
                               )}
                             >
-                              <div className={cn(
-                                "w-6 h-6 rounded-xl border flex items-center justify-center transition-all shadow-inner",
-                                isAltCompleted ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/30"
-                              )}>
-                                {isAltCompleted && <Check size={14} className="text-tm-purple-dark" />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2 overflow-hidden">
-                                    {alt.type === 'movie' && <Film size={12} className="text-tm-yellow/60 shrink-0" />}
-                                    {alt.type === 'song' && <Music size={12} className="text-tm-yellow/60 shrink-0" />}
-                                    {alt.type === 'food' && <Coffee size={12} className="text-tm-yellow/60 shrink-0" />}
-                                    {alt.type === 'activity' && <Dumbbell size={12} className="text-tm-yellow/60 shrink-0" />}
-                                    <span className={cn("text-[11px] font-black truncate uppercase tracking-tighter", isAltCompleted && "line-through opacity-50")}>{alt.title}</span>
-                                  </div>
-                                  <span className="text-[8px] font-black text-tm-yellow shrink-0">+{relief.xpReward} XP</span>
+                              <div className="flex items-center justify-between gap-3 relative z-10">
+                                <div className={cn(
+                                  "w-8 h-8 rounded-xl border flex items-center justify-center transition-all shrink-0",
+                                  isAltCompleted ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/20 group-hover/alt:border-tm-yellow/40"
+                                )}>
+                                  {isAltCompleted ? (
+                                    <Check size={16} className="text-tm-purple-dark" />
+                                  ) : (
+                                    <>
+                                      {alt.type === 'movie' && <Film size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                      {alt.type === 'song' && <Music size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                      {alt.type === 'food' && <Coffee size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                      {alt.type === 'activity' && <Dumbbell size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                    </>
+                                  )}
                                 </div>
+                                <span className="text-[9px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/10">+{relief.xpReward} XP</span>
+                              </div>
+                              <div className="relative z-10">
+                                <span className="text-[8px] font-black uppercase text-tm-blue-gray/40 tracking-widest block mb-0.5">{alt.type}</span>
+                                <h5 className={cn("text-sm font-black leading-snug line-clamp-2", isAltCompleted && "line-through opacity-50")}>{alt.title}</h5>
                               </div>
                             </button>
                           );

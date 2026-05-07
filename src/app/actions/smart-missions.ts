@@ -13,7 +13,7 @@ const GEMINI_API_KEY = process.env.gemini_key;
 
 export async function getSmartMission() {
   const today = format(new Date(), "yyyy-MM-dd");
-  
+
   try {
     if (!(prisma as any).smartMission) return null;
     let mission = await (prisma as any).smartMission.findUnique({
@@ -24,7 +24,7 @@ export async function getSmartMission() {
       if (GEMINI_API_KEY) {
         try {
           const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-          const model = genAI.getGenerativeModel({ 
+          const model = genAI.getGenerativeModel({
             model: "gemini-flash-latest",
             generationConfig: {
               responseMimeType: "application/json",
@@ -43,16 +43,16 @@ export async function getSmartMission() {
             }),
             getSmartMissionHistory(30)
           ]);
-          
+
           const prompt = getSmartMissionPrompt({
             level: profile.level,
             xp: profile.xp,
             stats: profile.stats,
             habits: habitData.map((h: any) => h.name),
-            recentTasks: taskData.map((t: any) => ({ 
-              title: t.title, 
+            recentTasks: taskData.map((t: any) => ({
+              title: t.title,
               type: t.type,
-              startTime: t.startTime 
+              startTime: t.startTime
             })),
             recentNotes: notesData.map((n: any) => n.content),
             missionHistory: history.map((m: any) => ({ title: m.title, completed: m.completed }))
@@ -61,7 +61,7 @@ export async function getSmartMission() {
           console.log("=== GEMINI SDK SMART MISSION PROMPT ===");
           const result = await model.generateContent(prompt);
           const content = result.response.text();
-          
+
           if (content) {
             const data = JSON.parse(content);
             mission = await (prisma as any).smartMission.create({
@@ -95,7 +95,7 @@ export async function getSmartMission() {
           { title: "Quick Stretch [OFF]", description: "Spend 3 minutes stretching your body to release tension. (AI Offline)" }
         ];
         const selected = missions[Math.floor(Math.random() * missions.length)];
-        
+
         mission = await (prisma as any).smartMission.create({
           data: {
             date: today,

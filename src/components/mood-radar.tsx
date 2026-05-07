@@ -55,8 +55,8 @@ export default function MoodRadar({ data, size = 200 }: MoodRadarProps) {
             key={i}
             d={path}
             fill="none"
-            stroke="white"
-            strokeOpacity={0.05}
+            stroke="currentColor"
+            className="text-tm-blue-gray/30"
             strokeWidth={1}
           />
         ))}
@@ -71,8 +71,8 @@ export default function MoodRadar({ data, size = 200 }: MoodRadarProps) {
               y1={center}
               x2={p.x}
               y2={p.y}
-              stroke="white"
-              strokeOpacity={0.1}
+              stroke="currentColor"
+              className="text-tm-blue-gray/50"
               strokeDasharray="2 2"
             />
           );
@@ -99,9 +99,9 @@ export default function MoodRadar({ data, size = 200 }: MoodRadarProps) {
         </defs>
 
         {/* Labels */}
-        <text x={getPoint(max * 1.2, 0).x} y={getPoint(max * 1.2, 0).y} textAnchor="middle" fontSize="10" fontWeight="bold" fill="currentColor" className="text-tm-yellow uppercase tracking-widest">JOY</text>
-        <text x={getPoint(max * 1.2, 120).x} y={getPoint(max * 1.2, 120).y} textAnchor="middle" fontSize="10" fontWeight="bold" fill="currentColor" className="text-tm-blue-gray/60 uppercase tracking-widest">STEADY</text>
-        <text x={getPoint(max * 1.2, 240).x} y={getPoint(max * 1.2, 240).y} textAnchor="middle" fontSize="10" fontWeight="bold" fill="currentColor" className="text-tm-orange-dark uppercase tracking-widest">STRESS</text>
+        <text x={getPoint(max * 1.2, 0).x} y={getPoint(max * 1.2, 0).y} textAnchor="middle" fontSize="10" fontWeight="black" fill="currentColor" className="text-tm-yellow uppercase tracking-widest">JOY</text>
+        <text x={getPoint(max * 1.2, 120).x} y={getPoint(max * 1.2, 120).y} textAnchor="middle" fontSize="10" fontWeight="black" fill="currentColor" className="text-tm-blue-gray dark:text-tm-blue-gray/60 uppercase tracking-widest">STEADY</text>
+        <text x={getPoint(max * 1.2, 240).x} y={getPoint(max * 1.2, 240).y} textAnchor="middle" fontSize="10" fontWeight="black" fill="currentColor" className="text-tm-orange-dark uppercase tracking-widest">STRESS</text>
       </svg>
     </div>
   );
