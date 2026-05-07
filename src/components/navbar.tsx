@@ -107,7 +107,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-1 sm:gap-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -134,6 +134,26 @@ export default function Navbar() {
             );
           })}
         </div>
+
+        {/* Mobile Nav Items */}
+        <div className="flex lg:hidden absolute left-1/2 -translate-x-1/2 items-center gap-1 sm:gap-2">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "relative p-2 rounded-full flex items-center transition-colors",
+                  isActive ? "text-tm-orange-dark" : "text-tm-blue-gray"
+                )}
+              >
+                <item.icon size={20} />
+              </Link>
+            );
+          })}
+        </div>
+
 
         <div className="flex items-center gap-3">
           {profile && (

@@ -52,12 +52,12 @@
 }
 
 :root[data-rank="Champion"] {
-  --tm-yellow: #D97706;
-  --tm-orange-light: #B45309;
-  --tm-orange-dark: #92400E;
-  --tm-blue-gray: #78350F;
-  --tm-purple-dark: #451A03;
-  --tm-red: #F97316;
+  --tm-yellow: #FCD34D; /* Gold */
+  --tm-orange-light: #EF4444; /* Bright Red */
+  --tm-orange-dark: #B91C1C; /* Crimson */
+  --tm-blue-gray: #7F1D1D; /* Ruby-Deep */
+  --tm-purple-dark: #450A0A; /* Maroon */
+  --tm-red: #EF4444;
 }
 
 :root[data-rank="Sentinel"] {
@@ -107,7 +107,7 @@
 .dark[data-rank="Vanguard"] { --tm-blue-gray: #94A3B8; --tm-yellow: #94A3B8; --tm-red: #64748B; }
 .dark[data-rank="Veteran"] { --tm-blue-gray: #94A3B8; --tm-yellow: #60A5FA; --tm-red: #3B82F6; }
 .dark[data-rank="Knight"] { --tm-blue-gray: #94A3B8; --tm-yellow: #FACC15; --tm-red: #EF4444; }
-.dark[data-rank="Champion"] { --tm-blue-gray: #A1A1AA; --tm-yellow: #B45309; --tm-red: #EA580C; }
+.dark[data-rank="Champion"] { --tm-blue-gray: #A1A1AA; --tm-yellow: #FDE047; --tm-red: #F43F5E; }
 .dark[data-rank="Sentinel"] { --tm-blue-gray: #94A3B8; --tm-yellow: #34D399; --tm-red: #10B981; }
 .dark[data-rank="Paladin"] { --tm-blue-gray: #94A3B8; --tm-yellow: #FDE047; --tm-red: #38BDF8; }
 .dark[data-rank="Grandmaster"] { 

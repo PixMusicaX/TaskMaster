@@ -501,9 +501,10 @@ export default function Home() {
         <motion.div 
           animate={{ y: [0, 10, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="absolute bottom-10 flex flex-col items-center gap-2 text-tm-blue-gray"
+          className="absolute bottom-20 flex flex-col items-center gap-2 text-tm-blue-gray"
         >
           <span className="text-[10px] font-black uppercase tracking-widest">Insights</span>
+
           <div className="w-1 h-8 bg-tm-blue-gray/20 rounded-full overflow-hidden">
             <motion.div 
               className="w-full bg-tm-yellow h-1/2"
