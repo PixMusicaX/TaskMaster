@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import GlassCard from "@/components/glass-card";
-import { Save, History, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { Save, History, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check, Brain } from "lucide-react";
 import { format, subDays, addDays, isSameDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { getNoteByDate, saveNote, getRecentNotes } from "@/app/actions/notes";
+import { getProfile } from "@/app/actions/gamification";
 
 export type NoteLine = {
   id: string;
@@ -20,10 +21,15 @@ export default function NotesPage() {
   const [recentNotes, setRecentNotes] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [profile, setProfile] = useState<any>(null);
 
   const fetchNote = useCallback(async (date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
-    const data = await getNoteByDate(dateStr);
+    const [data, profileData] = await Promise.all([
+      getNoteByDate(dateStr),
+      getProfile()
+    ]);
+    setProfile(profileData);
     if (data?.content) {
       try {
         setLines(JSON.parse(data.content));
@@ -98,6 +104,15 @@ export default function NotesPage() {
         <div>
           <h1 className="text-4xl font-black text-tm-purple-dark dark:text-tm-yellow">Daily Notes</h1>
           <p className="text-tm-blue-gray font-medium">Capture your thoughts, plans, and reflections.</p>
+
+          {profile && (
+            <div className="flex gap-4 mt-4">
+              <div className="flex items-center gap-2 bg-tm-yellow/10 px-3 py-1.5 rounded-xl border border-tm-yellow/20">
+                <Brain size={14} className="text-tm-yellow" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-tm-yellow">Intelligence: {profile.intelligence} XP</span>
+              </div>
+            </div>
+          )}
         </div>
         <GlassCard className="flex items-center gap-2 p-2 border-tm-yellow/30 relative z-50 overflow-visible">
           <button 

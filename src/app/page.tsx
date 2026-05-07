@@ -12,6 +12,7 @@ import { getProfile } from "@/app/actions/gamification";
 import { getNoteByDate } from "@/app/actions/notes";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { RPG_TITLES } from "@/lib/constants";
 
 export default function Home() {
   const [habits, setHabits] = useState<any[]>([]);
@@ -111,13 +112,10 @@ export default function Home() {
                     )}>
                       {isDone && <Check size={10} className="text-tm-purple-dark" />}
                     </div>
-                    <div className="flex-1 overflow-hidden">
-                      <span className={cn("text-sm font-bold truncate block", isDone ? "text-tm-purple-dark dark:text-tm-yellow" : "text-tm-blue-gray")}>
+                    <div className="flex-1">
+                      <p className={cn("font-bold text-sm", isDone ? "text-tm-yellow line-through opacity-50" : "text-foreground")}>
                         {habit.name}
-                      </span>
-                      {habit.stat && (
-                        <span className="text-[8px] font-black uppercase text-tm-blue-gray/60 tracking-widest">{habit.stat}</span>
-                      )}
+                      </p>
                     </div>
                   </button>
                 );
@@ -268,7 +266,7 @@ export default function Home() {
                 { label: "Strength", stat: "strength", icon: Swords, color: "tm-orange-dark" },
                 { label: "Intelligence", stat: "intelligence", icon: Brain, color: "tm-yellow" },
                 { label: "Wealth", stat: "wealth", icon: Coins, color: "tm-orange-light" },
-                { label: "Vitality", stat: "vitality", icon: HeartPulse, color: "red-500" },
+                { label: "Vitality", stat: "vitality", icon: HeartPulse, color: "tm-red" },
                 { label: "Charisma", stat: "charisma", icon: Users, color: "tm-blue-gray" },
               ].map((s) => {
                 const val = profile ? (profile as any)[s.stat] : 0;
@@ -279,7 +277,7 @@ export default function Home() {
                   <div key={s.label} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <s.icon size={16} className={`text-${s.color}`} />
+                        <s.icon size={16} style={{ color: `var(--${s.color})` }} />
                         <span className="text-xs font-black uppercase tracking-widest text-tm-blue-gray">{s.label}</span>
                       </div>
                       <span className="text-xs font-bold">{val} XP</span>
@@ -288,7 +286,8 @@ export default function Home() {
                       <motion.div 
                         initial={{ width: 0 }}
                         whileInView={{ width: `${pct}%` }}
-                        className={`h-full bg-${s.color} shadow-[0_0_15px_rgba(255,255,255,0.2)]`}
+                        style={{ backgroundColor: `var(--${s.color})` }}
+                        className="h-full shadow-[0_0_15px_rgba(255,255,255,0.2)]"
                       />
                     </div>
                   </div>
@@ -320,8 +319,14 @@ export default function Home() {
               </div>
             </div>
             <div className="text-center space-y-1">
-              <p className="text-sm font-bold">Class: {profile?.level > 10 ? "Arch-Mage" : profile?.level > 5 ? "Vanguard" : "Novice"}</p>
-              <p className="text-xs text-tm-blue-gray font-medium">Earn { (profile?.level * 100) - (profile?.xp % (profile?.level * 100)) } more XP to level up.</p>
+              <p className="text-sm font-bold">
+                Class: {
+                  [...RPG_TITLES].reverse().find(t => (profile?.level || 1) >= t.minLevel)?.title || "Novice"
+                }
+              </p>
+              <p className="text-xs text-tm-blue-gray font-medium">
+                Earn { (profile?.level * 100) - (profile?.xp % (profile?.level * 100)) } more XP to reach Level { (profile?.level || 1) + 1 }.
+              </p>
             </div>
           </GlassCard>
         </div>

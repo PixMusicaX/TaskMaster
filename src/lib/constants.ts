@@ -7,3 +7,16 @@ export const XP_VALUES = {
   TASK_COMPLETE: 40,
   NOTE_ENTRY: 5,
 };
+
+export const RPG_TITLES = [
+  { minLevel: 1, title: "Novice" },
+  { minLevel: 5, title: "Squire" },
+  { minLevel: 10, title: "Vanguard" },
+  { minLevel: 15, title: "Veteran" },
+  { minLevel: 20, title: "Knight" },
+  { minLevel: 30, title: "Sentinel" },
+  { minLevel: 40, title: "Paladin" },
+  { minLevel: 50, title: "Grandmaster" },
+  { minLevel: 75, title: "Legend" },
+  { minLevel: 100, title: "Mythic" },
+];

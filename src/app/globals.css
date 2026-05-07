@@ -8,6 +8,7 @@
   --tm-orange-dark: #F24F13;
   --tm-blue-gray: #8082A6;
   --tm-purple-dark: #2D1B33;
+  --tm-red: #f43f5e;
 }
 
 .dark {
@@ -24,6 +25,7 @@
   --color-tm-orange-dark: var(--tm-orange-dark);
   --color-tm-blue-gray: var(--tm-blue-gray);
   --color-tm-purple-dark: var(--tm-purple-dark);
+  --color-tm-red: var(--tm-red);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

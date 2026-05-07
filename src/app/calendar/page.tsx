@@ -6,12 +6,14 @@ import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell,
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent } from "@/app/actions/events";
+import { getProfile } from "@/app/actions/gamification";
 import { cn } from "@/lib/utils";
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -38,7 +40,9 @@ export default function CalendarPage() {
 
   const fetchEvents = useCallback(async () => {
     const data = await getEventsByDateRange(startDate, endDate);
+    const profileData = await getProfile();
     setEvents(data);
+    setProfile(profileData);
   }, [startDate, endDate]);
 
   useEffect(() => {
@@ -79,7 +83,7 @@ export default function CalendarPage() {
 
   async function handleAddEvent() {
     if (!newTitle) return;
-    
+
     const [hours, minutes] = newTime.split(":").map(Number);
     const baseDate = new Date(newDateStr);
     const eventTime = setMinutes(setHours(baseDate, hours), minutes);
@@ -103,7 +107,7 @@ export default function CalendarPage() {
         notification: newNotification,
       });
     }
-    
+
     resetForm();
     fetchEvents();
   }
@@ -137,8 +141,21 @@ export default function CalendarPage() {
         <div>
           <h1 className="text-4xl font-black text-tm-purple-dark dark:text-tm-yellow">Calendar</h1>
           <p className="text-tm-blue-gray font-medium">Plan your weeks and months ahead.</p>
+
+          {profile && (
+            <div className="flex gap-4 mt-4">
+              <div className="flex items-center gap-2 bg-tm-orange-dark/10 px-3 py-1.5 rounded-xl border border-tm-orange-dark/20">
+                <Swords size={14} className="text-tm-orange-dark" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-tm-orange-dark">Strength: {profile.strength} XP</span>
+              </div>
+              <div className="flex items-center gap-2 bg-tm-orange-light/10 px-3 py-1.5 rounded-xl border border-tm-orange-light/20">
+                <Coins size={14} className="text-tm-orange-light" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-tm-orange-light">Wealth: {profile.wealth} XP</span>
+              </div>
+            </div>
+          )}
         </div>
-        <button 
+        <button
           onClick={() => setShowAdd(true)}
           className="flex items-center gap-2 bg-tm-orange-dark/80 backdrop-blur-xl saturate-150 text-white px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl border border-tm-orange-dark/30 relative z-50"
         >
@@ -148,7 +165,7 @@ export default function CalendarPage() {
 
       <AnimatePresence>
         {showAdd && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
@@ -168,7 +185,7 @@ export default function CalendarPage() {
                       { id: "main", label: "Main", color: "bg-tm-orange-light", text: "text-white" },
                       { id: "epic", label: "Epic", color: "bg-tm-orange-dark", text: "text-white" },
                     ].map((t) => (
-                      <button 
+                      <button
                         key={t.id}
                         onClick={() => setNewTier(t.id)}
                         className={cn(
@@ -183,20 +200,20 @@ export default function CalendarPage() {
                 </div>
 
                 <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
-                  <button 
+                  <button
                     onClick={() => setNewType("task")}
                     className={cn("flex-1 py-2 rounded-lg font-bold text-sm transition-all", newType === "task" ? "bg-tm-yellow text-tm-purple-dark" : "text-tm-blue-gray")}
                   >
-                    Quest
+                    Task
                   </button>
-                  <button 
+                  <button
                     onClick={() => setNewType("event")}
                     className={cn("flex-1 py-2 rounded-lg font-bold text-sm transition-all", newType === "event" ? "bg-tm-orange-light text-white" : "text-tm-blue-gray")}
                   >
                     Event
                   </button>
                 </div>
-                <input 
+                <input
                   autoFocus
                   placeholder="Title"
                   className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-tm-yellow font-bold text-lg"
@@ -206,7 +223,7 @@ export default function CalendarPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
                     <p className="text-[10px] font-black uppercase text-tm-blue-gray mb-1">Date</p>
-                    <input 
+                    <input
                       type="date"
                       value={newDateStr}
                       onChange={(e) => setNewDateStr(e.target.value)}
@@ -215,7 +232,7 @@ export default function CalendarPage() {
                   </div>
                   <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
                     <p className="text-[10px] font-black uppercase text-tm-blue-gray mb-1">Time</p>
-                    <input 
+                    <input
                       type="time"
                       value={newTime}
                       onChange={(e) => setNewTime(e.target.value)}
@@ -224,7 +241,7 @@ export default function CalendarPage() {
                   </div>
                 </div>
 
-                <button 
+                <button
                   onClick={() => setNewNotification(!newNotification)}
                   className={cn(
                     "w-full flex items-center justify-between p-4 rounded-2xl border transition-all",
@@ -236,14 +253,14 @@ export default function CalendarPage() {
                     <span className="text-sm font-bold">Browser Notification</span>
                   </div>
                   <div className={cn("w-10 h-5 rounded-full relative transition-colors", newNotification ? "bg-tm-orange-dark" : "bg-tm-blue-gray/30")}>
-                    <motion.div 
+                    <motion.div
                       animate={{ x: newNotification ? 20 : 2 }}
                       className="absolute top-1 w-3 h-3 bg-white rounded-full"
                     />
                   </div>
                 </button>
 
-                <button 
+                <button
                   onClick={handleAddEvent}
                   className="w-full bg-tm-yellow text-tm-purple-dark font-black py-4 rounded-2xl shadow-xl hover:bg-tm-yellow/80 transition-colors"
                 >
@@ -260,13 +277,13 @@ export default function CalendarPage() {
           <div className="p-6 flex items-center justify-between bg-white/5 border-b border-tm-blue-gray/10">
             <h2 className="text-2xl font-black text-tm-purple-dark dark:text-tm-yellow">{format(currentDate, "MMMM yyyy")}</h2>
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => setCurrentDate(subMonths(currentDate, 1))}
                 className="p-2 hover:bg-tm-yellow/20 rounded-xl transition-colors"
               >
                 <ChevronLeft size={24} />
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setCurrentDate(new Date());
                   setSelectedDate(new Date());
@@ -275,7 +292,7 @@ export default function CalendarPage() {
               >
                 Today
               </button>
-              <button 
+              <button
                 onClick={() => setCurrentDate(addMonths(currentDate, 1))}
                 className="p-2 hover:bg-tm-yellow/20 rounded-xl transition-colors"
               >
@@ -315,14 +332,14 @@ export default function CalendarPage() {
                   )}>
                     {format(day, "d")}
                   </span>
-                  
+
                   <div className="flex flex-col gap-1 mt-1 overflow-hidden">
                     {dayEvents.slice(0, 3).map((event) => (
-                      <div 
+                      <div
                         key={event.id}
                         className={cn(
                           "px-1.5 py-0.5 rounded text-[8px] font-bold truncate border-l-2",
-                          event.type === "task" 
+                          event.type === "task"
                             ? (event.completed ? "bg-tm-blue-gray/10 text-tm-blue-gray/50 border-tm-blue-gray/30" : "bg-tm-yellow/20 text-tm-purple-dark border-tm-yellow")
                             : "bg-tm-orange-light/20 text-tm-orange-dark border-tm-orange-light"
                         )}
@@ -352,7 +369,7 @@ export default function CalendarPage() {
               </span>
             )}
           </div>
-          
+
           <div className="flex-1 space-y-4 overflow-y-auto pr-2">
             {selectedEvents.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-48 text-center opacity-40 border-2 border-dashed border-tm-blue-gray/20 rounded-3xl p-8">
@@ -362,7 +379,7 @@ export default function CalendarPage() {
               </div>
             ) : (
               selectedEvents.map((event) => (
-                <motion.div 
+                <motion.div
                   layout
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -375,7 +392,7 @@ export default function CalendarPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         {event.type === "task" && (
-                          <button 
+                          <button
                             onClick={() => handleToggle(event.id, event.completed)}
                             className={cn(
                               "w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center",
@@ -388,13 +405,13 @@ export default function CalendarPage() {
                         <h4 className={cn("font-bold text-sm", event.completed && "line-through text-tm-blue-gray")}>{event.title}</h4>
                       </div>
                       <div className="flex gap-2 items-center">
-                        <button 
+                        <button
                           onClick={() => openEdit(event)}
                           className="opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-tm-yellow transition-all"
                         >
                           <Edit2 size={14} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDelete(event.id)}
                           className="opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-red-500 transition-all"
                         >
