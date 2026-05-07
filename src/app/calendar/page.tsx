@@ -8,12 +8,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent } from "@/app/actions/events";
 import { getProfile } from "@/app/actions/gamification";
 import { cn } from "@/lib/utils";
+import { PremiumLoader } from "@/components/loader";
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -39,10 +41,15 @@ export default function CalendarPage() {
   }, [currentDate]);
 
   const fetchEvents = useCallback(async () => {
-    const data = await getEventsByDateRange(startDate, endDate);
-    const profileData = await getProfile();
-    setEvents(data);
-    setProfile(profileData);
+    setIsLoading(true);
+    try {
+      const data = await getEventsByDateRange(startDate, endDate);
+      const profileData = await getProfile();
+      setEvents(data);
+      setProfile(profileData);
+    } finally {
+      setIsLoading(false);
+    }
   }, [startDate, endDate]);
 
   useEffect(() => {
@@ -137,7 +144,11 @@ export default function CalendarPage() {
 
   return (
     <div className="p-6 md:p-12 max-w-7xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {isLoading ? (
+        <PremiumLoader />
+      ) : (
+        <>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-tm-purple-dark dark:text-tm-yellow">Calendar</h1>
           <p className="text-tm-blue-gray font-medium">Plan your weeks and months ahead.</p>
@@ -445,6 +456,8 @@ export default function CalendarPage() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

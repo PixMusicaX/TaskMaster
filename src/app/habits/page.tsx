@@ -8,9 +8,11 @@ import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { getHabits, addHabit, updateHabit, archiveHabit, restoreHabit, deleteHabitPermanently, toggleHabitLog, getArchivedHabits } from "@/app/actions/habits";
 import { getProfile } from "@/app/actions/gamification";
 import { cn } from "@/lib/utils";
+import { PremiumLoader } from "@/components/loader";
 
 export default function HabitsPage() {
   const [habits, setHabits] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [archivedHabits, setArchivedHabits] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [editingHabit, setEditingHabit] = useState<any>(null);
@@ -41,12 +43,16 @@ export default function HabitsPage() {
   }, []);
 
   async function fetchHabits() {
-    const data = await getHabits();
-    const archivedData = await getArchivedHabits();
-    const profileData = await getProfile();
-    setHabits(data);
-    setArchivedHabits(archivedData);
-    setProfile(profileData);
+    try {
+      const data = await getHabits();
+      const archivedData = await getArchivedHabits();
+      const profileData = await getProfile();
+      setHabits(data);
+      setArchivedHabits(archivedData);
+      setProfile(profileData);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   async function handleAddHabit() {
@@ -121,7 +127,11 @@ export default function HabitsPage() {
 
   return (
     <div className="p-6 md:p-12 max-w-6xl mx-auto space-y-12">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {isLoading ? (
+        <PremiumLoader />
+      ) : (
+        <>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-tm-purple-dark dark:text-tm-yellow">Habit Tracker</h1>
           <p className="text-tm-blue-gray font-medium">Consistency is the key to mastery.</p>
@@ -434,6 +444,8 @@ export default function HabitsPage() {
           ))}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

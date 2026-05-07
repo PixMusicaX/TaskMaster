@@ -7,6 +7,8 @@ import { format, subDays, addDays, isSameDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { getNoteByDate, saveNote, getRecentNotes } from "@/app/actions/notes";
 import { getProfile } from "@/app/actions/gamification";
+import { cn } from "@/lib/utils";
+import { PremiumLoader } from "@/components/loader";
 
 export type NoteLine = {
   id: string;
@@ -22,27 +24,32 @@ export default function NotesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchNote = useCallback(async (date: Date) => {
+    setIsLoading(true);
     const dateStr = format(date, "yyyy-MM-dd");
-    const [data, profileData] = await Promise.all([
-      getNoteByDate(dateStr),
-      getProfile()
-    ]);
-    setProfile(profileData);
-    if (data?.content) {
-      try {
-        setLines(JSON.parse(data.content));
-      } catch (e) {
-        // Fallback for old plain text notes
-        setLines(data.content.split("\n").map((text: string) => ({
-          id: Math.random().toString(36).substr(2, 9),
-          bullet: "○",
-          text
-        })));
+    try {
+      const [data, profileData] = await Promise.all([
+        getNoteByDate(dateStr),
+        getProfile()
+      ]);
+      setProfile(profileData);
+      if (data?.content) {
+        try {
+          setLines(JSON.parse(data.content));
+        } catch (e) {
+          setLines(data.content.split("\n").map((text: string) => ({
+            id: Math.random().toString(36).substr(2, 9),
+            bullet: "○",
+            text
+          })));
+        }
+      } else {
+        setLines([{ id: Math.random().toString(36).substr(2, 9), bullet: "○", text: "" }]);
       }
-    } else {
-      setLines([{ id: Math.random().toString(36).substr(2, 9), bullet: "○", text: "" }]);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -100,7 +107,11 @@ export default function NotesPage() {
 
   return (
     <div className="p-6 md:p-12 max-w-5xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {isLoading ? (
+        <PremiumLoader />
+      ) : (
+        <>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-tm-purple-dark dark:text-tm-yellow">Daily Notes</h1>
           <p className="text-tm-blue-gray font-medium">Capture your thoughts, plans, and reflections.</p>
@@ -262,6 +273,8 @@ export default function NotesPage() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { getNoteByDate } from "@/app/actions/notes";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { RPG_TITLES } from "@/lib/constants";
+import { PremiumLoader } from "@/components/loader";
 
 export default function Home() {
   const [habits, setHabits] = useState<any[]>([]);
@@ -94,9 +95,13 @@ export default function Home() {
                 <span className="text-[10px] font-black text-tm-yellow uppercase tracking-tighter">+10 XP</span>
               </div>
             </div>
-            <div className="space-y-3 min-h-[100px]">
-              {habits.filter(h => !h.frequency || h.frequency.includes(today.getDay())).map(habit => {
-                const isDone = habit.logs.some((l:any) => l.date === todayStr && l.completed);
+            <div className={cn("min-h-[200px]", loading && "flex items-center justify-center")}>
+              {loading ? (
+                <PremiumLoader />
+              ) : (
+                <div className="space-y-3">
+                  {habits.filter(h => !h.frequency || h.frequency.includes(today.getDay())).map(habit => {
+                    const isDone = habit.logs.some((l:any) => l.date === todayStr && l.completed);
                 return (
                   <button 
                     key={habit.id}
@@ -120,6 +125,8 @@ export default function Home() {
                   </button>
                 );
               })}
+                </div>
+              )}
               {habits.filter(h => !h.frequency || h.frequency.includes(today.getDay())).length === 0 && !loading && (
                 <p className="text-xs text-tm-blue-gray italic py-4">No missions active today.</p>
               )}
@@ -134,8 +141,12 @@ export default function Home() {
               <h2 className="text-xl font-bold">Active Quests</h2>
               <AlertCircle className="text-tm-orange-light" />
             </div>
-            <div className="space-y-3 min-h-[100px]">
-              {tasks
+            <div className={cn("min-h-[200px]", loading && "flex items-center justify-center")}>
+              {loading ? (
+                <PremiumLoader />
+              ) : (
+                <div className="space-y-3">
+                  {tasks
                 .filter(task => {
                   if (tasks.length >= 3 && task.completed && task.type === "task") return false;
                   return true;
@@ -175,6 +186,8 @@ export default function Home() {
                     </button>
                   );
                 })}
+                </div>
+              )}
               {tasks.length === 0 && !loading && (
                 <p className="text-xs text-tm-blue-gray italic py-4">No quests accepted today.</p>
               )}
@@ -246,6 +259,7 @@ export default function Home() {
           <p className="text-tm-blue-gray max-w-2xl mx-auto font-medium">
             Visualizing your progress towards becoming the master of your tasks.
           </p>
+          <p className="text-[10px] text-tm-blue-gray italic mt-2 uppercase tracking-widest opacity-60">XP and Levels reset on the 1st of every month</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">

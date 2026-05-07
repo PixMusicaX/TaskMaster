@@ -3,11 +3,11 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { XP_VALUES } from "@/lib/constants";
-import { subDays, format } from "date-fns";
+import { startOfMonth, format } from "date-fns";
 
 export async function getProfile() {
-  const last28Days = subDays(new Date(), 28);
-  const last28DaysStr = format(last28Days, "yyyy-MM-dd");
+  const windowStart = startOfMonth(new Date());
+  const windowStartStr = format(windowStart, "yyyy-MM-dd");
 
   // Calculate Habit XP
   const habits = await prisma.habit.findMany({
@@ -15,7 +15,7 @@ export async function getProfile() {
       logs: {
         where: {
           completed: true,
-          date: { gte: last28DaysStr }
+          date: { gte: windowStartStr }
         }
       }
     }
@@ -25,8 +25,8 @@ export async function getProfile() {
   const events = await prisma.event.findMany({
     where: {
       OR: [
-        { startTime: { gte: last28Days } },
-        { date: { gte: last28DaysStr } }
+        { startTime: { gte: windowStart } },
+        { date: { gte: windowStartStr } }
       ]
     }
   });
@@ -34,7 +34,7 @@ export async function getProfile() {
   // Calculate Note XP
   const notes = await prisma.note.findMany({
     where: {
-      date: { gte: last28DaysStr }
+      date: { gte: windowStartStr }
     }
   });
 
