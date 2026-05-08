@@ -26,14 +26,13 @@ export async function getDashboardTasks(targetDate: Date) {
   return await db.select().from(event).where(
     or(
       and(
-        eq(event.type, "event"),
         gte(event.startTime, startOfToday),
         lte(event.startTime, endOfToday)
       ),
       and(
         eq(event.type, "task"),
         eq(event.completed, false),
-        lte(event.startTime, endOfToday)
+        lte(event.startTime, startOfToday)
       )
     )
   ).orderBy(asc(event.startTime));
