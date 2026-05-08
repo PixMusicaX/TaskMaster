@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   description: "A feature-rich planner with habits, notes, and calendar.",
 };
 
+import ClassWatermark from "@/components/class-watermark";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,8 +30,9 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col transition-colors duration-300">
         <ThemeProvider>
+          <ClassWatermark />
           <Navbar />
-          <main className="flex-1 overflow-auto relative pb-24 lg:pb-0">
+          <main className="flex-1 overflow-auto relative pb-24 lg:pb-0 z-10">
             {children}
           </main>
         </ThemeProvider>
