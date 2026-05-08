@@ -561,7 +561,7 @@ export default function CalendarPage() {
             title="Calendar Archive"
             isOpen={isTabularOpen}
             onClose={() => setIsTabularOpen(false)}
-            data={allEventsForTable}
+            data={[...allEventsForTable].reverse()}
             columns={[
               {
                 header: "Date", key: "date", render: (val, row) => (

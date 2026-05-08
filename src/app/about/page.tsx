@@ -8,9 +8,10 @@ import { getSeasonHistory } from "@/app/actions/gamification";
 import { getSmartMissionHistory } from "@/app/actions/smart-missions";
 import { getReliefHistory } from "@/app/actions/relief";
 import { format } from "date-fns";
-import { Music, Film, Coffee, Dumbbell } from "lucide-react";
+import { Music, Film, Coffee, Dumbbell, Database, Download, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
+import { generatePruneArchive, deletePrunedData } from "@/app/actions/prune";
 
 export default function AboutPage() {
   const { theme } = useTheme();
@@ -21,6 +22,36 @@ export default function AboutPage() {
 
   const [seasonsLimit, setSeasonsLimit] = useState(6);
   const [missionsLimit, setMissionsLimit] = useState(5);
+  const [pruneLoading, setPruneLoading] = useState(false);
+
+  async function handlePrune() {
+    if (!confirm("Are you sure? This will download your data older than 5 years as a CSV and permanently delete it from the cloud database.")) return;
+    
+    setPruneLoading(true);
+    try {
+      const csvData = await generatePruneArchive();
+      if (csvData) {
+        const blob = new Blob([csvData], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `archive_${format(new Date(), "yyyy-MM-dd")}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        
+        await deletePrunedData();
+        alert("Old data has been archived and successfully pruned from the cloud database.");
+      } else {
+        alert("No data older than 5 years was found to prune.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to prune database.");
+    }
+    setPruneLoading(false);
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -51,9 +82,9 @@ export default function AboutPage() {
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="w-20 h-20 bg-tm-orange-dark mx-auto rounded-[2rem] flex items-center justify-center text-white text-4xl font-black shadow-2xl shadow-tm-orange-dark/20 mb-8"
+          className="w-24 h-24 mx-auto rounded-[2rem] flex items-center justify-center shadow-2xl shadow-tm-orange-dark/20 mb-8 overflow-hidden border border-white/5"
         >
-          T
+          <img src="/logo.png" alt="TaskMaster Logo" className="w-full h-full object-cover" />
         </motion.div>
         <h1 className="text-5xl md:text-6xl font-black tracking-tight text-tm-purple-dark dark:text-tm-yellow">
           The Vault
@@ -280,6 +311,58 @@ export default function AboutPage() {
             <p className="text-tm-blue-gray font-medium">No relief recommendations logged yet. Take a break today!</p>
           </GlassCard>
         )}
+      </div>
+
+      {/* Storage Management Section */}
+      <div className="space-y-8">
+        <div className="flex items-center gap-4">
+          <Database className="text-tm-blue-gray" size={32} />
+          <h2 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-3xl font-black dark:text-tm-blue-gray italic tracking-tighter uppercase">Cloud Storage</h2>
+        </div>
+        
+        <GlassCard className="p-6 md:p-8 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+            <Database size={120} />
+          </div>
+          <div className="relative z-10 space-y-6">
+            <div>
+              <h3 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-2xl font-black dark:text-white leading-tight">Database Archiving</h3>
+              <p className="text-sm text-tm-blue-gray mt-2 max-w-2xl font-medium">
+                Keep your cloud database fast and storage-efficient. This tool will automatically bundle all your records (Habits, Notes, Quests) older than 5 years into a CSV file, download it to your local device, and safely delete the old rows from the cloud.
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-2">
+              <button
+                onClick={handlePrune}
+                disabled={pruneLoading}
+                className={cn(
+                  "flex items-center gap-3 px-6 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all",
+                  pruneLoading 
+                    ? "bg-tm-blue-gray/20 text-tm-blue-gray cursor-not-allowed" 
+                    : "bg-tm-yellow/10 hover:bg-tm-yellow/20 text-tm-yellow border border-tm-yellow/20 hover:border-tm-yellow/40"
+                )}
+              >
+                {pruneLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-tm-blue-gray border-t-transparent rounded-full animate-spin" />
+                    Processing Archive...
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    Download Archive & Prune DB
+                  </>
+                )}
+              </button>
+              
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase text-tm-blue-gray tracking-widest px-4 py-2 bg-tm-blue-gray/10 rounded-lg">
+                <AlertTriangle size={12} className="text-tm-orange-light" />
+                <span>Cannot be undone</span>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
       </div>
 
       {/* Footer */}

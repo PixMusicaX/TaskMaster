@@ -91,8 +91,8 @@ export default function Navbar() {
     <div className="sticky top-0 z-[100] w-full">
       <nav className="w-full bg-background/80 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between relative z-40">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-tm-orange-dark rounded-full flex items-center justify-center text-white font-bold text-lg">
-            T
+          <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10 shadow-[0_0_10px_rgba(242,79,19,0.3)]">
+            <img src="/logo.png" alt="TaskMaster Logo" className="w-full h-full object-cover" />
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-xl hidden sm:inline-block text-tm-purple-dark dark:text-tm-yellow leading-none">
@@ -176,13 +176,13 @@ export default function Navbar() {
             <button
               onClick={cycleRank}
               onContextMenu={(e) => { e.preventDefault(); resetRank(); }}
-              className="p-2 rounded-full hover:bg-tm-blue-gray/10 text-tm-blue-gray transition-colors"
+              className="hidden md:block p-2 rounded-full hover:bg-tm-blue-gray/10 text-tm-blue-gray transition-colors"
               title="Cycle Class Scheme (Left Click) | Reset to Auto (Right Click)"
             >
               <Shield size={20} className={cn("transition-colors", isManuallySet ? "text-tm-yellow" : "text-tm-orange-light")} />
             </button>
 
-            <div className="w-px h-4 bg-white/10" />
+            <div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
 
             <button
               onClick={toggleTheme}
