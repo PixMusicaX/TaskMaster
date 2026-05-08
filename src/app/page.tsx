@@ -116,7 +116,7 @@ export default function Home() {
         ]);
         setSmartMission(smartData);
         setPrepTip(prepData);
-        
+
         const finishRelief = async (lat?: number, lon?: number) => {
           const reliefData = await getReliefRecommendation(lat, lon);
           setRelief(reliefData);
@@ -200,14 +200,19 @@ export default function Home() {
 
   async function handleReliefToggle(index: number = 0) {
     if (!relief) return;
-    const newStatus = !relief.completed;
+    const isCompleted = index === 0 ? relief.completed : index === 1 ? relief.alt1Completed : relief.alt2Completed;
+    const newStatus = !isCompleted;
     await toggleReliefRecommendation(relief.id, newStatus, index);
-    const [data, prof] = await Promise.all([getReliefRecommendation(), getProfile()]);
-    setRelief(data);
+
+    const updatedRelief = { ...relief };
+    if (index === 0) updatedRelief.completed = newStatus;
+    else if (index === 1) updatedRelief.alt1Completed = newStatus;
+    else if (index === 2) updatedRelief.alt2Completed = newStatus;
+    setRelief(updatedRelief);
+
+    const prof = await getProfile();
     setProfile(prof);
-    if (newStatus) {
-      window.dispatchEvent(new CustomEvent("profile-updated"));
-    }
+    window.dispatchEvent(new CustomEvent("profile-updated"));
   }
 
   async function handleRegenerate() {
@@ -227,7 +232,7 @@ export default function Home() {
 
   return (
     <div className="min-h-full bg-transparent text-foreground selection:bg-tm-yellow selection:text-tm-purple-dark">
-      <section 
+      <section
         className="relative min-h-screen flex flex-col items-center pt-28 pb-32 px-6 gap-12"
       >
         {/* Central Hero: Clock & Quote */}
@@ -324,11 +329,11 @@ export default function Home() {
                           task.completed && !isEvent
                             ? "bg-tm-blue-gray/5 border-transparent opacity-40 grayscale"
                             : cn(
-                                "shadow-lg transition-all",
-                                task.tier === "epic" ? "bg-tm-orange-dark/5 border-tm-orange-dark/20 hover:border-tm-orange-dark/40 hover:bg-tm-orange-dark/[0.03]" :
-                                  task.tier === "main" ? "bg-tm-orange-light/5 border-tm-orange-light/20 hover:border-tm-orange-light/40 hover:bg-tm-orange-light/[0.03]" :
-                                    "bg-tm-yellow/5 border-tm-yellow/20 hover:border-tm-yellow/40 hover:bg-tm-yellow/[0.03]"
-                              ),
+                              "shadow-lg transition-all",
+                              task.tier === "epic" ? "bg-tm-orange-dark/5 border-tm-orange-dark/20 hover:border-tm-orange-dark/40 hover:bg-tm-orange-dark/[0.03]" :
+                                task.tier === "main" ? "bg-tm-orange-light/5 border-tm-orange-light/20 hover:border-tm-orange-light/40 hover:bg-tm-orange-light/[0.03]" :
+                                  "bg-tm-yellow/5 border-tm-yellow/20 hover:border-tm-yellow/40 hover:bg-tm-yellow/[0.03]"
+                            ),
                           isEvent && "cursor-default"
                         )}
                       >
@@ -428,19 +433,19 @@ export default function Home() {
                 <div className="space-y-3">
                   {/* Preparation Tip Card */}
                   {prepTip && (
-                    <div 
+                    <div
                       onClick={handlePrepToggle}
                       className={cn(
                         "group/prep p-4 rounded-[1.25rem] border transition-all cursor-pointer relative overflow-hidden",
-                        prepTip.completed 
-                          ? "bg-tm-purple-dark/20 border-tm-purple-dark/30 opacity-50 grayscale-[0.5]" 
+                        prepTip.completed
+                          ? "bg-tm-purple-dark/20 border-tm-purple-dark/30 opacity-50 grayscale-[0.5]"
                           : "bg-white/5 border-white/10 hover:border-tm-purple-dark/40 hover:bg-tm-purple-dark/[0.03] shadow-xl"
                       )}
                     >
                       <div className="absolute top-0 right-0 p-5 opacity-[0.03] group-hover/prep:opacity-[0.07] transition-opacity pointer-events-none">
                         <Brain size={70} />
                       </div>
-                      
+
                       <div className="flex items-start gap-3 relative z-10">
                         <div className={cn(
                           "w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-all mt-0.5",
@@ -521,70 +526,6 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* Relief Suggestion Card */}
-                  {relief && (
-                    <div
-                      onClick={() => handleReliefToggle(0)}
-                      className={cn(
-                        "group/relief p-4 rounded-[1.25rem] border transition-all cursor-pointer relative overflow-hidden",
-                        relief.completed
-                          ? "bg-tm-yellow/10 border-tm-yellow/20 opacity-50 grayscale-[0.5]"
-                          : "bg-white/5 border-white/10 hover:border-tm-yellow/40 hover:bg-tm-yellow/[0.03] shadow-xl"
-                      )}
-                    >
-                      <div className="absolute top-0 right-0 p-5 opacity-[0.03] group-hover/relief:opacity-[0.07] transition-opacity pointer-events-none">
-                        {relief.type === 'movie' && <Film size={70} />}
-                        {relief.type === 'song' && <Music size={70} />}
-                        {relief.type === 'food' && <Coffee size={70} />}
-                        {relief.type === 'activity' && <Dumbbell size={70} />}
-                      </div>
-
-                      <div className="flex items-start gap-3 relative z-10">
-                        <div className={cn(
-                          "w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-all mt-0.5",
-                          relief.completed ? "bg-tm-yellow border-tm-yellow shadow-[0_0_10px_rgba(242,194,48,0.4)]" : "bg-white/5 border-tm-yellow/20 group-hover/relief:border-tm-yellow/50"
-                        )}>
-                          {relief.completed ? <Check size={18} className="text-tm-purple-dark" /> : (
-                            <>
-                              {relief.type === 'movie' && <Film size={16} className="text-tm-yellow" />}
-                              {relief.type === 'song' && <Music size={16} className="text-tm-yellow" />}
-                              {relief.type === 'food' && <Coffee size={16} className="text-tm-yellow" />}
-                              {relief.type === 'activity' && <Dumbbell size={16} className="text-tm-yellow" />}
-                            </>
-                          )}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[8px] font-black uppercase text-tm-yellow tracking-[0.2em]">Relief: {relief.type}</span>
-                            <div className="flex items-center gap-2">
-                              {!relief.completed && (
-                                <button
-                                  onClick={handleRegenerateRelief}
-                                  className="text-[8px] font-black text-tm-yellow/50 hover:text-tm-yellow uppercase tracking-widest flex items-center gap-1 transition-all"
-                                >
-                                  <RotateCw size={8} className={cn(reliefLoading && "animate-spin")} /> Reload
-                                </button>
-                              )}
-                              <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-[8px] font-black text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">
-                                +{relief.xpReward === 5 ? 10 : relief.xpReward} XP
-                              </span>
-                            </div>
-                          </div>
-
-                          <h4 className={cn("text-base font-black text-foreground/90 leading-tight", relief.completed && "line-through opacity-50")}>
-                            {relief.title}
-                          </h4>
-
-                          {!relief.completed && relief.description && (
-                            <p className="text-xs text-tm-blue-gray leading-relaxed mt-1.5 italic opacity-80">
-                              {relief.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Footer Action */}
                   {!aiLoading && (
@@ -758,42 +699,143 @@ export default function Home() {
             </div>
           </GlassCard>
 
-          <GlassCard className="p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-6 group relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
-              <HistoryIcon size={120} />
+          <GlassCard className="p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
+              <Coffee size={120} />
             </div>
 
             <div className="flex items-center justify-between relative z-10">
               <div className="flex flex-col gap-1">
                 <h3 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
-                  <HistoryIcon className="text-tm-yellow" size={24} /> Season Cycle
+                  <Coffee className="text-tm-blue-gray" size={24} /> Relief Hub
                 </h3>
-                <p className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-[0.3em]">
-                  Neural Progression History
-                </p>
+                {relief && (
+                  <div className="flex items-center gap-3 text-[10px] font-black uppercase text-tm-blue-gray/60 tracking-[0.2em]">
+                    <span className="flex items-center gap-1.5"><MapPin size={12} className="text-tm-yellow/40" /> {relief.location}</span>
+                    <span className="w-1 h-1 rounded-full bg-white/10" />
+                    <span className="flex items-center gap-1.5"><CloudSun size={12} className="text-tm-yellow/40" /> {relief.temp}°C {relief.weather}</span>
+                  </div>
+                )}
               </div>
+              {!relief?.completed && relief && (
+                <button
+                  onClick={handleRegenerateRelief}
+                  className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 text-tm-blue-gray hover:text-tm-yellow hover:border-tm-yellow/50 transition-all shadow-lg active:scale-95"
+                  title="Regenerate Hub"
+                >
+                  <RotateCw size={18} className={cn(reliefLoading && "animate-spin")} />
+                </button>
+              )}
             </div>
 
-            <div className="flex-1 flex flex-col gap-4 relative z-10">
-              {history.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-                  <div className="text-center min-w-[60px]">
-                    <span className="text-[10px] font-black uppercase text-tm-blue-gray block">{item.monthName}</span>
-                  </div>
-                  <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min((item.xp / 5000) * 100, 100)}%` }}
-                      transition={{ duration: 1, delay: idx * 0.1 }}
-                      className="h-full bg-tm-yellow shadow-[0_0_8px_rgba(242,194,48,0.4)]"
-                    />
-                  </div>
-                  <div className="min-w-[80px] text-right">
-                    <span className="text-sm font-black text-tm-yellow">{item.xp} XP</span>
-                  </div>
+            <div className={cn("flex-1 flex flex-col justify-center relative z-10", reliefLoading && "items-center")}>
+              {reliefLoading ? (
+                <div className="flex flex-col items-center">
+                  <PremiumLoader />
+                  <p className="text-[10px] font-black uppercase text-tm-yellow animate-pulse -mt-16">Scanning for relief...</p>
                 </div>
-              ))}
+              ) : relief ? (
+                <div className="flex flex-col gap-6">
+                  {/* Primary Suggestion */}
+                  <div className="relative">
+                    <div className="absolute -top-3 left-4 px-2 bg-tm-purple-dark border border-tm-yellow/20 rounded text-[8px] font-black uppercase text-tm-yellow tracking-[0.2em] z-20">
+                      Primary Path
+                    </div>
+                    <button
+                      onClick={() => handleReliefToggle(0)}
+                      className={cn(
+                        "w-full text-left p-6 rounded-[2rem] border transition-all relative overflow-hidden group/card shadow-2xl",
+                        relief.completed
+                          ? "bg-tm-yellow/10 border-tm-yellow/40 shadow-inner opacity-50 grayscale-[0.5]"
+                          : "bg-white/5 border-white/10 hover:border-tm-yellow/30 hover:bg-white/10"
+                      )}
+                    >
+                      <div className="flex items-start gap-5">
+                        <div className={cn(
+                          "w-8 h-8 rounded-2xl border-2 flex items-center justify-center transition-all mt-1 shadow-lg",
+                          relief.completed ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/30 group-hover/card:border-tm-yellow/50"
+                        )}>
+                          {relief.completed ? <Check size={18} className="text-tm-purple-dark" /> : <Sparkles size={14} className="text-tm-yellow" />}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-black uppercase text-tm-yellow tracking-[0.3em] flex items-center gap-2">
+                              {relief.type === 'movie' && <Film size={12} />}
+                              {relief.type === 'song' && <Music size={12} />}
+                              {relief.type === 'food' && <Coffee size={12} />}
+                              {relief.type === 'activity' && <Dumbbell size={12} />}
+                              {relief.type || 'Suggestion'}
+                            </span>
+                            <span className="text-xs font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">+{relief.xpReward === 5 ? 10 : relief.xpReward} XP</span>
+                          </div>
+                          <h4 className={cn("text-xl font-black leading-tight tracking-tight", relief.completed && "line-through opacity-50")}>
+                            {relief.title}
+                          </h4>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Alternatives Section */}
+                  {relief.alternatives && Array.isArray(relief.alternatives) && relief.alternatives.length > 0 && (
+                    <div className="flex flex-col gap-5">
+                      <div className="flex items-center gap-4">
+                        <p className="text-[10px] font-black uppercase text-tm-blue-gray/30 tracking-[0.4em] shrink-0">Alternative Channels</p>
+                        <div className="h-px flex-1 bg-white/[0.03]" />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {relief.alternatives.map((alt: any, i: number) => {
+                          const isAltCompleted = i === 0 ? relief.alt1Completed : relief.alt2Completed;
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => handleReliefToggle(i + 1)}
+                              className={cn(
+                                "flex flex-col gap-3 p-5 rounded-[1.5rem] border transition-all text-left group/alt relative overflow-hidden",
+                                isAltCompleted
+                                  ? "bg-tm-yellow/5 border-tm-yellow/10 opacity-40 grayscale"
+                                  : "bg-white/[0.02] border-white/5 hover:border-tm-yellow/20 hover:bg-white/[0.05] shadow-lg"
+                              )}
+                            >
+                              <div className="flex items-center justify-between gap-3 relative z-10">
+                                <div className={cn(
+                                  "w-8 h-8 rounded-xl border flex items-center justify-center transition-all shrink-0",
+                                  isAltCompleted ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/20 group-hover/alt:border-tm-yellow/40"
+                                )}>
+                                  {isAltCompleted ? (
+                                    <Check size={16} className="text-tm-purple-dark" />
+                                  ) : (
+                                    <>
+                                      {alt.type === 'movie' && <Film size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                      {alt.type === 'song' && <Music size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                      {alt.type === 'food' && <Coffee size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                      {alt.type === 'activity' && <Dumbbell size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                    </>
+                                  )}
+                                </div>
+                                <span className="text-[9px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/10">+{relief.xpReward === 5 ? 10 : relief.xpReward} XP</span>
+                              </div>
+                              <div className="relative z-10">
+                                <span className="text-[8px] font-black uppercase text-tm-blue-gray/40 tracking-widest block mb-0.5">{alt.type}</span>
+                                <h5 className={cn("text-sm font-black leading-snug line-clamp-2", isAltCompleted && "line-through opacity-50")}>{alt.title}</h5>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12 opacity-50">
+                  <p className="text-[10px] font-black uppercase text-tm-blue-gray animate-pulse">Syncing Hub...</p>
+                </div>
+              )}
             </div>
+
+            <p className="text-[10px] text-tm-blue-gray/40 uppercase font-black tracking-[0.5em] text-center mt-auto relative z-10">
+              Personalized Growth Neural-Link
+            </p>
           </GlassCard>
         </div>
       </section>

@@ -117,7 +117,7 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="p-6 md:p-12 max-w-5xl mx-auto space-y-8">
+    <div className="p-4 md:p-12 max-w-5xl mx-auto space-y-8">
       {isLoading ? (
         <PremiumLoader />
       ) : (
@@ -136,42 +136,44 @@ export default function NotesPage() {
                 </div>
               )}
             </div>
-            <GlassCard className="flex items-center gap-2 p-2 border-tm-yellow/30 relative z-10 overflow-visible">
+            <GlassCard className="flex items-center justify-between p-1.5 border-tm-yellow/30 relative z-10 overflow-visible w-full sm:w-auto sm:min-w-[320px]">
               <button
                 onClick={() => setSelectedDate(subDays(selectedDate, 1))}
-                className="p-2 hover:bg-tm-yellow/30 rounded-xl transition-colors text-tm-purple-dark dark:text-tm-yellow"
+                className="p-2.5 hover:bg-tm-yellow/30 rounded-2xl transition-all text-tm-purple-dark dark:text-tm-yellow active:scale-90"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={24} />
               </button>
-              <div className="px-4 text-center min-w-[120px]">
-                <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest leading-none mb-1">{format(selectedDate, "EEEE")}</p>
-                <p className="font-black text-sm text-tm-purple-dark dark:text-tm-yellow">{format(selectedDate, "MMM d, yyyy")}</p>
+              <div className="px-6 text-center">
+                <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest leading-none mb-1.5">{format(selectedDate, "EEEE")}</p>
+                <p className="font-black text-lg sm:text-sm text-tm-purple-dark dark:text-tm-yellow tracking-tight leading-none">
+                  {format(selectedDate, "MMMM d, yyyy")}
+                </p>
               </div>
               <button
                 onClick={() => setSelectedDate(addDays(selectedDate, 1))}
                 disabled={isSameDay(selectedDate, new Date())}
-                className="p-2 hover:bg-tm-yellow/30 rounded-xl transition-colors disabled:opacity-20 text-tm-purple-dark dark:text-tm-yellow"
+                className="p-2.5 hover:bg-tm-yellow/30 rounded-2xl transition-all disabled:opacity-20 text-tm-purple-dark dark:text-tm-yellow active:scale-90"
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={24} />
               </button>
             </GlassCard>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 md:gap-8">
             <GlassCard className={cn(
-              "min-h-[500px] flex flex-col p-0 overflow-hidden transition-all duration-500",
+              "min-h-[500px] flex flex-col p-0 overflow-hidden transition-all duration-500 bg-white/40 dark:bg-black/60",
               "shadow-xl shadow-tm-purple-dark/5 dark:shadow-none",
               mood === "good" ? "border-tm-yellow/40 shadow-[0_0_20px_rgba(242,194,48,0.15)]" :
                 mood === "bad" ? "border-tm-orange-dark/40 shadow-[0_0_20px_rgba(191,49,0,0.15)]" :
                   "border-tm-yellow/20"
             )}>
-              <div className="border-b border-tm-blue-gray/10 p-4 flex items-center justify-between bg-white/40 dark:bg-white/5 backdrop-blur-sm">
+              <div className="border-b border-tm-blue-gray/10 p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-tm-blue-gray">
                   <CalendarIcon size={16} />
                   <span className="text-[10px] font-black uppercase tracking-widest">{format(selectedDate, "MMMM d")} Entry</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 mr-2">
+                  <div className="flex p-1 mr-2">
                     {[
                       { val: "good", icon: "😇", color: "text-tm-yellow", bg: "bg-tm-yellow/20" },
                       { val: "neutral", icon: "😐", color: "text-tm-blue-gray", bg: "bg-white/10" },
@@ -181,7 +183,7 @@ export default function NotesPage() {
                         key={m.val}
                         onClick={() => setMood(m.val)}
                         className={cn(
-                          "p-2 rounded-lg transition-all flex items-center justify-center w-9 h-9",
+                          "p-2 rounded-full transition-all flex items-center justify-center w-9 h-9",
                           mood === m.val ? m.bg + " " + m.color + " shadow-inner scale-95" : "text-tm-blue-gray/40 hover:bg-white/5"
                         )}
                         title={m.val.toUpperCase()}

@@ -98,7 +98,7 @@ export default function Navbar() {
             <span className="font-bold text-xl hidden sm:inline-block text-tm-purple-dark dark:text-tm-yellow leading-none">
               TaskMaster
             </span>
-            <div className="flex items-center gap-1.5 leading-none mt-1">
+            <div className="hidden md:flex items-center gap-1.5 leading-none mt-1">
               <span className="text-tm-orange-dark text-[10px] font-black uppercase tracking-widest">[{currentClass}]</span>
               <span className="text-[9px] text-tm-blue-gray font-bold uppercase tracking-tighter border-l border-white/10 pl-1.5 ml-0.5">
                 {daysLeft} DAYS LEFT
@@ -194,6 +194,24 @@ export default function Navbar() {
           </div>
         </div>
       </nav>
+
+      {/* Mobile Bottom Ribbon */}
+      <div className="flex lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[200]">
+        <div className="px-4 py-2 bg-white/90 dark:bg-tm-purple-dark/90 backdrop-blur-xl border border-tm-blue-gray/10 dark:border-white/10 rounded-full shadow-2xl flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="text-tm-orange-dark dark:text-tm-yellow text-[10px] font-black uppercase tracking-widest">{currentClass}</span>
+            <span className="text-[9px] text-tm-blue-gray dark:text-white/60 font-bold uppercase tracking-tighter border-l border-tm-blue-gray/20 dark:border-white/20 pl-2">
+              {daysLeft} DAYS REMAINING
+            </span>
+          </div>
+          {profile && (
+            <div className="flex items-center gap-2 border-l border-tm-blue-gray/20 dark:border-white/20 pl-3">
+              <span className="text-[10px] font-black uppercase text-tm-orange-dark dark:text-tm-yellow leading-none tracking-widest">Lvl {profile.level}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="relative h-px w-full overflow-visible">
         <GaseousDivider
           hoveredSide={null}

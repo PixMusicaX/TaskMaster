@@ -163,7 +163,7 @@ export default function CalendarPage() {
   const selectedEvents = events.filter(e => isSameDay(new Date(e.startTime || e.date), selectedDate));
 
   return (
-    <div className="p-6 md:p-12 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 md:p-12 max-w-7xl mx-auto space-y-8">
       {isLoading ? (
         <PremiumLoader />
       ) : (
@@ -309,9 +309,11 @@ export default function CalendarPage() {
           </AnimatePresence>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8 h-full min-h-[600px]">
-            <GlassCard className="flex flex-col p-0 overflow-hidden border-tm-blue-gray/10">
-              <div className="p-6 flex items-center justify-between bg-white/5 border-b border-tm-blue-gray/10">
-                <h2 className="text-2xl font-black text-tm-purple-dark dark:text-tm-yellow">{format(currentDate, "MMMM yyyy")}</h2>
+            {/* Desktop Full Calendar */}
+            <GlassCard className="hidden lg:flex flex-col p-0 overflow-x-auto thin-scrollbar border-tm-blue-gray/10">
+              <div className="min-w-[700px] flex flex-col h-full">
+                <div className="p-6 flex items-center justify-between bg-white/5 border-b border-tm-blue-gray/10">
+                  <h2 className="text-2xl font-black text-tm-purple-dark dark:text-tm-yellow">{format(currentDate, "MMMM yyyy")}</h2>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCurrentDate(subMonths(currentDate, 1))}
@@ -401,7 +403,52 @@ export default function CalendarPage() {
                   );
                 })}
               </div>
-            </GlassCard>
+            </div>
+          </GlassCard>
+
+          {/* Mobile Mini Calendar */}
+          <GlassCard className="lg:hidden p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black text-tm-purple-dark dark:text-tm-yellow">{format(currentDate, "MMMM yyyy")}</h2>
+              <div className="flex gap-1">
+                <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-2 text-tm-blue-gray hover:text-tm-yellow"><ChevronLeft size={20} /></button>
+                <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-2 text-tm-blue-gray hover:text-tm-yellow"><ChevronRight size={20} /></button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1">
+              {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+                <div key={i} className="text-center text-[10px] font-black text-tm-blue-gray/40 pb-2">{d}</div>
+              ))}
+              {days.map((day) => {
+                const isToday = isSameDay(day, new Date());
+                const isCurrentMonth = isSameMonth(day, monthStart);
+                const isSelected = isSameDay(day, selectedDate);
+                const dayEvents = events.filter(e => isSameDay(new Date(e.startTime || e.date), day));
+                const hasTask = dayEvents.some(e => e.type === "task");
+                const hasEvent = dayEvents.some(e => e.type === "event");
+
+                return (
+                  <button
+                    key={day.toISOString()}
+                    onClick={() => setSelectedDate(day)}
+                    className={cn(
+                      "aspect-square flex flex-col items-center justify-center rounded-xl transition-all relative",
+                      !isCurrentMonth ? "opacity-20" : "opacity-100",
+                      isSelected ? "bg-tm-yellow text-tm-purple-dark shadow-lg" : "hover:bg-white/5",
+                      isToday && !isSelected && "border border-tm-orange-dark text-tm-orange-dark"
+                    )}
+                  >
+                    <span className="text-sm font-bold">{format(day, "d")}</span>
+                    <div className="flex gap-0.5 mt-0.5 h-1">
+                      {hasTask && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-purple-dark" : "bg-tm-yellow")} />}
+                      {hasEvent && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-purple-dark/60" : "bg-tm-orange-light")} />}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </GlassCard>
 
             <div className="space-y-6 flex flex-col">
               <div className="flex items-center justify-between pl-2">

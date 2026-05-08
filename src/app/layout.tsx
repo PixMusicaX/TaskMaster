@@ -29,7 +29,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col transition-colors duration-300">
         <ThemeProvider>
           <Navbar />
-          <main className="flex-1 overflow-auto relative">
+          <main className="flex-1 overflow-auto relative pb-24 lg:pb-0">
             {children}
           </main>
         </ThemeProvider>

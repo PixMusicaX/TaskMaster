@@ -27,8 +27,28 @@ export default function HabitsPage() {
   const [newFrequency, setNewFrequency] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
 
   const today = new Date();
-  const weekDays = Array.from({ length: 7 }, (_, i) => subDays(today, 6 - i));
-  const visibleCount = 7;
+  const [visibleCount, setVisibleCount] = useState(7);
+  const [nameWidth, setNameWidth] = useState("240px");
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640) {
+        setVisibleCount(4);
+        setNameWidth("120px");
+      } else if (window.innerWidth < 1024) {
+        setVisibleCount(5);
+        setNameWidth("180px");
+      } else {
+        setVisibleCount(7);
+        setNameWidth("240px");
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const weekDays = Array.from({ length: visibleCount }, (_, i) => subDays(today, (visibleCount - 1) - i));
 
   const DAYS = [
     { label: "M", value: 1 },
@@ -165,7 +185,7 @@ export default function HabitsPage() {
   }
 
   return (
-    <div className="p-6 md:p-12 max-w-6xl mx-auto space-y-12">
+    <div className="p-4 md:p-12 max-w-6xl mx-auto space-y-8 md:space-y-12">
       {isLoading ? (
         <PremiumLoader />
       ) : (
@@ -184,11 +204,11 @@ export default function HabitsPage() {
                 </div>
               )}
             </div>
-            <div className="flex gap-4 relative z-10">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 relative z-10">
               <button
                 onClick={() => setShowArchive(!showArchive)}
                 className={cn(
-                  "flex items-center gap-2 px-6 py-3 rounded-2xl font-black transition-all backdrop-blur-xl border shadow-2xl",
+                  "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-black transition-all backdrop-blur-xl border shadow-2xl w-full sm:w-auto",
                   showArchive
                     ? "bg-tm-purple-dark text-tm-yellow border-tm-purple-dark"
                     : "bg-white/20 dark:bg-white/5 border-white/20 text-tm-purple-dark dark:text-tm-yellow saturate-150"
@@ -198,7 +218,7 @@ export default function HabitsPage() {
               </button>
               <button
                 onClick={() => setShowAdd(true)}
-                className="flex items-center gap-2 bg-tm-orange-dark/80 backdrop-blur-xl saturate-150 text-white px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl border border-tm-orange-dark/30"
+                className="flex items-center justify-center gap-2 bg-tm-orange-dark/80 backdrop-blur-xl saturate-150 text-white px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl border border-tm-orange-dark/30 w-full sm:w-auto"
               >
                 <Plus size={20} /> Add Habit
               </button>
@@ -340,13 +360,13 @@ export default function HabitsPage() {
             )}
           </AnimatePresence>
 
-          <GlassCard className="overflow-x-auto">
-            <div className="min-w-[800px]">
+          <GlassCard className="overflow-x-auto thin-scrollbar px-4 py-6 sm:p-6">
+            <div className="min-w-full">
               <div
                 className="grid mb-8"
-                style={{ gridTemplateColumns: `240px repeat(${visibleCount}, 1fr)` }}
+                style={{ gridTemplateColumns: `${nameWidth} repeat(${visibleCount}, 1fr)` }}
               >
-                <div className="font-bold text-tm-blue-gray text-xs uppercase tracking-widest pl-4">Habit</div>
+                <div className="font-bold text-tm-blue-gray text-[10px] sm:text-xs uppercase tracking-widest pl-1 sm:pl-4">Habit</div>
                 {weekDays.map((day) => (
                   <div key={day.toISOString()} className="text-center space-y-1">
                     <p className="text-[10px] font-black uppercase tracking-widest text-tm-blue-gray">
@@ -367,15 +387,15 @@ export default function HabitsPage() {
                   <div
                     key={habit.id}
                     className="grid items-center group"
-                    style={{ gridTemplateColumns: `240px repeat(${visibleCount}, 1fr)` }}
+                    style={{ gridTemplateColumns: `${nameWidth} repeat(${visibleCount}, 1fr)` }}
                   >
-                    <div className="flex items-center gap-4 pl-4 relative">
-                      <div className="w-10 h-10 bg-tm-yellow/10 rounded-xl flex items-center justify-center text-xl">
+                    <div className="flex items-center gap-2 sm:gap-4 pl-1 sm:pl-4 relative">
+                      <div className="w-10 h-10 bg-tm-yellow/10 rounded-xl hidden sm:flex items-center justify-center text-xl">
                         {habit.icon}
                       </div>
-                      <div className="flex-1 overflow-hidden pr-12">
-                        <p className="font-bold text-sm truncate">{habit.name}</p>
-                        <p className="text-[10px] text-tm-blue-gray uppercase font-black tracking-tighter truncate">
+                      <div className="flex-1 overflow-hidden sm:pr-12">
+                        <p className="font-bold text-xs sm:text-sm truncate">{habit.name}</p>
+                        <p className="text-[8px] sm:text-[10px] text-tm-blue-gray uppercase font-black tracking-tighter truncate">
                           {getFrequencyLabel(habit.frequency)}
                         </p>
                       </div>
