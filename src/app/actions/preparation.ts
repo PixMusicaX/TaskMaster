@@ -10,8 +10,8 @@ import { eq, and, gte, lte } from "drizzle-orm";
 
 const GEMINI_API_KEY = process.env.gemini_key;
 
-export async function getPreparationTip() {
-  const today = format(new Date(), "yyyy-MM-dd");
+export async function getPreparationTip(clientDateStr?: string) {
+  const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   
   try {
     let tip = await db.query.preparationTip.findFirst({
@@ -85,11 +85,11 @@ export async function togglePreparationTip(id: string, completed: boolean) {
   }
 }
 
-export async function regeneratePreparationTip() {
-  const today = format(new Date(), "yyyy-MM-dd");
+export async function regeneratePreparationTip(clientDateStr?: string) {
+  const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   try {
     await db.delete(preparationTip).where(eq(preparationTip.date, today));
-    return await getPreparationTip();
+    return await getPreparationTip(clientDateStr);
   } catch (e) {
     return null;
   }

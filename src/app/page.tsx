@@ -83,7 +83,7 @@ export default function Home() {
       });
 
       // 2. Tasks (including overdue)
-      getDashboardTasks(today).then((data) => {
+      getDashboardTasks(todayStr).then((data) => {
         setTasks(data);
         setTasksLoading(false);
       });
@@ -111,14 +111,14 @@ export default function Home() {
       setAiLoading(true);
       try {
         const [smartData, prepData] = await Promise.all([
-          getSmartMission(),
-          getPreparationTip()
+          getSmartMission(todayStr),
+          getPreparationTip(todayStr)
         ]);
         setSmartMission(smartData);
         setPrepTip(prepData);
 
         const finishRelief = async (lat?: number, lon?: number) => {
-          const reliefData = await getReliefRecommendation(lat, lon);
+          const reliefData = await getReliefRecommendation(lat, lon, todayStr);
           setRelief(reliefData);
           setAiLoading(false);
         };
@@ -163,7 +163,7 @@ export default function Home() {
   async function handleTaskToggle(id: string, current: boolean) {
     await toggleEventCompletion(id, !current);
     const [taskData, prof] = await Promise.all([
-      getDashboardTasks(today),
+      getDashboardTasks(todayStr),
       getProfile()
     ]);
     setTasks(taskData);
@@ -175,7 +175,7 @@ export default function Home() {
     if (!smartMission) return;
     const newStatus = !smartMission.completed;
     await toggleSmartMission(smartMission.id, newStatus);
-    const [data, prof] = await Promise.all([getSmartMission(), getProfile()]);
+    const [data, prof] = await Promise.all([getSmartMission(todayStr), getProfile()]);
     setSmartMission(data);
     setProfile(prof);
     if (newStatus) {
@@ -193,7 +193,7 @@ export default function Home() {
 
   async function handleRegeneratePrep() {
     setPrepLoading(true);
-    const newTip = await regeneratePreparationTip();
+    const newTip = await regeneratePreparationTip(todayStr);
     setPrepTip(newTip);
     setPrepLoading(false);
   }
@@ -217,15 +217,15 @@ export default function Home() {
 
   async function handleRegenerate() {
     setAiLoading(true);
-    await regenerateSmartMission();
-    const data = await getSmartMission();
+    await regenerateSmartMission(todayStr);
+    const data = await getSmartMission(todayStr);
     setSmartMission(data);
     setAiLoading(false);
   }
 
   async function handleRegenerateRelief() {
     setReliefLoading(true);
-    const newRelief = await regenerateReliefRecommendation();
+    const newRelief = await regenerateReliefRecommendation(undefined, undefined, todayStr);
     setRelief(newRelief);
     setReliefLoading(false);
   }

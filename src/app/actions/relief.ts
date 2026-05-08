@@ -13,8 +13,8 @@ import { eq, desc, gte } from "drizzle-orm";
 
 const GEMINI_API_KEY = process.env.gemini_key;
 
-export async function getReliefRecommendation(lat?: number, lon?: number) {
-  const today = format(new Date(), "yyyy-MM-dd");
+export async function getReliefRecommendation(lat?: number, lon?: number, clientDateStr?: string) {
+  const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   
   try {
     let recommendation = await db.query.reliefRecommendation.findFirst({
@@ -160,11 +160,11 @@ export async function getReliefHistory(limit: number = 10) {
   }
 }
 
-export async function regenerateReliefRecommendation(lat?: number, lon?: number) {
-  const today = format(new Date(), "yyyy-MM-dd");
+export async function regenerateReliefRecommendation(lat?: number, lon?: number, clientDateStr?: string) {
+  const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   try {
     await db.delete(reliefRecommendation).where(eq(reliefRecommendation.date, today));
-    return await getReliefRecommendation(lat, lon);
+    return await getReliefRecommendation(lat, lon, clientDateStr);
   } catch (e) {
     return null;
   }

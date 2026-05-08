@@ -13,8 +13,8 @@ import { eq, desc, gte } from "drizzle-orm";
 
 const GEMINI_API_KEY = process.env.gemini_key;
 
-export async function getSmartMission() {
-  const today = format(new Date(), "yyyy-MM-dd");
+export async function getSmartMission(clientDateStr?: string) {
+  const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
 
   try {
     let mission = await db.query.smartMission.findFirst({
@@ -131,11 +131,11 @@ export async function getSmartMissionHistory(limit: number = 30) {
   }
 }
 
-export async function regenerateSmartMission() {
-  const today = format(new Date(), "yyyy-MM-dd");
+export async function regenerateSmartMission(clientDateStr?: string) {
+  const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   try {
     await db.delete(smartMission).where(eq(smartMission.date, today));
-    return await getSmartMission();
+    return await getSmartMission(clientDateStr);
   } catch (e) {
     console.error("Error in regenerateSmartMission:", e);
     return null;

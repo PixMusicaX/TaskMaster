@@ -16,12 +16,10 @@ export async function getEventsByDateRange(start: Date, end: Date) {
   ).orderBy(asc(event.startTime));
 }
 
-export async function getDashboardTasks(targetDate: Date) {
-  const startOfToday = new Date(targetDate);
-  startOfToday.setHours(0, 0, 0, 0);
-  
-  const endOfToday = new Date(targetDate);
-  endOfToday.setHours(23, 59, 59, 999);
+export async function getDashboardTasks(targetDateStr: string) {
+  const [year, month, day] = targetDateStr.split('-').map(Number);
+  const startOfToday = new Date(year, month - 1, day, 0, 0, 0, 0);
+  const endOfToday = new Date(year, month - 1, day, 23, 59, 59, 999);
   
   return await db.select().from(event).where(
     or(
