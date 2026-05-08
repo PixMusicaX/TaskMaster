@@ -527,15 +527,57 @@ export default function Home() {
                   )}
 
 
-                  {/* Footer Action */}
-                  {!aiLoading && (
-                    <Link href="/about" className="mt-auto flex items-center gap-2 text-tm-yellow font-black text-[10px] uppercase tracking-[0.2em] hover:underline group/link">
-                      <Plus size={14} className="group-hover/link:rotate-90 transition-transform" /> Visit Logs
-                    </Link>
+                  {/* Relief Primary Path Copy */}
+                  {relief && (
+                    <div
+                      onClick={() => handleReliefToggle(0)}
+                      className={cn(
+                        "group/relief p-4 rounded-[1.25rem] border transition-all cursor-pointer relative overflow-hidden",
+                        relief.completed
+                          ? "bg-tm-blue-gray/10 border-tm-blue-gray/20 opacity-50 grayscale-[0.5]"
+                          : "bg-white/5 border-white/10 hover:border-tm-blue-gray/40 hover:bg-tm-blue-gray/[0.03] shadow-xl"
+                      )}
+                    >
+                      <div className="absolute top-0 right-0 p-5 opacity-[0.03] group-hover/relief:opacity-[0.07] transition-opacity pointer-events-none">
+                        <Coffee size={70} />
+                      </div>
+
+                      <div className="flex items-start gap-3 relative z-10">
+                        <div className={cn(
+                          "w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-all mt-0.5",
+                          relief.completed ? "bg-tm-blue-gray border-tm-blue-gray shadow-[0_0_10px_rgba(148,163,184,0.4)]" : "bg-white/5 border-tm-blue-gray/20 group-hover/relief:border-tm-blue-gray/50"
+                        )}>
+                          {relief.completed ? <Check size={18} className="text-white" /> : <Coffee size={16} className="text-tm-blue-gray" />}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[8px] font-black uppercase text-tm-blue-gray tracking-[0.2em]">Relief Recommendation</span>
+                            <span className="px-1.5 py-0.5 bg-tm-blue-gray/10 rounded-lg text-[8px] font-black text-tm-blue-gray border border-tm-blue-gray/20 whitespace-nowrap">
+                              +{relief.xpReward === 5 ? 10 : relief.xpReward} XP
+                            </span>
+                          </div>
+
+                          <h3 className={cn("text-base font-black text-foreground/90 leading-tight", relief.completed && "line-through opacity-50")}>
+                            {relief.title}
+                          </h3>
+
+                          {!relief.completed && relief.description && (
+                            <p className="text-xs text-tm-blue-gray leading-relaxed mt-1.5 italic opacity-80">
+                              {relief.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
+
                 </div>
               )}
             </div>
+            <Link href="/about" className="mt-auto flex items-center gap-2 text-tm-yellow font-black text-[10px] uppercase tracking-[0.2em] hover:underline group/link">
+              <Plus size={14} className="group-hover/link:rotate-90 transition-transform" /> Visit Logs
+            </Link>
           </GlassCard>
         </div>
 
