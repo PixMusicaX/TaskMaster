@@ -1,22 +1,19 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { event } from "@/db/schema";
 import { revalidatePath } from "next/cache";
+import { eq, and, or, gte, lte, asc } from "drizzle-orm";
+import { addXP } from "./gamification";
+import { XP_VALUES } from "@/lib/constants";
 
 export async function getEventsByDateRange(start: Date, end: Date) {
-  // We store date as string YYYY-MM-DD for easier filtering, 
-  // but we can also use startTime/endTime.
-  return await prisma.event.findMany({
-    where: {
-      startTime: {
-        gte: start,
-        lte: end,
-      },
-    },
-    orderBy: {
-      startTime: "asc",
-    },
-  });
+  return await db.select().from(event).where(
+    and(
+      gte(event.startTime, start),
+      lte(event.startTime, end)
+    )
+  ).orderBy(asc(event.startTime));
 }
 
 export async function getDashboardTasks(targetDate: Date) {
@@ -26,31 +23,20 @@ export async function getDashboardTasks(targetDate: Date) {
   const endOfToday = new Date(targetDate);
   endOfToday.setHours(23, 59, 59, 999);
   
-  return await prisma.event.findMany({
-    where: {
-      OR: [
-        // 1. Events for today (always show regardless of completion)
-        {
-          type: "event",
-          startTime: {
-            gte: startOfToday,
-            lte: endOfToday,
-          }
-        },
-        // 2. Unfinished Tasks (today or overdue from the past)
-        {
-          type: "task",
-          completed: false,
-          startTime: {
-            lte: endOfToday,
-          }
-        }
-      ]
-    },
-    orderBy: {
-      startTime: "asc",
-    },
-  });
+  return await db.select().from(event).where(
+    or(
+      and(
+        eq(event.type, "event"),
+        gte(event.startTime, startOfToday),
+        lte(event.startTime, endOfToday)
+      ),
+      and(
+        eq(event.type, "task"),
+        eq(event.completed, false),
+        lte(event.startTime, endOfToday)
+      )
+    )
+  ).orderBy(asc(event.startTime));
 }
 
 export async function addEvent(data: {
@@ -62,46 +48,44 @@ export async function addEvent(data: {
   type: string;
   notification?: boolean;
 }) {
-  const event = await prisma.event.create({
-    data,
-  });
+  const [newEvent] = await db.insert(event).values(data).returning();
   revalidatePath("/calendar");
   revalidatePath("/");
-  return event;
+  return newEvent;
 }
 
-import { addXP } from "./gamification";
-import { XP_VALUES } from "@/lib/constants";
-
 export async function toggleEventCompletion(id: string, completed: boolean) {
-  const event = await prisma.event.update({
-    where: { id },
-    data: { completed },
-  });
+  const [updatedEvent] = await db.update(event)
+    .set({ completed })
+    .where(eq(event.id, id))
+    .returning();
 
   if (completed) {
     let xp = XP_VALUES.QUEST_SIDE;
-    if (event.tier === "main") xp = XP_VALUES.QUEST_MAIN;
-    if (event.tier === "epic") xp = XP_VALUES.QUEST_EPIC;
+    if (updatedEvent.tier === "main") xp = XP_VALUES.QUEST_MAIN;
+    if (updatedEvent.tier === "epic") xp = XP_VALUES.QUEST_EPIC;
     
-    await addXP(xp, event.stat || undefined);
+    await addXP(xp, updatedEvent.stat || undefined);
   }
 
   revalidatePath("/calendar");
   revalidatePath("/");
-  return event;
+  return updatedEvent;
 }
 
 export async function deleteEvent(id: string) {
-  await prisma.event.delete({ where: { id } });
+  await db.delete(event).where(eq(event.id, id));
   revalidatePath("/calendar");
 }
+
 export async function updateEvent(id: string, data: any) {
-  const event = await prisma.event.update({
-    where: { id },
-    data,
-  });
+  const [updatedEvent] = await db.update(event)
+    .set(data)
+    .where(eq(event.id, id))
+    .returning();
+    
   revalidatePath("/calendar");
   revalidatePath("/");
-  return event;
+  return updatedEvent;
 }
+

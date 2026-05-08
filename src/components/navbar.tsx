@@ -37,9 +37,9 @@ export default function Navbar() {
     // Check localStorage on client side only
     const manuallySet = !!localStorage.getItem("rank_manually_set");
     setIsManuallySet(manuallySet);
-    
+
     fetchProfile(manuallySet);
-    
+
     const handleUpdate = () => fetchProfile(!!localStorage.getItem("rank_manually_set"));
     window.addEventListener("profile-updated", handleUpdate);
     return () => window.removeEventListener("profile-updated", handleUpdate);
@@ -48,10 +48,10 @@ export default function Navbar() {
   async function fetchProfile(manualOverride: boolean) {
     const data = await getProfile();
     setProfile(data);
-    
+
     if (data) {
       const profileRank = [...RPG_TITLES].reverse().find(t => data.level >= t.minLevel)?.title;
-      
+
       // LOGIC: If we are not manually overriding, OR if we are "Novice" but should be higher, sync it.
       // This helps users who got stuck in Novice due to previous manual testing.
       if (profileRank) {
@@ -76,7 +76,7 @@ export default function Navbar() {
     const nextIndex = (currentIndex + 1) % ranks.length;
     const newRank = ranks[nextIndex];
     setRank(newRank);
-    
+
     localStorage.setItem("rank_manually_set", "true");
     setIsManuallySet(true);
   };
@@ -88,7 +88,7 @@ export default function Navbar() {
   };
 
   return (
-    <div className="sticky top-0 z-50 w-full">
+    <div className="sticky top-0 z-[100] w-full">
       <nav className="w-full bg-background/80 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between relative z-40">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-tm-orange-dark rounded-full flex items-center justify-center text-white font-bold text-lg">
@@ -116,8 +116,8 @@ export default function Navbar() {
                 href={item.href}
                 className={cn(
                   "relative px-3 py-2 rounded-full flex items-center gap-2 transition-colors",
-                  isActive 
-                    ? "text-tm-orange-dark font-medium" 
+                  isActive
+                    ? "text-tm-orange-dark font-medium"
                     : "text-tm-blue-gray hover:text-tm-orange-light"
                 )}
               >
@@ -163,7 +163,7 @@ export default function Navbar() {
                 <span className="text-[9px] font-bold text-tm-blue-gray mt-0.5">{profile.xp} XP Total</span>
               </div>
               <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden relative">
-                <motion.div 
+                <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   className="absolute inset-y-0 left-0 bg-tm-yellow shadow-[0_0_10px_rgba(242,194,48,0.5)]"
@@ -171,7 +171,7 @@ export default function Navbar() {
               </div>
             </div>
           )}
-          
+
           <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full border border-white/10">
             <button
               onClick={cycleRank}
@@ -181,7 +181,7 @@ export default function Navbar() {
             >
               <Shield size={20} className={cn("transition-colors", isManuallySet ? "text-tm-yellow" : "text-tm-orange-light")} />
             </button>
-            
+
             <div className="w-px h-4 bg-white/10" />
 
             <button
@@ -195,10 +195,10 @@ export default function Navbar() {
         </div>
       </nav>
       <div className="relative h-px w-full overflow-visible">
-        <GaseousDivider 
-          hoveredSide={null} 
-          variant="artpaint" 
-          align="top" 
+        <GaseousDivider
+          hoveredSide={null}
+          variant="artpaint"
+          align="top"
         />
       </div>
     </div>

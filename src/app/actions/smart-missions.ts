@@ -1,13 +1,15 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { smartMission, note } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { format, subDays } from "date-fns";
 import { getSmartMissionPrompt } from "@/lib/prompts";
 import { getProfile } from "./gamification";
 import { getHabits } from "./habits";
 import { getEventsByDateRange } from "./events";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { safeGenerateContent } from "@/lib/ai-utils";
+import { eq, desc, gte } from "drizzle-orm";
 
 const GEMINI_API_KEY = process.env.gemini_key;
 
@@ -15,32 +17,21 @@ export async function getSmartMission() {
   const today = format(new Date(), "yyyy-MM-dd");
 
   try {
-    if (!(prisma as any).smartMission) return null;
-    let mission = await (prisma as any).smartMission.findUnique({
-      where: { date: today }
+    let mission = await db.query.smartMission.findFirst({
+      where: eq(smartMission.date, today)
     });
 
     if (!mission) {
       if (GEMINI_API_KEY) {
         try {
-          const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-          const model = genAI.getGenerativeModel({
-            model: "gemini-flash-latest",
-            generationConfig: {
-              responseMimeType: "application/json",
-            }
-          });
-
           const lastWeek = subDays(new Date(), 7);
+          const lastWeekStr = format(lastWeek, "yyyy-MM-dd");
+
           const [profile, habitData, taskData, notesData, history] = await Promise.all([
             getProfile(),
             getHabits(),
             getEventsByDateRange(lastWeek, new Date()),
-            prisma.note.findMany({
-              where: {
-                date: { gte: format(lastWeek, "yyyy-MM-dd") }
-              }
-            }),
+            db.select().from(note).where(gte(note.date, lastWeekStr)),
             getSmartMissionHistory(30)
           ]);
 
@@ -59,21 +50,22 @@ export async function getSmartMission() {
           });
 
           console.log("=== GEMINI SDK SMART MISSION PROMPT ===");
-          const result = await model.generateContent(prompt);
-          const content = result.response.text();
+          const content = await safeGenerateContent(prompt, {
+            model: "gemini-flash-latest",
+            responseMimeType: "application/json"
+          });
 
           if (content) {
             const data = JSON.parse(content);
-            mission = await (prisma as any).smartMission.create({
-              data: {
-                date: today,
-                title: data.title,
-                description: data.description,
-                quote: data.quote,
-                xpReward: 50,
-                stat: "charisma"
-              }
-            });
+            const [newMission] = await db.insert(smartMission).values({
+              date: today,
+              title: data.title,
+              description: data.description,
+              quote: data.quote,
+              xpReward: 50,
+              stat: "charisma"
+            }).returning();
+            mission = newMission;
           }
         } catch (error) {
           console.error("Gemini SDK Error:", error);
@@ -96,16 +88,15 @@ export async function getSmartMission() {
         ];
         const selected = missions[Math.floor(Math.random() * missions.length)];
 
-        mission = await (prisma as any).smartMission.create({
-          data: {
-            date: today,
-            title: selected.title,
-            description: selected.description,
-            quote: "Every grand legend begins with a single modest step.",
-            xpReward: 50,
-            stat: "charisma"
-          }
-        });
+        const [fallbackMission] = await db.insert(smartMission).values({
+          date: today,
+          title: selected.title,
+          description: selected.description,
+          quote: "Every grand legend begins with a single modest step.",
+          xpReward: 50,
+          stat: "charisma"
+        }).returning();
+        mission = fallbackMission;
       }
     }
 
@@ -118,11 +109,9 @@ export async function getSmartMission() {
 
 export async function toggleSmartMission(id: string, completed: boolean) {
   try {
-    if (!(prisma as any).smartMission) return { success: false };
-    await (prisma as any).smartMission.update({
-      where: { id },
-      data: { completed }
-    });
+    await db.update(smartMission)
+      .set({ completed })
+      .where(eq(smartMission.id, id));
     revalidatePath("/");
     return { success: true };
   } catch (e) {
@@ -130,13 +119,12 @@ export async function toggleSmartMission(id: string, completed: boolean) {
     return { success: false };
   }
 }
+
 export async function getSmartMissionHistory(limit: number = 30) {
   try {
-    if (!(prisma as any).smartMission) return [];
-    return await (prisma as any).smartMission.findMany({
-      orderBy: { date: "desc" },
-      take: limit
-    });
+    return await db.select().from(smartMission)
+      .orderBy(desc(smartMission.date))
+      .limit(limit);
   } catch (e) {
     console.error("Error fetching mission history:", e);
     return [];
@@ -146,15 +134,11 @@ export async function getSmartMissionHistory(limit: number = 30) {
 export async function regenerateSmartMission() {
   const today = format(new Date(), "yyyy-MM-dd");
   try {
-    if (!(prisma as any).smartMission) return null;
-    try {
-      await (prisma as any).smartMission.deleteMany({
-        where: { date: today }
-      });
-    } catch (e) {}
+    await db.delete(smartMission).where(eq(smartMission.date, today));
     return await getSmartMission();
   } catch (e) {
     console.error("Error in regenerateSmartMission:", e);
     return null;
   }
 }
+

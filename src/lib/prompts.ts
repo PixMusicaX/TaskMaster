@@ -136,7 +136,7 @@ Return ONLY a valid JSON object. No preamble, no markdown, no extra keys.
     {
       "title": "Specific name of the movie/song/food/activity",
       "type": "movie | song | activity | food",
-      "description": "1-2 sentences. Why this is the perfect relief given their weather, mood, and recent activity."
+      "description": "1-2 sentences. Less than 20 words. Why this is the perfect relief given their weather, mood, and recent activity."
     }
   ],
   "alternatives": [
@@ -149,5 +149,36 @@ Return ONLY a valid JSON object. No preamble, no markdown, no extra keys.
       "type": "movie | song | activity | food"
     }
   ]
+}
+`;
+
+export const getPreparationTipPrompt = (context: {
+  futureTasks: any[];
+}) => `
+You are the TaskMaster Strategic Advisor. Your goal is to help the user prepare for their upcoming journey over the next 28 days.
+
+═══════════════════════════════
+FUTURE HORIZON (NEXT 28 DAYS)
+═══════════════════════════════
+Upcoming Events & Tasks:
+${context.futureTasks.map(t => `- [${t.type.toUpperCase()}] ${t.title} on ${t.date}`).join("\n") || "No major upcoming events."}
+
+═══════════════════════════════
+ADVICE RULES
+═══════════════════════════════
+1. Analyze the upcoming schedule for clusters of activity, major deadlines, or significant gaps.
+2. Provide ONE actionable preparation tip to help them stay ahead of their curve.
+3. If they have many tasks on a specific day, suggest prep for that.
+4. If they have a quiet period, suggest rest or deep work.
+5. Tone: Strategic, calm, forward-thinking.
+
+═══════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════
+Return ONLY a valid JSON object.
+
+{
+  "title": "Short strategic name (max 6 words)",
+  "description": "1-2 sentences. Specific advice based on the upcoming 28 days."
 }
 `;

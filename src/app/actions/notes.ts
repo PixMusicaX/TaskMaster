@@ -1,28 +1,38 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { note } from "@/db/schema";
 import { revalidatePath } from "next/cache";
+import { eq, desc } from "drizzle-orm";
 
 export async function getNoteByDate(date: string) {
-  return await prisma.note.findUnique({
-    where: { date },
+  return await db.query.note.findFirst({
+    where: eq(note.date, date),
   });
 }
 
 export async function saveNote(date: string, content: string, mood: string = "neutral") {
-  const note = await prisma.note.upsert({
-    where: { date },
-    update: { content, mood },
-    create: { date, content, mood },
-  });
+  const [savedNote] = await db.insert(note)
+    .values({
+      date,
+      content,
+      mood,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [note.date],
+      set: { content, mood, updatedAt: new Date() },
+    })
+    .returning();
+    
   revalidatePath("/notes");
   revalidatePath("/");
-  return note;
+  return savedNote;
 }
 
 export async function getRecentNotes(limit: number = 7) {
-  return await prisma.note.findMany({
-    take: limit,
-    orderBy: { date: "desc" },
-  });
+  return await db.select().from(note)
+    .orderBy(desc(note.date))
+    .limit(limit);
 }
+

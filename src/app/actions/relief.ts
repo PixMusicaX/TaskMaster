@@ -1,13 +1,15 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { reliefRecommendation, note } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { format, subDays } from "date-fns";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getReliefRecommendationPrompt } from "@/lib/prompts";
 import { getProfile } from "./gamification";
 import { getHabits } from "./habits";
 import { getEventsByDateRange } from "./events";
+import { safeGenerateContent } from "@/lib/ai-utils";
+import { eq, desc, gte } from "drizzle-orm";
 
 const GEMINI_API_KEY = process.env.gemini_key;
 
@@ -15,8 +17,8 @@ export async function getReliefRecommendation(lat?: number, lon?: number) {
   const today = format(new Date(), "yyyy-MM-dd");
   
   try {
-    let recommendation = await (prisma as any).reliefRecommendation.findUnique({
-      where: { date: today }
+    let recommendation = await db.query.reliefRecommendation.findFirst({
+      where: eq(reliefRecommendation.date, today)
     });
 
     if (!recommendation) {
@@ -55,19 +57,12 @@ export async function getReliefRecommendation(lat?: number, lon?: number) {
 
       if (GEMINI_API_KEY) {
         try {
-          const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-          const model = genAI.getGenerativeModel({ 
-            model: "gemini-3.1-flash-lite",
-            generationConfig: { responseMimeType: "application/json" }
-          });
-
           const lastWeek = subDays(new Date(), 7);
+          const lastWeekStr = format(lastWeek, "yyyy-MM-dd");
           const [habitData, taskData, notesData, history] = await Promise.all([
             getHabits(),
             getEventsByDateRange(lastWeek, new Date()),
-            prisma.note.findMany({
-              where: { date: { gte: format(lastWeek, "yyyy-MM-dd") } }
-            }),
+            db.select().from(note).where(gte(note.date, lastWeekStr)),
             getReliefHistory(10)
           ]);
 
@@ -83,26 +78,27 @@ export async function getReliefRecommendation(lat?: number, lon?: number) {
             history: history.map((r: any) => ({ title: r.title, type: r.type }))
           });
 
-          const result = await model.generateContent(prompt);
-          const content = result.response.text();
+          const content = await safeGenerateContent(prompt, {
+            model: "gemini-3.1-flash-lite",
+            responseMimeType: "application/json"
+          });
           
           if (content) {
             const data = JSON.parse(content);
             const main = data.recommendations[0];
-            recommendation = await (prisma as any).reliefRecommendation.create({
-              data: {
-                date: today,
-                title: main.title,
-                description: main.description,
-                type: main.type,
-                location: weatherInfo.location,
-                weather: weatherInfo.weather,
-                temp: weatherInfo.temp,
-                alternatives: data.alternatives || [],
-                xpReward: 10,
-                stat: "charisma"
-              }
-            });
+            const [newRec] = await db.insert(reliefRecommendation).values({
+              date: today,
+              title: main.title,
+              description: main.description,
+              type: main.type,
+              location: weatherInfo.location,
+              weather: weatherInfo.weather,
+              temp: weatherInfo.temp,
+              alternatives: data.alternatives || [],
+              xpReward: 10,
+              stat: "charisma"
+            }).returning();
+            recommendation = newRec;
           }
         } catch (error) {
           console.error("Relief AI Error:", error);
@@ -110,23 +106,22 @@ export async function getReliefRecommendation(lat?: number, lon?: number) {
       }
 
       if (!recommendation) {
-        recommendation = await (prisma as any).reliefRecommendation.create({
-          data: {
-            date: today,
-            title: "Listen to 'Lo-fi Girl' Radio",
-            description: "Perfect background for unwinding after a productive day.",
-            type: "song",
-            location: weatherInfo.location,
-            weather: weatherInfo.weather,
-            temp: weatherInfo.temp,
-            alternatives: [
-              { title: "Quick 5-min Stretch", type: "activity" },
-              { title: "Hot Herbal Tea", type: "food" }
-            ],
-            xpReward: 10,
-            stat: "charisma"
-          }
-        });
+        const [fallbackRec] = await db.insert(reliefRecommendation).values({
+          date: today,
+          title: "Listen to 'Lo-fi Girl' Radio",
+          description: "Perfect background for unwinding after a productive day.",
+          type: "song",
+          location: weatherInfo.location,
+          weather: weatherInfo.weather,
+          temp: weatherInfo.temp,
+          alternatives: [
+            { title: "Quick 5-min Stretch", type: "activity" },
+            { title: "Hot Herbal Tea", type: "food" }
+          ],
+          xpReward: 10,
+          stat: "charisma"
+        }).returning();
+        recommendation = fallbackRec;
       }
     }
 
@@ -144,10 +139,9 @@ export async function toggleReliefRecommendation(id: string, completed: boolean,
     else if (index === 1) updateData.alt1Completed = completed;
     else if (index === 2) updateData.alt2Completed = completed;
 
-    await (prisma as any).reliefRecommendation.update({
-      where: { id },
-      data: updateData
-    });
+    await db.update(reliefRecommendation)
+      .set(updateData)
+      .where(eq(reliefRecommendation.id, id));
     revalidatePath("/");
     return { success: true };
   } catch (e) {
@@ -158,10 +152,9 @@ export async function toggleReliefRecommendation(id: string, completed: boolean,
 
 export async function getReliefHistory(limit: number = 10) {
   try {
-    return await (prisma as any).reliefRecommendation.findMany({
-      orderBy: { date: "desc" },
-      take: limit
-    });
+    return await db.select().from(reliefRecommendation)
+      .orderBy(desc(reliefRecommendation.date))
+      .limit(limit);
   } catch (e) {
     return [];
   }
@@ -170,11 +163,10 @@ export async function getReliefHistory(limit: number = 10) {
 export async function regenerateReliefRecommendation(lat?: number, lon?: number) {
   const today = format(new Date(), "yyyy-MM-dd");
   try {
-    await (prisma as any).reliefRecommendation.deleteMany({
-      where: { date: today }
-    });
+    await db.delete(reliefRecommendation).where(eq(reliefRecommendation.date, today));
     return await getReliefRecommendation(lat, lon);
   } catch (e) {
     return null;
   }
 }
+
