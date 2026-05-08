@@ -32,7 +32,9 @@ export default function Home() {
   const [prepTip, setPrepTip] = useState<any>(null);
   const [moodData, setMoodData] = useState<any[]>([]);
   const [missingInfo, setMissingInfo] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [habitsLoading, setHabitsLoading] = useState(true);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(true);
   const [reliefLoading, setReliefLoading] = useState(false);
   const [prepLoading, setPrepLoading] = useState(false);
 
@@ -61,6 +63,8 @@ export default function Home() {
       // 1. Habits & Missing Info Check
       getHabits().then(async (habitData) => {
         setHabits(habitData);
+        setHabitsLoading(false);
+
         const yesterday = subDays(today, 1);
         const yesterdayStr = format(yesterday, "yyyy-MM-dd");
         const yesterdayDay = yesterday.getDay();
@@ -79,7 +83,10 @@ export default function Home() {
       });
 
       // 2. Tasks (including overdue)
-      getDashboardTasks(today).then(setTasks);
+      getDashboardTasks(today).then((data) => {
+        setTasks(data);
+        setTasksLoading(false);
+      });
 
       // 3. Profile Stats
       getProfile().then(setProfile);
@@ -101,7 +108,7 @@ export default function Home() {
       });
 
       // 5. AI Guidance (Parallelized for better performance)
-      setLoading(true);
+      setAiLoading(true);
       try {
         const [smartData, prepData] = await Promise.all([
           getSmartMission(),
@@ -113,7 +120,7 @@ export default function Home() {
         const finishRelief = async (lat?: number, lon?: number) => {
           const reliefData = await getReliefRecommendation(lat, lon);
           setRelief(reliefData);
-          setLoading(false);
+          setAiLoading(false);
         };
 
         if (typeof window !== "undefined" && navigator.geolocation) {
@@ -126,7 +133,7 @@ export default function Home() {
         }
       } catch (err) {
         console.error("AI Fetch error:", err);
-        setLoading(false);
+        setAiLoading(false);
       }
     }
     fetchData();
@@ -204,11 +211,11 @@ export default function Home() {
   }
 
   async function handleRegenerate() {
-    setLoading(true);
+    setAiLoading(true);
     await regenerateSmartMission();
     const data = await getSmartMission();
     setSmartMission(data);
-    setLoading(false);
+    setAiLoading(false);
   }
 
   async function handleRegenerateRelief() {
@@ -224,16 +231,11 @@ export default function Home() {
         className="relative min-h-screen flex flex-col items-center pt-28 pb-32 px-6 gap-12"
       >
         {/* Central Hero: Clock & Quote */}
-        <div className="flex flex-col items-center text-center gap-6 z-10">
+        <div className="flex flex-col items-center text-center gap-2 z-10">
           <Clock />
-          
-          {/* Daily Quote - Moved from footer to primary header */}
-          <div className="max-w-2xl px-6 py-2 border-l-2 border-tm-yellow/30 bg-tm-yellow/5 backdrop-blur-sm rounded-r-xl">
-            <p className="text-xs md:text-sm font-medium text-tm-blue-gray italic leading-relaxed">
-              <Sparkles className="inline-block mr-2 text-tm-yellow/40" size={12} />
-              {profile?.quote || smartMission?.quote || "Initializing daily directive..."}
-            </p>
-          </div>
+          <p className="text-sm md:text-base font-medium text-tm-blue-gray italic opacity-80 max-w-xl">
+            "{profile?.quote || smartMission?.quote || "Master your day, master your life."}"
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-6xl">
@@ -250,8 +252,8 @@ export default function Home() {
               <Zap className="text-tm-yellow opacity-50" size={24} />
             </div>
 
-            <div className={cn("flex-1 space-y-4", loading && "flex items-center justify-center min-h-[200px]")}>
-              {loading ? (
+            <div className={cn("flex-1 space-y-4", habitsLoading && "flex items-center justify-center min-h-[200px]")}>
+              {habitsLoading ? (
                 <PremiumLoader />
               ) : (
                 <div className="space-y-3">
@@ -304,8 +306,8 @@ export default function Home() {
               <AlertCircle className="text-tm-orange-light opacity-50" size={24} />
             </div>
 
-            <div className={cn("flex-1 space-y-4", loading && "flex items-center justify-center min-h-[200px]")}>
-              {loading ? (
+            <div className={cn("flex-1 space-y-4", tasksLoading && "flex items-center justify-center min-h-[200px]")}>
+              {tasksLoading ? (
                 <PremiumLoader />
               ) : (
                 <div className="space-y-3">
@@ -395,8 +397,8 @@ export default function Home() {
               </div>
             </div>
 
-            <div className={cn("flex-1 space-y-4", loading && "flex items-center justify-center min-h-[250px]")}>
-              {loading ? (
+            <div className={cn("flex-1 space-y-4", aiLoading && "flex items-center justify-center min-h-[250px]")}>
+              {aiLoading ? (
                 <div className="flex flex-col items-center gap-4">
                   <PremiumLoader />
                   <p className="text-[10px] font-black uppercase text-tm-yellow animate-pulse tracking-[0.2em]">Syncing Intelligence...</p>
@@ -496,7 +498,7 @@ export default function Home() {
                                   onClick={handleRegenerate}
                                   className="text-[8px] font-black text-tm-yellow/50 hover:text-tm-yellow uppercase tracking-widest flex items-center gap-1 transition-all"
                                 >
-                                  <RotateCw size={8} className={cn(loading && "animate-spin")} /> Reload
+                                  <RotateCw size={8} className={cn(aiLoading && "animate-spin")} /> Reload
                                 </button>
                               )}
                               <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-[8px] font-black text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">
@@ -584,89 +586,11 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* Preparation Tip Card */}
-                  {prepTip && (
-                    <div
-                      onClick={handlePrepToggle}
-                      className={cn(
-                        "group/prep p-4 rounded-[1.25rem] border transition-all cursor-pointer relative overflow-hidden",
-                        prepTip.completed
-                          ? "bg-tm-yellow/10 border-tm-yellow/20 opacity-50 grayscale-[0.5]"
-                          : "bg-white/5 border-white/10 hover:border-tm-yellow/40 hover:bg-tm-yellow/[0.03] shadow-xl"
-                      )}
-                    >
-                      <div className="absolute top-0 right-0 p-5 opacity-[0.03] group-hover/prep:opacity-[0.07] transition-opacity pointer-events-none">
-                        <Brain size={70} />
-                      </div>
-
-                      <div className="flex items-start gap-3 relative z-10">
-                        <div className={cn(
-                          "w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-all mt-0.5",
-                          prepTip.completed ? "bg-tm-yellow border-tm-yellow shadow-[0_0_10px_rgba(242,194,48,0.4)]" : "bg-white/5 border-tm-yellow/20 group-hover/prep:border-tm-yellow/50"
-                        )}>
-                          {prepTip.completed ? <Check size={18} className="text-tm-purple-dark" /> : <Brain size={16} className="text-tm-yellow" />}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[8px] font-black uppercase text-tm-yellow tracking-[0.2em]">Strategic Insight</span>
-                            <div className="flex items-center gap-3">
-                              {!prepTip.completed && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRegeneratePrep();
-                                  }}
-                                  className="text-[8px] font-black text-tm-yellow/50 hover:text-tm-yellow uppercase tracking-widest flex items-center gap-1 transition-all"
-                                >
-                                  <RotateCw size={8} className={cn(prepLoading && "animate-spin")} /> Reload
-                                </button>
-                              )}
-                              <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-[8px] font-black text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">
-                                +{prepTip.xpReward} XP
-                              </span>
-                            </div>
-                          </div>
-
-                          <h4 className={cn("text-base font-black text-foreground/90 leading-tight", prepTip.completed && "line-through opacity-50")}>
-                            {prepTip.title}
-                          </h4>
-
-                          {!prepTip.completed && prepTip.description && (
-                            <p className="text-xs text-tm-blue-gray leading-relaxed mt-1.5 italic opacity-80">
-                              {prepTip.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* System Status / Telemetry */}
-                  {!loading && (
-                    <div className="mt-6 pt-6 border-t border-tm-blue-gray/10 flex items-center justify-between px-2">
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="w-2 h-2 bg-tm-yellow rounded-full animate-pulse" />
-                          <div className="absolute inset-0 w-2 h-2 bg-tm-yellow rounded-full animate-ping opacity-40" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-black uppercase text-tm-yellow tracking-widest leading-none">System Active</span>
-                          <span className="text-[8px] font-bold text-tm-blue-gray mt-1 leading-none">Neural Link Established</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 text-right">
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-black uppercase text-tm-blue-gray leading-none">Sync</span>
-                          <span className="text-[8px] font-bold text-tm-yellow mt-1 leading-none">100%</span>
-                        </div>
-                        <div className="w-px h-6 bg-tm-blue-gray/10" />
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-black uppercase text-tm-blue-gray leading-none">Focus</span>
-                          <span className="text-[8px] font-bold text-tm-yellow mt-1 leading-none">Optimal</span>
-                        </div>
-                      </div>
-                    </div>
+                  {/* Footer Action */}
+                  {!aiLoading && (
+                    <Link href="/about" className="mt-auto flex items-center gap-2 text-tm-yellow font-black text-[10px] uppercase tracking-[0.2em] hover:underline group/link">
+                      <Plus size={14} className="group-hover/link:rotate-90 transition-transform" /> Visit Logs
+                    </Link>
                   )}
                 </div>
               )}
