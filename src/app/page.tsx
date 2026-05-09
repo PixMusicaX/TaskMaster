@@ -634,8 +634,8 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
-          <GlassCard delay={0.2} className="p-8 border-tm-purple-dark/20 flex flex-col gap-8 group relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
+          <GlassCard delay={0.2} className="p-6 md:p-8 border-tm-purple-dark/20 flex flex-col gap-8 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 md:p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
               <Crown size={120} />
             </div>
             <div className="flex items-center justify-between relative z-10">
@@ -647,7 +647,7 @@ export default function Home() {
                   Current Attribute Progression
                 </p>
               </div>
-              <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-tm-blue-gray">
+              <div className="hidden sm:block px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-tm-blue-gray whitespace-nowrap">
                 Live Data
               </div>
             </div>
@@ -675,8 +675,8 @@ export default function Home() {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.4} className="h-full flex flex-col gap-8 border-tm-orange-dark/20 p-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+          <GlassCard delay={0.4} className="h-full flex flex-col gap-8 border-tm-orange-dark/20 p-6 md:p-8 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 md:p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
               <Trophy size={120} />
             </div>
 
@@ -689,7 +689,7 @@ export default function Home() {
                   Level & Ranking
                 </p>
               </div>
-              <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-tm-blue-gray">
+              <div className="hidden sm:block px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-tm-blue-gray whitespace-nowrap">
                 Live Data
               </div>
             </div>
@@ -731,8 +731,8 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
-          <GlassCard delay={0.6} className="p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
+          <GlassCard delay={0.6} className="p-6 md:p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 md:p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
               <Zap size={120} />
             </div>
 
@@ -745,7 +745,7 @@ export default function Home() {
                   30-Day Emotional Signature
                 </p>
               </div>
-              <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-tm-blue-gray">
+              <div className="hidden sm:block px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-tm-blue-gray whitespace-nowrap">
                 Live Data
               </div>
             </div>
@@ -783,8 +783,8 @@ export default function Home() {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.8} className="p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
+          <GlassCard delay={0.8} className="p-6 md:p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 md:p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
               <Coffee size={120} />
             </div>
 
