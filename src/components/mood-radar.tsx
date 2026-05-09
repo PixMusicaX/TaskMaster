@@ -100,8 +100,8 @@ export default function MoodRadar({ data, size = 200 }: MoodRadarProps) {
 
         {/* Labels */}
         <text x={getPoint(max * 1.2, 0).x} y={getPoint(max * 1.2, 0).y} textAnchor="middle" fontSize="10" fontWeight="black" fill="currentColor" className="text-tm-yellow uppercase tracking-widest">JOY</text>
-        <text x={getPoint(max * 1.2, 120).x} y={getPoint(max * 1.2, 120).y} textAnchor="middle" fontSize="10" fontWeight="black" fill="currentColor" className="text-tm-blue-gray dark:text-tm-blue-gray/60 uppercase tracking-widest">STEADY</text>
-        <text x={getPoint(max * 1.2, 240).x} y={getPoint(max * 1.2, 240).y} textAnchor="middle" fontSize="10" fontWeight="black" fill="currentColor" className="text-tm-orange-dark uppercase tracking-widest">STRESS</text>
+        <text x={getPoint(max * 1.35, 120).x} y={getPoint(max * 1.35, 120).y + 6} textAnchor="middle" fontSize="10" fontWeight="black" fill="currentColor" className="text-tm-blue-gray dark:text-tm-blue-gray/60 uppercase tracking-widest">STEADY</text>
+        <text x={getPoint(max * 1.35, 240).x} y={getPoint(max * 1.35, 240).y + 6} textAnchor="middle" fontSize="10" fontWeight="black" fill="currentColor" className="text-tm-orange-dark uppercase tracking-widest">STRESS</text>
       </svg>
     </div>
   );
