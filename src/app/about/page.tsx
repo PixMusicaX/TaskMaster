@@ -104,7 +104,7 @@ export default function AboutPage() {
           animate={{ scale: 1, opacity: 1 }}
           className="w-24 h-24 mx-auto rounded-[2rem] flex items-center justify-center shadow-2xl shadow-tm-orange-dark/20 mb-8 overflow-hidden border border-white/5"
         >
-          <img src="/logo.png" alt="TaskMaster Logo" className="w-full h-full object-cover" />
+          <img src="/logo.png" alt="TaskMaster Logo" className="w-full h-full object-cover dark:invert-0 dark:hue-rotate-0 invert hue-rotate-180 transition-all" />
         </motion.div>
         <h1 className="text-5xl md:text-6xl font-black tracking-tight text-tm-purple-dark dark:text-tm-yellow">
           The Vault

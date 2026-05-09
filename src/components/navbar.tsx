@@ -92,7 +92,7 @@ export default function Navbar() {
       <nav className="w-full bg-background/80 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between relative z-40">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10 shadow-[0_0_10px_rgba(242,79,19,0.3)]">
-            <img src="/logo.png" alt="TaskMaster Logo" className="w-full h-full object-cover" />
+            <img src="/logo.png" alt="TaskMaster Logo" className="w-full h-full object-cover dark:invert-0 dark:hue-rotate-0 invert hue-rotate-180 transition-all" />
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-xl hidden sm:inline-block text-tm-purple-dark dark:text-tm-yellow leading-none">
