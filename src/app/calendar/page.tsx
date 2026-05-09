@@ -618,16 +618,28 @@ export default function CalendarPage() {
                 )
               },
               {
-                header: "Status", key: "completed", render: (val, row) => (
-                  row.type === "task" ? (
+                header: "Status", key: "completed", render: (val, row) => {
+                  if (row.type === "task") {
+                    return (
+                      <span className={cn(
+                        "px-2 py-0.5 rounded text-[10px] font-black uppercase",
+                        val ? "bg-green-500/20 text-green-500" : "bg-tm-blue-gray/20 text-tm-blue-gray"
+                      )}>
+                        {val ? "Completed" : "Pending"}
+                      </span>
+                    );
+                  }
+                  
+                  const isUpcoming = new Date(row.startTime || row.date) > new Date();
+                  return (
                     <span className={cn(
                       "px-2 py-0.5 rounded text-[10px] font-black uppercase",
-                      val ? "bg-green-500/20 text-green-500" : "bg-tm-blue-gray/20 text-tm-blue-gray"
+                      isUpcoming ? "bg-tm-orange-light/10 text-tm-orange-light" : "bg-tm-blue-gray/10 text-tm-blue-gray"
                     )}>
-                      {val ? "Completed" : "Pending"}
+                      {isUpcoming ? "Upcoming" : "Passed"}
                     </span>
-                  ) : <span className="text-tm-blue-gray/30">—</span>
-                )
+                  );
+                }
               }
             ]}
           />

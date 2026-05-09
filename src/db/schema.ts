@@ -47,7 +47,9 @@ export const habit = pgTable("Habit", {
 
 export const habitLog = pgTable("HabitLog", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
-  habitId: text("habitId").notNull().references(() => habit.id, { onDelete: 'cascade' }),
+  habitId: text("habitId").references(() => habit.id, { onDelete: 'set null' }),
+  habitName: text("habitName"), // Preserved name
+  habitIcon: text("habitIcon"), // Preserved icon
   date: text("date").notNull(), // Format: YYYY-MM-DD
   completed: boolean("completed").default(false).notNull(),
 }, (t) => [

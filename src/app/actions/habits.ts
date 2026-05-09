@@ -72,23 +72,31 @@ export async function deleteHabitPermanently(id: string) {
 }
 
 export async function toggleHabitLog(habitId: string, date: string, completed: boolean) {
+  // Fetch habit info to preserve metadata
+  const h = await db.query.habit.findFirst({
+    where: eq(habit.id, habitId),
+  });
+
   const [log] = await db.insert(habitLog)
     .values({
       habitId,
+      habitName: h?.name,
+      habitIcon: h?.icon,
       date,
       completed,
     })
     .onConflictDoUpdate({
       target: [habitLog.habitId, habitLog.date],
-      set: { completed },
+      set: { 
+        completed,
+        habitName: h?.name,
+        habitIcon: h?.icon,
+      },
     })
     .returning();
 
-  if (completed) {
-    const h = await db.query.habit.findFirst({
-      where: eq(habit.id, habitId),
-    });
-    await addXP(XP_VALUES.HABIT_CHECK, h?.stat || undefined);
+  if (completed && h) {
+    await addXP(XP_VALUES.HABIT_CHECK, h.stat || undefined);
   }
 
   revalidatePath("/habits");
@@ -96,3 +104,8 @@ export async function toggleHabitLog(habitId: string, date: string, completed: b
   return log;
 }
 
+export async function getHabitLogs() {
+  return await db.query.habitLog.findMany({
+    orderBy: [asc(habitLog.date)],
+  });
+}

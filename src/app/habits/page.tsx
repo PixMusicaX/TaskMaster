@@ -5,7 +5,7 @@ import GlassCard from "@/components/glass-card";
 import { Plus, Trash2, Check, X, Edit2, Archive, RotateCcw, Search, Swords, Brain, Coins, HeartPulse, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
-import { getHabits, addHabit, updateHabit, archiveHabit, restoreHabit, deleteHabitPermanently, toggleHabitLog, getArchivedHabits } from "@/app/actions/habits";
+import { getHabits, addHabit, updateHabit, archiveHabit, restoreHabit, deleteHabitPermanently, toggleHabitLog, getArchivedHabits, getHabitLogs } from "@/app/actions/habits";
 import { getProfile } from "@/app/actions/gamification";
 import { cn } from "@/lib/utils";
 import { PremiumLoader } from "@/components/loader";
@@ -20,6 +20,7 @@ export default function HabitsPage() {
   const [showArchive, setShowArchive] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [isTabularOpen, setIsTabularOpen] = useState(false);
+  const [allLogs, setAllLogs] = useState<any[]>([]);
 
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("✨");
@@ -66,12 +67,16 @@ export default function HabitsPage() {
 
   async function fetchHabits() {
     try {
-      const data = await getHabits();
-      const archivedData = await getArchivedHabits();
-      const profileData = await getProfile();
+      const [data, archivedData, profileData, logsData] = await Promise.all([
+        getHabits(),
+        getArchivedHabits(),
+        getProfile(),
+        getHabitLogs()
+      ]);
       setHabits(data);
       setArchivedHabits(archivedData);
       setProfile(profileData);
+      setAllLogs(logsData);
       window.dispatchEvent(new CustomEvent("profile-updated"));
     } finally {
       setIsLoading(false);
@@ -553,15 +558,16 @@ export default function HabitsPage() {
             title="Habit Logs"
             isOpen={isTabularOpen}
             onClose={() => setIsTabularOpen(false)}
-            data={[...habits, ...archivedHabits].flatMap(h =>
-              (h.logs || []).map((l: any) => ({
+            data={[...allLogs].sort((a, b) => b.date.localeCompare(a.date)).map(l => {
+              // Fallback for legacy logs or deleted habits without metadata
+              const h = [...habits, ...archivedHabits].find(habit => habit.id === l.habitId);
+              return {
                 date: l.date,
-                habitName: h.name,
-                icon: h.icon,
+                habitName: l.habitName || h?.name || "Deleted Habit",
+                icon: l.habitIcon || h?.icon || "❓",
                 status: l.completed ? "Completed" : "Missed",
-                stat: h.stat || "intelligence"
-              }))
-            ).sort((a, b) => b.date.localeCompare(a.date))}
+              };
+            })}
             columns={[
               { header: "Date", key: "date", render: (val) => {
                 const parsed = new Date(val + "T00:00:00");
