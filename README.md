@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎮 TaskMaster: Gamified Productivity & Life Log
 
-## Getting Started
+**TaskMaster** is a premium, high-performance web application designed to turn your life into an RPG. Track habits, complete quests, capture daily thoughts, and gain XP to level up your character attributes (Strength, Intelligence, Wealth, Vitality, and Charisma).
 
-First, run the development server:
+Built with a stunning glass-morphism aesthetic and powered by AI, TaskMaster helps you visualize your growth and maintain consistency through a sophisticated gamification engine.
 
+---
+
+## ✨ Key Features
+
+- **🛡️ Character Progression**: Level up your RPG attributes based on your real-life actions.
+- **📅 Smart Calendar**: Manage "Main" and "Epic" quests with integrated browser notifications.
+- **🧠 AI Intelligence**: Receive daily "Strategic Preparation Tips" and "Smart Missions" generated specifically for you by Google's Gemini AI.
+- **📔 Daily Vault**: A bullet-style note-taking system with integrated mood tracking.
+- **🏆 Hall of Fame**: Visualize your monthly progress with a seasonal ranking system.
+- **📊 Detailed Analytics**: Character radars and stress metrics to visualize your journey.
+- **📁 Archive System**: Robust tabular archives for notes and calendar events with a 7-year storage reach.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: [Next.js 15 (App Router)](https://nextjs.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Database**: [PostgreSQL (Neon)](https://neon.tech/)
+- **ORM**: [Drizzle ORM](https://orm.drizzle.team/)
+- **AI Engine**: [Google Gemini 1.5 Flash](https://aistudio.google.com/)
+- **Animations**: [Framer Motion](https://www.framer.com/motion/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+
+---
+
+## 🚀 Getting Started
+
+### 1. Fork & Clone
+Fork the repository to your own GitHub account and clone it:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/YOUR_USERNAME/taskmaster.git
+cd taskmaster
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Environment Variables
+Create a `.env` file in the root directory and add the following keys:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+# Database (Neon / Postgres)
+DATABASE_URL="postgresql://user:password@host/neondb?sslmode=require"
 
-## Learn More
+# AI Engine (Google AI Studio)
+gemini_key="YOUR_GEMINI_API_KEY"
 
-To learn more about Next.js, take a look at the following resources:
+# Optional: Unpooled connection for direct scripts
+DATABASE_URL_UNPOOLED="postgresql://user:password@host/neondb?sslmode=require"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 4. Database Setup
+Push the schema to your database using Drizzle:
+```bash
+npx drizzle-kit push
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 5. Run Locally
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) to see your TaskMaster dashboard.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🏗️ Customization
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### XP Values
+You can adjust the gamification difficulty in `src/lib/constants.ts`:
+```typescript
+export const XP_VALUES = {
+  HABIT_CHECK: 20,
+  QUEST_SIDE: 40,
+  QUEST_MAIN: 60,
+  QUEST_EPIC: 80,
+  NOTE_ENTRY: 10,
+  TASK: 30,
+};
+```
+
+### Character Ranks
+Modify the level requirements and titles in the same constants file to fit your desired progression speed.
+
+---
+
+## 🔒 License
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+*Built for creatives who want to master their day and master their life.*

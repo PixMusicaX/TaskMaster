@@ -75,11 +75,7 @@ export default function CalendarPage() {
 
   useEffect(() => {
     async function fetchArchive() {
-      const start = new Date();
-      start.setFullYear(start.getFullYear() - 5);
-      const end = new Date();
-      end.setFullYear(end.getFullYear() + 2);
-      const data = await getEventsByDateRange(start, end);
+      const data = await getAllEvents();
       setAllEventsForTable(data);
     }
     fetchArchive();
