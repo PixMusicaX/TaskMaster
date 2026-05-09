@@ -72,7 +72,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
                      XP_VALUES.QUEST_SIDE;
 
       if (e.type === "task" && e.completed) {
-        xp = reward;
+        xp = XP_VALUES.TASK;
         totalXP += xp;
         stats.strength += xp;
       } else if (e.type === "event") {

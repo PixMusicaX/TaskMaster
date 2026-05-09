@@ -4,6 +4,7 @@ export const XP_VALUES = {
   QUEST_MAIN: 60,
   QUEST_EPIC: 80,
   NOTE_ENTRY: 10,
+  TASK: 30,
 };
 
 export const RPG_TITLES = [

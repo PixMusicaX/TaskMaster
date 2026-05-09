@@ -58,9 +58,13 @@ export async function toggleEventCompletion(id: string, completed: boolean) {
     .returning();
 
   if (completed) {
-    let xp = XP_VALUES.QUEST_SIDE;
-    if (updatedEvent.tier === "main") xp = XP_VALUES.QUEST_MAIN;
-    if (updatedEvent.tier === "epic") xp = XP_VALUES.QUEST_EPIC;
+    let xp = updatedEvent.type === "task"
+      ? XP_VALUES.TASK
+      : updatedEvent.tier === "epic"
+        ? XP_VALUES.QUEST_EPIC
+        : updatedEvent.tier === "main"
+          ? XP_VALUES.QUEST_MAIN
+          : XP_VALUES.QUEST_SIDE;
     
     await addXP(xp, updatedEvent.stat || undefined);
   }

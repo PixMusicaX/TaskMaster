@@ -338,7 +338,13 @@ export default function Home() {
                 <div className="space-y-3">
                   {tasks.map(task => {
                     const isEvent = task.type === "event";
-                    const xp = task.tier === "epic" ? XP_VALUES.QUEST_EPIC : task.tier === "main" ? XP_VALUES.QUEST_MAIN : XP_VALUES.QUEST_SIDE;
+                    const xp = task.type === "task"
+                      ? XP_VALUES.TASK
+                      : task.tier === "epic"
+                        ? XP_VALUES.QUEST_EPIC
+                        : task.tier === "main"
+                          ? XP_VALUES.QUEST_MAIN
+                          : XP_VALUES.QUEST_SIDE;
 
                     return (
                       <button
