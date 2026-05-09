@@ -154,6 +154,7 @@ Return ONLY a valid JSON object. No preamble, no markdown, no extra keys.
 
 export const getPreparationTipPrompt = (context: {
   futureTasks: any[];
+  history: any[];
 }) => `
 You are the TaskMaster Strategic Advisor. Your goal is to help the user prepare for their upcoming journey over the next 28 days.
 
@@ -164,13 +165,19 @@ Upcoming Events & Tasks:
 ${context.futureTasks.map(t => `- [${t.type.toUpperCase()}] ${t.title} on ${t.date}`).join("\n") || "No major upcoming events."}
 
 ═══════════════════════════════
+ADVICE HISTORY (LAST 14 DAYS)
+═══════════════════════════════
+${context.history.map(h => `- ${h.title} (${h.completed ? "COMPLETED" : "IGNORED"})`).join("\n") || "No previous advice."}
+
+═══════════════════════════════
 ADVICE RULES
 ═══════════════════════════════
 1. Analyze the upcoming schedule for clusters of activity, major deadlines, or significant gaps.
 2. Provide ONE actionable preparation tip to help them stay ahead of their curve.
 3. If they have many tasks on a specific day, suggest prep for that.
 4. If they have a quiet period, suggest rest or deep work.
-5. Tone: Strategic, calm, forward-thinking.
+5. NEVER repeat a title or specific advice from the advice history.
+6. Tone: Strategic, calm, forward-thinking.
 
 ═══════════════════════════════
 OUTPUT FORMAT

@@ -84,7 +84,7 @@ export const smartMission = pgTable("SmartMission", {
   description: text("description"),
   date: text("date").unique().notNull(), // Format: YYYY-MM-DD
   completed: boolean("completed").default(false).notNull(),
-  xpReward: integer("xpReward").default(25).notNull(),
+  xpReward: integer("xpReward").default(50).notNull(),
   stat: text("stat").default("charisma").notNull(),
   quote: text("quote"),
   createdAt: timestamp("createdAt", { precision: 3, mode: 'date' }).defaultNow().notNull(),
@@ -99,7 +99,7 @@ export const reliefRecommendation = pgTable("ReliefRecommendation", {
   completed: boolean("completed").default(false).notNull(),
   alt1Completed: boolean("alt1Completed").default(false).notNull(),
   alt2Completed: boolean("alt2Completed").default(false).notNull(),
-  xpReward: integer("xpReward").default(5).notNull(),
+  xpReward: integer("xpReward").default(10).notNull(),
   stat: text("stat").default("charisma").notNull(),
   location: text("location"),
   weather: text("weather"),
@@ -114,8 +114,8 @@ export const preparationTip = pgTable("PreparationTip", {
   description: text("description"),
   date: text("date").unique().notNull(), // Format: YYYY-MM-DD
   completed: boolean("completed").default(false).notNull(),
-  xpReward: integer("xpReward").default(15).notNull(),
-  stat: text("stat").default("intelligence").notNull(),
+  xpReward: integer("xpReward").default(25).notNull(),
+  stat: text("stat").default("charisma").notNull(),
   createdAt: timestamp("createdAt", { precision: 3, mode: 'date' }).defaultNow().notNull(),
 });
 

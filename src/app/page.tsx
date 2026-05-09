@@ -208,6 +208,8 @@ export default function Home() {
     const newStatus = !prepTip.completed;
     setPrepTip({ ...prepTip, completed: newStatus });
     await togglePreparationTip(prepTip.id, newStatus);
+    const prof = await getProfile();
+    setProfile(prof);
     window.dispatchEvent(new CustomEvent("profile-updated"));
   }
 
@@ -482,7 +484,7 @@ export default function Home() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-[8px] font-black uppercase text-tm-purple-dark dark:text-tm-yellow tracking-[0.2em]">Preparation Tip</span>
-                            <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-[8px] font-black text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">+25 XP</span>
+                            <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-[8px] font-black text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">+{prepTip.xpReward} XP</span>
                           </div>
                           <h3 className={cn("text-base font-black text-foreground/90 leading-tight", prepTip.completed && "line-through opacity-50")}>
                             {prepTip.title}
@@ -533,7 +535,7 @@ export default function Home() {
                                 </button>
                               )}
                               <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-[8px] font-black text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">
-                                +{smartMission.xpReward === 25 ? 50 : smartMission.xpReward} XP
+                                +{smartMission.xpReward} XP
                               </span>
                             </div>
                           </div>
@@ -580,7 +582,7 @@ export default function Home() {
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-[8px] font-black uppercase text-tm-blue-gray tracking-[0.2em]">Relief Recommendation</span>
                             <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-[8px] font-black text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">
-                              +{relief.xpReward === 5 ? 10 : relief.xpReward} XP
+                              +{relief.xpReward} XP
                             </span>
                           </div>
 

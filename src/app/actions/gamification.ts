@@ -1,18 +1,18 @@
 "use server";
 
 import { db, client } from "@/db";
-import { habit, habitLog, event, note, smartMission, reliefRecommendation, seasonSnapshot } from "@/db/schema";
+import { habit, habitLog, event, note, smartMission, reliefRecommendation, seasonSnapshot, preparationTip } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { XP_VALUES, RPG_TITLES } from "@/lib/constants";
 import { startOfMonth, endOfMonth, format, subMonths, isSameMonth } from "date-fns";
-import { and, or, gte, lte, eq } from "drizzle-orm";
+import { and, or, gte, lte, eq, inArray } from "drizzle-orm";
 
 export async function getStatsForPeriod(startDate: Date, endDate: Date) {
   try {
     const startStr = format(startDate, "yyyy-MM-dd");
     const endStr = format(endDate, "yyyy-MM-dd");
 
-    const [habits, events, notes, smartMissions, reliefRecommendations] = await Promise.all([
+    const [habits, events, notes, smartMissions, reliefRecommendations, preparationTips] = await Promise.all([
       db.query.habit.findMany({
         with: {
           logs: {
@@ -42,6 +42,13 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
       ),
       db.select().from(reliefRecommendation).where(
         and(gte(reliefRecommendation.date, startStr), lte(reliefRecommendation.date, endStr))
+      ),
+      db.select().from(preparationTip).where(
+        and(
+          gte(preparationTip.date, startStr),
+          lte(preparationTip.date, endStr),
+          eq(preparationTip.completed, true)
+        )
       )
     ]);
 
@@ -102,9 +109,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
 
     // Add Smart Mission XP
     smartMissions.forEach((sm: any) => {
-      let reward = sm.xpReward;
-      if (reward === 25) reward = 50; // Legacy doubling
-      
+      const reward = sm.xpReward;
       totalXP += reward;
       if (sm.stat === "charisma") stats.charisma += reward;
       else if (sm.stat === "strength") stats.strength += reward;
@@ -113,13 +118,22 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
       else if (sm.stat === "vitality") stats.vitality += reward;
     });
 
+    // Add Preparation Tip XP
+    preparationTips.forEach((pt: any) => {
+      const reward = pt.xpReward;
+      totalXP += reward;
+      if (pt.stat === "charisma") stats.charisma += reward;
+      else if (pt.stat === "strength") stats.strength += reward;
+      else if (pt.stat === "intelligence") stats.intelligence += reward;
+      else if (pt.stat === "wealth") stats.wealth += reward;
+      else if (pt.stat === "vitality") stats.vitality += reward;
+    });
+
     // Add Relief Recommendation XP (3 separate tasks)
     reliefRecommendations.forEach((rr: any) => {
       const awardXP = (isCompleted: boolean) => {
         if (isCompleted) {
-          let reward = rr.xpReward;
-          if (reward === 5) reward = 10; // Legacy doubling
-          
+          const reward = rr.xpReward;
           totalXP += reward;
           if (rr.stat === "charisma") stats.charisma += reward;
           else if (rr.stat === "strength") stats.strength += reward;
@@ -261,14 +275,24 @@ async function getSnapshotForPeriod(startDate: Date, endDate: Date) {
 
 export async function getSeasonHistory(monthsCount: number = 6) {
   const now = new Date();
-  
-  const promises = Array.from({ length: monthsCount }).map(async (_, i) => {
+  const periods = Array.from({ length: monthsCount }).map((_, i) => format(subMonths(now, i), "yyyy-MM"));
+
+  await ensureSeasonSnapshotTable();
+  const snapshots = await db.select().from(seasonSnapshot).where(inArray(seasonSnapshot.period, periods));
+  const snapshotMap = new Map(snapshots.map(s => [s.period, s]));
+
+  const promises = periods.map(async (period, i) => {
     const date = subMonths(now, i);
-    const startDate = startOfMonth(date);
-    const endDate = endOfMonth(date);
-    return isSameMonth(date, now) ? getStatsForPeriod(startDate, endDate) : getSnapshotForPeriod(startDate, endDate);
+    if (isSameMonth(date, now)) {
+      return getStatsForPeriod(startOfMonth(date), endOfMonth(date));
+    }
+
+    const existing = snapshotMap.get(period);
+    if (existing) return existing;
+
+    return getSnapshotForPeriod(startOfMonth(date), endOfMonth(date));
   });
-  
+
   return await Promise.all(promises);
 }
 
