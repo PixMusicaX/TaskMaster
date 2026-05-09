@@ -7,8 +7,9 @@ import { useEffect, useState } from "react";
 import { getSeasonHistory } from "@/app/actions/gamification";
 import { getSmartMissionHistory } from "@/app/actions/smart-missions";
 import { getReliefHistory } from "@/app/actions/relief";
+import { getPreparationTipHistory } from "@/app/actions/preparation";
 import { format, subDays } from "date-fns";
-import { Music, Film, Coffee, Dumbbell, Database, Download, AlertTriangle } from "lucide-react";
+import { Music, Film, Coffee, Dumbbell, Database, Download, AlertTriangle, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
 import { generatePruneArchive, deletePrunedData } from "@/app/actions/prune";
@@ -18,6 +19,7 @@ export default function AboutPage() {
   const [seasonHistory, setSeasonHistory] = useState<any[]>([]);
   const [missionHistory, setMissionHistory] = useState<any[]>([]);
   const [reliefHistory, setReliefHistory] = useState<any[]>([]);
+  const [preparationHistory, setPreparationHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [seasonsLimit, setSeasonsLimit] = useState(6);
@@ -57,14 +59,16 @@ export default function AboutPage() {
   useEffect(() => {
     async function loadData() {
       const oneYearAgo = format(subDays(new Date(), 365), "yyyy-MM-dd");
-      const [seasons, missions, relief] = await Promise.all([
+      const [seasons, missions, relief, prep] = await Promise.all([
         getSeasonHistory(50),
         getSmartMissionHistory(oneYearAgo),
-        getReliefHistory(oneYearAgo)
+        getReliefHistory(oneYearAgo),
+        getPreparationTipHistory(oneYearAgo)
       ]);
       setSeasonHistory(seasons.filter(s => s.xp > 0));
       setMissionHistory(missions);
       setReliefHistory(relief);
+      setPreparationHistory(prep);
       setLoading(false);
     }
     loadData();
@@ -268,6 +272,54 @@ export default function AboutPage() {
         )}
       </div>
 
+      {/* Preparation History Section */}
+      <div className="space-y-8">
+        <div className="flex items-center gap-4">
+          <Brain className="text-tm-purple-dark dark:text-tm-yellow" size={32} />
+          <h2 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-3xl font-black dark:text-tm-yellow italic tracking-tighter uppercase">Strategic Prep Log</h2>
+        </div>
+
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2].map(i => (
+              <div key={i} className="h-20 bg-white/5 rounded-2xl animate-pulse" />
+            ))}
+          </div>
+        ) : preparationHistory.length > 0 ? (
+          <div className="space-y-4">
+            {preparationHistory.slice(0, 10).map((p, idx) => (
+              <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:border-tm-yellow/40 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                    p.completed ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-blue-gray/10 text-tm-blue-gray"
+                  )}>
+                    <Brain size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start gap-2">
+                      <h4 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="font-bold text-sm leading-tight dark:text-white">{p.title}</h4>
+                      <span className="text-[10px] font-black text-tm-blue-gray uppercase shrink-0">{format(new Date(p.date), "MMM d, yyyy")}</span>
+                    </div>
+                    <p className="text-xs text-tm-blue-gray/90 line-clamp-1 mt-0.5 italic">{p.description}</p>
+                  </div>
+                  {p.completed && (
+                    <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-1 rounded-lg border border-tm-yellow/20 shrink-0">
+                      +25 XP
+                    </div>
+                  )}
+                </div>
+              </GlassCard>
+            ))}
+          </div>
+        ) : (
+          <GlassCard className="p-12 text-center border-tm-blue-gray/5">
+            <Brain size={48} className="mx-auto text-tm-blue-gray/20 mb-4" />
+            <p className="text-tm-blue-gray font-medium">No strategic preparations logged yet. Check your Attention widget!</p>
+          </GlassCard>
+        )}
+      </div>
+
       {/* Relief Log Section */}
       <div className="space-y-8">
         <div className="flex items-center gap-4">
@@ -418,7 +470,7 @@ export default function AboutPage() {
       {/* Footer */}
       <div className="pt-12 text-center space-y-4 border-t border-tm-blue-gray/10">
         <p className="text-xs font-black uppercase text-tm-blue-gray tracking-[0.3em]">
-          Version 2.6.0 • © 2026 TaskMaster • By Pinaki AKA PiX
+          Version 2.6.2 • © 2026 TaskMaster • By Pinaki AKA PiX
         </p>
       </div>
     </div>

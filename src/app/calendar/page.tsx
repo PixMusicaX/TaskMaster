@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent } from "@/app/actions/events";
 import { getProfile } from "@/app/actions/gamification";
 import { getRecentNotes } from "@/app/actions/notes";
+import { getReliefHistory } from "@/app/actions/relief";
 import { cn } from "@/lib/utils";
 import { PremiumLoader } from "@/components/loader";
 import TabularViewModal, { Column } from "@/components/TabularViewModal";
@@ -17,6 +18,7 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
+  const [reliefs, setReliefs] = useState<any[]>([]);
   const [moods, setMoods] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,14 +51,16 @@ export default function CalendarPage() {
   const fetchEvents = useCallback(async (showLoader = true) => {
     if (showLoader) setIsLoading(true);
     try {
-      const [eventsData, profileData, notesData] = await Promise.all([
+      const [eventsData, profileData, notesData, reliefData] = await Promise.all([
         getEventsByDateRange(startDate, endDate),
         getProfile(),
-        getRecentNotes(60)
+        getRecentNotes(60),
+        getReliefHistory(format(startDate, "yyyy-MM-dd"))
       ]);
       setEvents(eventsData);
       setProfile(profileData);
       setMoods(notesData);
+      setReliefs(reliefData);
     } finally {
       if (showLoader) setIsLoading(false);
     }
@@ -458,6 +462,14 @@ export default function CalendarPage() {
                 <div>
                   <h3 className="text-xl font-bold tracking-tight">{format(selectedDate, "MMMM d")}</h3>
                   <p className="text-xs font-black uppercase text-tm-blue-gray tracking-widest">{format(selectedDate, "EEEE")}</p>
+                  {reliefs.find(r => r.date === format(selectedDate, "yyyy-MM-dd"))?.location && (
+                    <div className="flex items-center gap-1.5 mt-1 text-tm-blue-gray/60">
+                      <MapPin size={10} className="text-tm-orange-light" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">
+                        {reliefs.find(r => r.date === format(selectedDate, "yyyy-MM-dd")).location}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {selectedEvents.length > 0 && (
                   <span className="bg-tm-yellow/20 text-tm-yellow px-3 py-1 rounded-full text-[10px] font-black uppercase">
