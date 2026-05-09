@@ -554,7 +554,7 @@ export default function HabitsPage() {
             columns={[
               { header: "Date", key: "date", render: (val) => <span className="font-mono text-tm-blue-gray">{val}</span> },
               {
-                header: "Habit", key: "habitName", render: (val, row) => (
+                header: "Habit", key: "habitName", wrap: true, render: (val, row) => (
                   <div className="flex items-center gap-3">
                     <span className="text-xl">{row.icon}</span>
                     <span className="font-bold text-white/90">{val}</span>
@@ -567,13 +567,6 @@ export default function HabitsPage() {
                     "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
                     val === "Completed" ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-orange-dark/20 text-tm-orange-dark"
                   )}>
-                    {val}
-                  </span>
-                )
-              },
-              {
-                header: "Attribute", key: "stat", render: (val) => (
-                  <span className="text-[10px] font-black uppercase text-tm-blue-gray tracking-tighter italic">
                     {val}
                   </span>
                 )

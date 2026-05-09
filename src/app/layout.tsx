@@ -34,7 +34,7 @@ export default function RootLayout({
           <ClassWatermark />
           <SwipeNav />
           <Navbar />
-          <main className="flex-1 overflow-auto relative pb-24 lg:pb-0 z-10">
+          <main className="flex-1 overflow-auto relative pb-24 lg:pb-0">
             {children}
           </main>
         </ThemeProvider>

@@ -10,6 +10,7 @@ export interface Column {
   header: string;
   key: string;
   render?: (value: any, row: any) => React.ReactNode;
+  wrap?: boolean;
 }
 
 interface TabularViewModalProps {
@@ -32,7 +33,7 @@ export default function TabularViewModal({ title, isOpen, onClose, data, columns
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 md:p-12 overflow-hidden">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-0 md:p-12 overflow-hidden" data-swipe-ignore="true">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -105,7 +106,7 @@ export default function TabularViewModal({ title, isOpen, onClose, data, columns
                               className="hover:bg-tm-yellow/[0.03] transition-colors group/row"
                             >
                               {columns.map((col) => (
-                                <td key={col.key} className="px-6 py-4 whitespace-nowrap">
+                                <td key={col.key} className={cn("px-6 py-4", col.wrap ? "whitespace-normal" : "whitespace-nowrap")}>
                                   <div className="text-sm font-bold text-white/80 group-hover/row:text-white transition-colors">
                                     {col.render ? col.render(row[col.key], row) : String(row[col.key])}
                                   </div>

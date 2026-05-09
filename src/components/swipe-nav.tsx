@@ -17,12 +17,20 @@ export default function SwipeNav() {
 
     const minSwipeDistance = 75;
 
+    let isIgnored = false;
+
     const onTouchStart = (e: TouchEvent) => {
+      if ((e.target as Element).closest('[data-swipe-ignore="true"]')) {
+        isIgnored = true;
+        return;
+      }
+      isIgnored = false;
       touchStartX = e.changedTouches[0].screenX;
       touchStartY = e.changedTouches[0].screenY;
     };
 
     const onTouchEnd = (e: TouchEvent) => {
+      if (isIgnored) return;
       touchEndX = e.changedTouches[0].screenX;
       touchEndY = e.changedTouches[0].screenY;
       handleSwipe();

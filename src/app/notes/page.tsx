@@ -380,8 +380,8 @@ export default function NotesPage() {
                 )
               },
               {
-                header: "Content", key: "contentText", render: (val) => (
-                  <div className="max-w-md truncate font-medium text-white/80">
+                header: "Content", key: "contentText", wrap: true, render: (val) => (
+                  <div className="font-medium text-white/80">
                     {val}
                   </div>
                 )
