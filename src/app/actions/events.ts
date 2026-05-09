@@ -90,3 +90,7 @@ export async function updateEvent(id: string, data: any) {
   return updatedEvent;
 }
 
+
+export async function getAllEvents() {
+  return await db.select().from(event).orderBy(asc(event.startTime));
+}
