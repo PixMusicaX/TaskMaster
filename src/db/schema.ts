@@ -13,6 +13,26 @@ export const userProfile = pgTable("UserProfile", {
   charisma: integer("charisma").default(0).notNull(),
 });
 
+export const seasonSnapshot = pgTable("SeasonSnapshot", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  period: text("period").notNull(),
+  monthName: text("monthName").notNull(),
+  year: integer("year").notNull(),
+  xp: integer("xp").default(0).notNull(),
+  level: integer("level").default(1).notNull(),
+  title: text("title").notNull(),
+  topStat: text("topStat").notNull(),
+  weakStat: text("weakStat").notNull(),
+  strength: integer("strength").default(0).notNull(),
+  intelligence: integer("intelligence").default(0).notNull(),
+  wealth: integer("wealth").default(0).notNull(),
+  vitality: integer("vitality").default(0).notNull(),
+  charisma: integer("charisma").default(0).notNull(),
+  createdAt: timestamp("createdAt", { precision: 3, mode: 'date' }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex("SeasonSnapshot_period_key").on(t.period)
+]);
+
 export const habit = pgTable("Habit", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),

@@ -1,7 +1,7 @@
 "use server";
 
-import { db } from "@/db";
-import { habit, habitLog, event, note, smartMission, reliefRecommendation } from "@/db/schema";
+import { db, client } from "@/db";
+import { habit, habitLog, event, note, smartMission, reliefRecommendation, seasonSnapshot } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { XP_VALUES, RPG_TITLES } from "@/lib/constants";
 import { startOfMonth, endOfMonth, format, subMonths, isSameMonth } from "date-fns";
@@ -186,12 +186,87 @@ export async function getProfile() {
   return getStatsForPeriod(startOfMonth(now), endOfMonth(now));
 }
 
+let seasonSnapshotTableInitialized = false;
+async function ensureSeasonSnapshotTable() {
+  if (seasonSnapshotTableInitialized) return;
+
+  await client`
+    CREATE TABLE IF NOT EXISTS "SeasonSnapshot" (
+      "id" text PRIMARY KEY,
+      "period" text NOT NULL,
+      "monthName" text NOT NULL,
+      "year" integer NOT NULL,
+      "xp" integer DEFAULT 0 NOT NULL,
+      "level" integer DEFAULT 1 NOT NULL,
+      "title" text NOT NULL,
+      "topStat" text NOT NULL,
+      "weakStat" text NOT NULL,
+      "strength" integer DEFAULT 0 NOT NULL,
+      "intelligence" integer DEFAULT 0 NOT NULL,
+      "wealth" integer DEFAULT 0 NOT NULL,
+      "vitality" integer DEFAULT 0 NOT NULL,
+      "charisma" integer DEFAULT 0 NOT NULL,
+      "createdAt" timestamp DEFAULT now() NOT NULL
+    );
+  `;
+
+  await client`
+    CREATE UNIQUE INDEX IF NOT EXISTS "SeasonSnapshot_period_key" ON "SeasonSnapshot" ("period");
+  `;
+
+  seasonSnapshotTableInitialized = true;
+}
+
+async function getSnapshotForPeriod(startDate: Date, endDate: Date) {
+  const period = format(startDate, "yyyy-MM");
+  await ensureSeasonSnapshotTable();
+
+  const existingRows = await db.select().from(seasonSnapshot).where(eq(seasonSnapshot.period, period)).limit(1);
+  const existing = existingRows[0];
+  if (existing) {
+    return {
+      xp: existing.xp,
+      level: existing.level,
+      title: existing.title,
+      topStat: existing.topStat,
+      weakStat: existing.weakStat,
+      strength: existing.strength,
+      intelligence: existing.intelligence,
+      wealth: existing.wealth,
+      vitality: existing.vitality,
+      charisma: existing.charisma,
+      monthName: existing.monthName,
+      year: existing.year,
+    };
+  }
+
+  const stats = await getStatsForPeriod(startDate, endDate);
+  await db.insert(seasonSnapshot).values({
+    period,
+    monthName: stats.monthName,
+    year: stats.year,
+    xp: stats.xp,
+    level: stats.level,
+    title: stats.title,
+    topStat: stats.topStat,
+    weakStat: stats.weakStat,
+    strength: stats.strength,
+    intelligence: stats.intelligence,
+    wealth: stats.wealth,
+    vitality: stats.vitality,
+    charisma: stats.charisma,
+  });
+  return stats;
+}
+
 export async function getSeasonHistory(monthsCount: number = 6) {
   const now = new Date();
   
-  const promises = Array.from({ length: monthsCount }).map((_, i) => {
+  const promises = Array.from({ length: monthsCount }).map(async (_, i) => {
     const date = subMonths(now, i);
-    return getStatsForPeriod(startOfMonth(date), endOfMonth(date));
+    const startDate = startOfMonth(date);
+    const endDate = endOfMonth(date);
+    return isSameMonth(date, now) ? getStatsForPeriod(startDate, endDate) : getSnapshotForPeriod(startDate, endDate);
   });
   
   return await Promise.all(promises);
