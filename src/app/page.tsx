@@ -449,9 +449,9 @@ export default function Home() {
                       <div className="flex items-start gap-3 relative z-10">
                         <div className={cn(
                           "w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-all mt-0.5",
-                          prepTip.completed ? "bg-tm-purple-dark border-tm-purple-dark shadow-[0_0_10px_rgba(45,27,51,0.4)]" : "bg-white/5 border-tm-purple-dark/20 group-hover/prep:border-tm-purple-dark/50"
+                          prepTip.completed ? "bg-tm-purple-dark border-tm-purple-dark dark:bg-tm-yellow dark:border-tm-yellow shadow-[0_0_10px_rgba(45,27,51,0.4)]" : "bg-white/5 border-tm-purple-dark/20 dark:border-tm-yellow/20 group-hover/prep:border-tm-purple-dark/50 dark:group-hover/prep:border-tm-yellow/50"
                         )}>
-                          {prepTip.completed ? <Check size={18} className="text-white" /> : <Brain size={16} className="text-tm-purple-dark dark:text-tm-yellow" />}
+                          {prepTip.completed ? <Check size={18} className="text-white dark:text-tm-purple-dark" /> : <Brain size={16} className="text-tm-purple-dark dark:text-tm-yellow" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
