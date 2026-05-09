@@ -27,7 +27,7 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
       if (lat && lon) {
         try {
           const [weatherRes, geoRes] = await Promise.all([
-            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max&timezone=auto`),
+            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max&timezone=auto&forecast_days=3`),
             fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`, {
               headers: { "User-Agent": "TaskMaster/1.0" }
             })
@@ -37,8 +37,16 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
           const geoData = await geoRes.json();
 
           if (weatherData.daily) {
-            weatherInfo.temp = Math.round(weatherData.daily.temperature_2m_max[0]).toString();
-            const code = weatherData.daily.weathercode[0];
+            // Match today's date explicitly so timezone shifts can't silently return the wrong day
+            const todayIndex = weatherData.daily.time?.indexOf(today) ?? 0;
+            const idx = todayIndex >= 0 ? todayIndex : 0;
+
+            const maxTemp = Math.round(weatherData.daily.temperature_2m_max[idx]);
+            const minTemp = Math.round(weatherData.daily.temperature_2m_min[idx]);
+            const feelsLike = Math.round(weatherData.daily.apparent_temperature_max[idx]);
+            weatherInfo.temp = `${maxTemp}° (${minTemp}–${maxTemp}, feels ${feelsLike})`;
+
+            const code = weatherData.daily.weathercode[idx];
             if (code === 0) weatherInfo.weather = "Clear";
             else if (code <= 3) weatherInfo.weather = "Partly Cloudy";
             else if (code <= 48) weatherInfo.weather = "Foggy";
