@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import GlassCard from "@/components/glass-card";
-import { Save, History, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check, Brain, Search } from "lucide-react";
+import { History, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Brain, Search, CheckCircle2 } from "lucide-react";
 import { format, subDays, addDays, isSameDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { getNoteByDate, saveNote, getRecentNotes } from "@/app/actions/notes";
@@ -24,12 +24,23 @@ export default function NotesPage() {
   const [recentNotes, setRecentNotes] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isNoteLoading, setIsNoteLoading] = useState(false);
   const [mood, setMood] = useState("neutral");
   const [isTabularOpen, setIsTabularOpen] = useState(false);
   const [allNotesForTable, setAllNotesForTable] = useState<any[]>([]);
+
+  // Refs so async callbacks always see fresh values
+  const linesRef = useRef(lines);
+  const moodRef = useRef(mood);
+  const selectedDateRef = useRef(selectedDate);
+  const isDirtyRef = useRef(isDirty);
+  useEffect(() => { linesRef.current = lines; }, [lines]);
+  useEffect(() => { moodRef.current = mood; }, [mood]);
+  useEffect(() => { selectedDateRef.current = selectedDate; }, [selectedDate]);
+  useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
 
   const fetchNote = useCallback(async (date: Date) => {
     setIsNoteLoading(true);
@@ -54,10 +65,20 @@ export default function NotesPage() {
       } else {
         setLines([{ id: Math.random().toString(36).substr(2, 9), bullet: "○", text: "" }]);
       }
+      setIsDirty(false);
     } finally {
       setIsNoteLoading(false);
       setIsLoading(false);
     }
+  }, []);
+
+  // Save the current note silently (no loading state flip, used for auto-save)
+  const autoSave = useCallback(async (date: Date, currentLines: NoteLine[], currentMood: string) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    await saveNote(dateStr, JSON.stringify(currentLines), currentMood);
+    setLastSaved(new Date());
+    setIsDirty(false);
+    fetchRecent();
   }, []);
 
   const fetchRecent = useCallback(async () => {
@@ -71,6 +92,38 @@ export default function NotesPage() {
     fetchRecent();
   }, [selectedDate, fetchNote, fetchRecent]);
 
+  // Auto-save on page unload / browser navigation away
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirtyRef.current) {
+        // Fire-and-forget best-effort save via sendBeacon
+        const payload = JSON.stringify({
+          date: format(selectedDateRef.current, "yyyy-MM-dd"),
+          content: JSON.stringify(linesRef.current),
+          mood: moodRef.current,
+        });
+        navigator.sendBeacon("/api/notes/autosave", new Blob([payload], { type: "application/json" }));
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
+  // Auto-save when the component unmounts (SPA navigation within the app)
+  useEffect(() => {
+    return () => {
+      if (isDirtyRef.current) {
+        saveNote(
+          format(selectedDateRef.current, "yyyy-MM-dd"),
+          JSON.stringify(linesRef.current),
+          moodRef.current
+        );
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const textareas = document.querySelectorAll<HTMLTextAreaElement>('.note-textarea');
     textareas.forEach(textarea => {
@@ -79,22 +132,19 @@ export default function NotesPage() {
     });
   }, [lines]);
 
-  async function handleSave() {
-    setIsSaving(true);
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
-    await saveNote(dateStr, JSON.stringify(lines), mood);
-    const profileData = await getProfile();
-    setProfile(profileData);
-    window.dispatchEvent(new CustomEvent("profile-updated"));
-    setLastSaved(new Date());
-    setIsSaving(false);
-    fetchRecent();
+
+  async function handleDateChange(newDate: Date) {
+    if (isDirtyRef.current) {
+      await autoSave(selectedDateRef.current, linesRef.current, moodRef.current);
+    }
+    setSelectedDate(newDate);
   }
 
   function updateLine(index: number, updates: Partial<NoteLine>) {
     const newLines = [...lines];
     newLines[index] = { ...newLines[index], ...updates };
     setLines(newLines);
+    setIsDirty(true);
   }
 
   function handleKeyDown(e: React.KeyboardEvent, index: number) {
@@ -146,7 +196,7 @@ export default function NotesPage() {
             </div>
             <GlassCard className="flex items-center justify-between p-1.5 border-tm-yellow/30 relative z-10 overflow-visible w-full sm:w-auto sm:min-w-[320px]">
               <button
-                onClick={() => setSelectedDate(subDays(selectedDate, 1))}
+                onClick={() => handleDateChange(subDays(selectedDate, 1))}
                 className="p-2.5 hover:bg-tm-yellow/30 rounded-2xl transition-all text-tm-purple-dark dark:text-tm-yellow active:scale-90"
               >
                 <ChevronLeft size={24} />
@@ -158,7 +208,7 @@ export default function NotesPage() {
                 </p>
               </div>
               <button
-                onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+                onClick={() => handleDateChange(addDays(selectedDate, 1))}
                 disabled={isSameDay(selectedDate, new Date())}
                 className="p-2.5 hover:bg-tm-yellow/30 rounded-2xl transition-all disabled:opacity-20 text-tm-purple-dark dark:text-tm-yellow active:scale-90"
               >
@@ -189,7 +239,7 @@ export default function NotesPage() {
                     ].map(m => (
                       <button
                         key={m.val}
-                        onClick={() => setMood(m.val)}
+                        onClick={() => { setMood(m.val); setIsDirty(true); }}
                         className={cn(
                           "p-2 rounded-full transition-all flex items-center justify-center w-9 h-9",
                           mood === m.val ? m.bg + " " + m.color + " shadow-inner scale-95" : "text-tm-blue-gray/40 hover:bg-white/5"
@@ -201,18 +251,19 @@ export default function NotesPage() {
                     ))}
                   </div>
 
-                  {lastSaved && (
-                    <span className="text-[10px] text-tm-blue-gray font-bold italic hidden sm:flex items-center gap-1 mr-2">
-                      <Check size={12} /> Saved at {format(lastSaved, "HH:mm")}
+                  {isDirty ? (
+                    <span className="text-[10px] text-tm-blue-gray/60 font-bold italic flex items-center gap-1 animate-pulse">
+                      Saving automatically...
+                    </span>
+                  ) : lastSaved ? (
+                    <span className="text-[10px] text-tm-blue-gray font-bold italic flex items-center gap-1">
+                      <CheckCircle2 size={12} /> Saved {format(lastSaved, "HH:mm")}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-tm-blue-gray/40 font-bold italic flex items-center gap-1">
+                      Auto-save on
                     </span>
                   )}
-                  <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex items-center gap-2 bg-tm-orange-dark text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-tm-orange-dark/20 hover:scale-105 transition-transform disabled:opacity-50"
-                  >
-                    {isSaving ? "Saving..." : <><Save size={16} /> Save</>}
-                  </button>
                 </div>
               </div>
               <div className="flex-1 bg-transparent p-4 sm:p-8 overflow-y-auto space-y-2 min-h-[400px] relative">
@@ -300,7 +351,7 @@ export default function NotesPage() {
                   return (
                     <button
                       key={dateStr}
-                      onClick={() => setSelectedDate(day)}
+                      onClick={() => handleDateChange(day)}
                       className={cn(
                         "w-full text-left p-4 rounded-2xl border transition-all relative overflow-hidden group",
                         isSelected ? "bg-tm-yellow/20 border-tm-yellow shadow-lg scale-[1.02]" : "bg-white/40 dark:bg-white/5 border-white/20 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10 shadow-sm",
