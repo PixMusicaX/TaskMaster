@@ -80,12 +80,12 @@
 }
 
 :root[data-rank="Grandmaster"] {
-  --tm-yellow: #D97706;
-  --tm-orange-light: #9333EA;
-  --tm-orange-dark: #7E22CE;
-  --tm-blue-gray: #475569;
-  --tm-purple-dark: #2E1065;
-  --tm-red: #A21CAF;
+  --tm-yellow: #F59E0B; /* Amber/Gold */
+  --tm-orange-light: #BE123C; /* Rose Crimson */
+  --tm-orange-dark: #881337; /* Deep Ruby */
+  --tm-blue-gray: #3F3F46; /* Zinc */
+  --tm-purple-dark: #18181B; /* Obsidian */
+  --tm-red: #E11D48; /* Bright Rose */
 }
 
 :root[data-rank="Ascendant"] {
@@ -112,12 +112,12 @@
 .dark[data-rank="Sentinel"] { --tm-blue-gray: #94A3B8; --tm-yellow: #34D399; --tm-red: #10B981; }
 .dark[data-rank="Paladin"] { --tm-blue-gray: #94A3B8; --tm-yellow: #FDE047; --tm-red: #38BDF8; }
 .dark[data-rank="Grandmaster"] { 
-  --tm-yellow: #FCD34D;
-  --tm-orange-light: #C084FC;
-  --tm-orange-dark: #A855F7;
-  --tm-blue-gray: #94A3B8;
-  --tm-purple-dark: #4C1D95;
-  --tm-red: #E879F9;
+  --tm-yellow: #FDE047; /* Bright Gold */
+  --tm-orange-light: #F43F5E; /* Bright Rose */
+  --tm-orange-dark: #BE123C; /* Ruby */
+  --tm-blue-gray: #A1A1AA; /* Light Zinc */
+  --tm-purple-dark: #4C0519; /* Dark Ruby Obsidian */
+  --tm-red: #FB7185; /* Soft Rose */
 }
 .dark[data-rank="Ascendant"] { 
   --tm-yellow: #F87171;

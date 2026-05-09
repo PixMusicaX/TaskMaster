@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { habit, habitLog, event, note, smartMission, reliefRecommendation } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { XP_VALUES } from "@/lib/constants";
+import { XP_VALUES, RPG_TITLES } from "@/lib/constants";
 import { startOfMonth, endOfMonth, format, subMonths, isSameMonth } from "date-fns";
 import { and, or, gte, lte, eq } from "drizzle-orm";
 
@@ -148,9 +148,12 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
     const topStat = sortedStats[0].name;
     const weakStat = sortedStats[sortedStats.length - 1].name;
 
+    const title = [...RPG_TITLES].reverse().find((t: any) => currentLevel >= t.minLevel)?.title || "Novice";
+
     return {
       xp: totalXP,
       level: currentLevel,
+      title,
       levelProgress: remainingXP,
       nextLevelXP: 70,
       topStat,
@@ -165,6 +168,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
     return {
       xp: 0,
       level: 1,
+      title: "Novice",
       levelProgress: 0,
       nextLevelXP: 70,
       topStat: "none",

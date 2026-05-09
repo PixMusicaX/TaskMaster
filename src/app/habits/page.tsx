@@ -34,7 +34,7 @@ export default function HabitsPage() {
     const handleResize = () => {
       if (window.innerWidth < 640) {
         setVisibleCount(4);
-        setNameWidth("120px");
+        setNameWidth("150px");
       } else if (window.innerWidth < 1024) {
         setVisibleCount(5);
         setNameWidth("180px");
@@ -394,12 +394,23 @@ export default function HabitsPage() {
                         {habit.icon}
                       </div>
                       <div className="flex-1 overflow-hidden sm:pr-12">
-                        <p className="font-bold text-xs sm:text-sm truncate">{habit.name}</p>
-                        <p className="text-[8px] sm:text-[10px] text-tm-blue-gray uppercase font-black tracking-tighter truncate">
+                        <p className="font-bold text-xs sm:text-sm truncate leading-tight">{habit.name}</p>
+                        <p className="text-[8px] sm:text-[10px] text-tm-blue-gray uppercase font-black tracking-tighter truncate mt-0.5">
                           {getFrequencyLabel(habit.frequency)}
                         </p>
+                        {/* Mobile Actions */}
+                        <div className="flex sm:hidden gap-1.5 mt-1.5">
+                          <button onClick={() => openEdit(habit)} className="flex items-center gap-1 px-2 py-1 text-tm-blue-gray hover:text-tm-yellow bg-tm-blue-gray/10 rounded-md transition-colors text-[8px] font-black uppercase tracking-widest">
+                            <Edit2 size={10} /> Edit
+                          </button>
+                          <button onClick={() => handleArchive(habit.id)} className="flex items-center gap-1 px-2 py-1 text-tm-blue-gray hover:text-tm-orange-dark bg-tm-blue-gray/10 rounded-md transition-colors text-[8px] font-black uppercase tracking-widest">
+                            <Archive size={10} /> Hide
+                          </button>
+                        </div>
                       </div>
-                      <div className="absolute right-0 opacity-0 group-hover:opacity-100 flex gap-0.5 transition-all">
+                      
+                      {/* Desktop Actions */}
+                      <div className="hidden sm:flex absolute right-0 opacity-100 lg:opacity-0 group-hover:opacity-100 gap-0.5 transition-all">
                         <button
                           onClick={() => openEdit(habit)}
                           className="p-2 text-tm-blue-gray hover:text-tm-yellow transition-all hover:bg-tm-yellow/5 rounded-lg"
