@@ -49,6 +49,25 @@ export default function Home() {
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
 
+  const DAYS = [
+    { label: "M", value: 1 },
+    { label: "T", value: 2 },
+    { label: "W", value: 3 },
+    { label: "T", value: 4 },
+    { label: "F", value: 5 },
+    { label: "S", value: 6 },
+    { label: "S", value: 0 },
+  ];
+
+  function getFrequencyLabel(freq: number[]) {
+    if (!freq || freq.length === 0) return "Daily";
+    if (freq.length === 7) return "Daily";
+    if (freq.length === 5 && !freq.includes(0) && !freq.includes(6)) return "Weekdays";
+    if (freq.length === 2 && freq.includes(0) && freq.includes(6)) return "Weekends";
+    const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return freq.map(f => labels[f]).join(", ");
+  }
+
   const fetchPrep = useCallback(async (showLoader = true) => {
     if (showLoader) setPrepLoading(true);
     try {
@@ -286,7 +305,7 @@ export default function Home() {
                           <p className={cn("font-black text-sm", isDone ? "text-tm-yellow line-through opacity-50" : "text-foreground/90")}>
                             {habit.name}
                           </p>
-                          <p className="text-[10px] font-black text-tm-blue-gray/60 uppercase tracking-widest mt-0.5">Recurring Skill</p>
+                          <p className="text-[10px] font-black text-tm-blue-gray/60 uppercase tracking-widest mt-0.5">{getFrequencyLabel(habit.frequency)}</p>
                         </div>
                       </button>
                     );
