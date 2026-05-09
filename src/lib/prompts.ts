@@ -121,8 +121,8 @@ VARIETY RULES:
 - The TWO recommendations must be different types (e.g. one movie + one food, not two movies)
 
 STAT MAPPING
-- Movie / Song  → follow up on recent trends
-- Activity      → According to Weather (both indoor and outdoor suggestions)
+- Movie / Song  → follow up on recent trends (run search if required)
+- Activity      → According to Location and Weather (both indoor and outdoor suggestions)
 - Food          → According to Location and Weather (Both Order and Cooking suggestion)
 - Creative task → According to recent notes and activities
 

@@ -15,7 +15,7 @@ const GEMINI_API_KEY = process.env.gemini_key;
 
 export async function getReliefRecommendation(lat?: number, lon?: number, clientDateStr?: string) {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
-  
+
   try {
     let recommendation = await db.query.reliefRecommendation.findFirst({
       where: eq(reliefRecommendation.date, today)
@@ -23,7 +23,7 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
 
     if (!recommendation) {
       let weatherInfo = { weather: "Clear", temp: "22", location: "No location found" };
-      
+
       if (lat && lon) {
         try {
           const [weatherRes, geoRes] = await Promise.all([
@@ -32,7 +32,7 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
               headers: { "User-Agent": "TaskMaster/1.0" }
             })
           ]);
-          
+
           const weatherData = await weatherRes.json();
           const geoData = await geoRes.json();
 
@@ -79,8 +79,8 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
             recentNotes: notesData.map((n: any) => {
               try {
                 const parsed = JSON.parse(n.content);
-                return Array.isArray(parsed) ? parsed.map((p:any) => p.text).join(" ") : n.content;
-              } catch(e) { return n.content; }
+                return Array.isArray(parsed) ? parsed.map((p: any) => p.text).join(" ") : n.content;
+              } catch (e) { return n.content; }
             }),
             recentTasks: taskData.map((t: any) => ({ title: t.title })),
             history: history.map((r: any) => ({ title: r.title, type: r.type }))
@@ -90,7 +90,7 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
             model: "gemini-3.1-flash-lite",
             responseMimeType: "application/json"
           });
-          
+
           if (content) {
             const data = JSON.parse(content);
             const main = data.recommendations[0];
@@ -116,7 +116,7 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
       if (!recommendation) {
         const [fallbackRec] = await db.insert(reliefRecommendation).values({
           date: today,
-          title: "Listen to 'Lo-fi Girl' Radio",
+          title: "Listen to 'Lo-fi Girl' Radio [OFF]",
           description: "Perfect background for unwinding after a productive day.",
           type: "song",
           location: weatherInfo.location,
