@@ -73,19 +73,41 @@ export default function NotesPage() {
   }, []);
 
   // Save the current note silently (no loading state flip, used for auto-save)
-  const autoSave = useCallback(async (date: Date, currentLines: NoteLine[], currentMood: string) => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    await saveNote(dateStr, JSON.stringify(currentLines), currentMood);
-    setLastSaved(new Date());
-    setIsDirty(false);
-    fetchRecent();
-  }, []);
-
   const fetchRecent = useCallback(async () => {
     const data = await getRecentNotes(1000);
     setRecentNotes(data.slice(0, 10));
     setAllNotesForTable(data);
   }, []);
+
+  const autoSave = useCallback(async (date: Date, currentLines: NoteLine[], currentMood: string) => {
+    setIsSaving(true);
+    const dateStr = format(date, "yyyy-MM-dd");
+    try {
+      await saveNote(dateStr, JSON.stringify(currentLines), currentMood);
+      setLastSaved(new Date());
+      setIsDirty(false);
+      fetchRecent();
+    } finally {
+      setIsSaving(false);
+    }
+  }, [fetchRecent]);
+
+  useEffect(() => {
+    if (!isDirty) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      if (!isDirtyRef.current) {
+        return;
+      }
+      autoSave(selectedDateRef.current, linesRef.current, moodRef.current).catch((err) => {
+        console.error("Auto-save failed", err);
+      });
+    }, 1000);
+
+    return () => window.clearTimeout(timeout);
+  }, [lines, mood, selectedDate, isDirty, autoSave]);
 
   useEffect(() => {
     fetchNote(selectedDate);
