@@ -183,16 +183,14 @@ export async function getProfile() {
 }
 
 export async function getSeasonHistory(monthsCount: number = 6) {
-  const history = [];
   const now = new Date();
   
-  for (let i = 0; i < monthsCount; i++) {
+  const promises = Array.from({ length: monthsCount }).map((_, i) => {
     const date = subMonths(now, i);
-    const stats = await getStatsForPeriod(startOfMonth(date), endOfMonth(date));
-    history.push(stats);
-  }
+    return getStatsForPeriod(startOfMonth(date), endOfMonth(date));
+  });
   
-  return history;
+  return await Promise.all(promises);
 }
 
 export async function addXP(amount: number, stat?: string) {

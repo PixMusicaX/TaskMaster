@@ -23,6 +23,7 @@ export default function AboutPage() {
   const [seasonsLimit, setSeasonsLimit] = useState(6);
   const [missionsLimit, setMissionsLimit] = useState(5);
   const [pruneLoading, setPruneLoading] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<string>("default");
 
   async function handlePrune() {
     if (!confirm("Are you sure? This will download your data older than 5 years as a CSV and permanently delete it from the cloud database.")) return;
@@ -66,7 +67,26 @@ export default function AboutPage() {
       setLoading(false);
     }
     loadData();
+
+    if ("Notification" in window) {
+      setNotificationPermission(Notification.permission);
+    }
   }, []);
+
+  async function handleEnableNotifications() {
+    if (!("Notification" in window)) {
+      alert("This browser does not support desktop notifications.");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+    if (permission === "granted") {
+      new Notification("Notifications Enabled!", {
+        body: "You'll now receive updates from TaskMaster.",
+        icon: "/favicon.ico"
+      });
+    }
+  }
 
   const stats = [
     { label: "Design", value: "Premium", icon: Palette },
@@ -361,6 +381,35 @@ export default function AboutPage() {
                 <span>Cannot be undone</span>
               </div>
             </div>
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* App Settings Section */}
+      <div className="space-y-8">
+        <div className="flex items-center gap-4">
+          <Zap className="text-tm-yellow" size={32} />
+          <h2 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-3xl font-black dark:text-tm-yellow italic tracking-tighter uppercase">App Settings</h2>
+        </div>
+        
+        <GlassCard className="p-6 md:p-8 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 relative overflow-hidden">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+               <h3 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-xl font-black dark:text-white leading-tight">Browser Notifications</h3>
+               <p className="text-sm text-tm-blue-gray mt-1 max-w-2xl font-medium">Enable browser notifications to receive alerts for your smart missions and habit reminders.</p>
+            </div>
+            <button
+               onClick={handleEnableNotifications}
+               disabled={notificationPermission === "granted"}
+               className={cn(
+                 "px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all whitespace-nowrap",
+                 notificationPermission === "granted"
+                   ? "bg-tm-yellow/5 text-tm-yellow/50 border border-tm-yellow/10 cursor-default"
+                   : "bg-tm-yellow/10 hover:bg-tm-yellow/20 text-tm-yellow border border-tm-yellow/20 hover:scale-105"
+               )}
+            >
+              {notificationPermission === "granted" ? "Notifications Enabled" : "Enable Notifications"}
+            </button>
           </div>
         </GlassCard>
       </div>
