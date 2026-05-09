@@ -35,11 +35,14 @@ export async function getPreparationTip(clientDateStr?: string) {
       ]);
 
       const prompt = getPreparationTipPrompt({
-        futureTasks: futureTasks.slice(0, 30).map(t => ({
-          title: t.title,
-          type: t.type,
-          date: t.date
-        })),
+        futureTasks: futureTasks
+          .filter(t => !t.completed) // Only prepare for pending tasks
+          .slice(0, 30)
+          .map(t => ({
+            title: t.title,
+            type: t.type,
+            date: t.date
+          })),
         history: history.map(h => ({ title: h.title, completed: h.completed })),
         today,
         profile: {
