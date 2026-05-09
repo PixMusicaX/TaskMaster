@@ -57,13 +57,13 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
 
       if (GEMINI_API_KEY) {
         try {
-          const lastWeek = subDays(new Date(), 7);
-          const lastWeekStr = format(lastWeek, "yyyy-MM-dd");
+          const twoWeeksAgo = subDays(new Date(), 14);
+          const twoWeeksAgoStr = format(twoWeeksAgo, "yyyy-MM-dd");
           const [habitData, taskData, notesData, history] = await Promise.all([
             getHabits(),
-            getEventsByDateRange(lastWeek, new Date()),
-            db.select().from(note).where(gte(note.date, lastWeekStr)),
-            getReliefHistory(10)
+            getEventsByDateRange(twoWeeksAgo, new Date()),
+            db.select().from(note).where(gte(note.date, twoWeeksAgoStr)),
+            getReliefHistory(twoWeeksAgoStr)
           ]);
 
           const prompt = getReliefRecommendationPrompt({
@@ -150,11 +150,12 @@ export async function toggleReliefRecommendation(id: string, completed: boolean,
   }
 }
 
-export async function getReliefHistory(limit: number = 10) {
+export async function getReliefHistory(sinceDate?: string) {
   try {
+    const since = sinceDate || format(subDays(new Date(), 14), "yyyy-MM-dd");
     return await db.select().from(reliefRecommendation)
-      .orderBy(desc(reliefRecommendation.date))
-      .limit(limit);
+      .where(gte(reliefRecommendation.date, since))
+      .orderBy(desc(reliefRecommendation.date));
   } catch (e) {
     return [];
   }

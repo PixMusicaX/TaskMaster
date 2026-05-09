@@ -563,7 +563,20 @@ export default function HabitsPage() {
               }))
             ).sort((a, b) => b.date.localeCompare(a.date))}
             columns={[
-              { header: "Date", key: "date", render: (val) => <span className="font-mono text-tm-blue-gray">{val}</span> },
+              { header: "Date", key: "date", render: (val) => {
+                const parsed = new Date(val + "T00:00:00");
+                const year = parsed.getFullYear().toString();
+                const shortDate = parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                return (
+                  <span className="font-mono text-tm-blue-gray whitespace-nowrap">
+                    <span className="sm:hidden flex flex-col leading-tight">
+                      <span className="text-[10px] opacity-50">{year}</span>
+                      <span>{shortDate}</span>
+                    </span>
+                    <span className="hidden sm:inline">{val}</span>
+                  </span>
+                );
+              }},
               {
                 header: "Habit", key: "habitName", wrap: true, render: (val, row) => (
                   <div className="flex items-center gap-3">

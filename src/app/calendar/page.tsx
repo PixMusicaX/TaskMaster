@@ -567,11 +567,21 @@ export default function CalendarPage() {
             data={[...allEventsForTable].reverse()}
             columns={[
               {
-                header: "Date", key: "date", render: (val, row) => (
-                  <span className="font-mono text-tm-blue-gray">
-                    {format(new Date(row.startTime || row.date), "yyyy-MM-dd")}
-                  </span>
-                )
+                header: "Date", key: "date", render: (val, row) => {
+                  const base = format(new Date(row.startTime || row.date), "yyyy-MM-dd");
+                  const parsed = new Date(base + "T00:00:00");
+                  const year = parsed.getFullYear().toString();
+                  const shortDate = parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                  return (
+                    <span className="font-mono text-tm-blue-gray whitespace-nowrap">
+                      <span className="sm:hidden flex flex-col leading-tight">
+                        <span className="text-[10px] opacity-50">{year}</span>
+                        <span>{shortDate}</span>
+                      </span>
+                      <span className="hidden sm:inline">{base}</span>
+                    </span>
+                  );
+                }
               },
               {
                 header: "Time", key: "startTime", render: (val) => (

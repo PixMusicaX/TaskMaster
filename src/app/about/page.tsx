@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { getSeasonHistory } from "@/app/actions/gamification";
 import { getSmartMissionHistory } from "@/app/actions/smart-missions";
 import { getReliefHistory } from "@/app/actions/relief";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { Music, Film, Coffee, Dumbbell, Database, Download, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
@@ -56,10 +56,11 @@ export default function AboutPage() {
 
   useEffect(() => {
     async function loadData() {
+      const oneYearAgo = format(subDays(new Date(), 365), "yyyy-MM-dd");
       const [seasons, missions, relief] = await Promise.all([
         getSeasonHistory(50),
-        getSmartMissionHistory(100),
-        getReliefHistory(100)
+        getSmartMissionHistory(oneYearAgo),
+        getReliefHistory(oneYearAgo)
       ]);
       setSeasonHistory(seasons.filter(s => s.xp > 0));
       setMissionHistory(missions);
@@ -417,7 +418,7 @@ export default function AboutPage() {
       {/* Footer */}
       <div className="pt-12 text-center space-y-4 border-t border-tm-blue-gray/10">
         <p className="text-xs font-black uppercase text-tm-blue-gray tracking-[0.3em]">
-          Version 2.2.1 • © 2026 TaskMaster
+          Version 2.3.0 • © 2026 TaskMaster
         </p>
       </div>
     </div>

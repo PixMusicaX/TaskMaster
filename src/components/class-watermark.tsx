@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "./theme-provider";
-import { User, Swords, ShieldAlert, Crosshair, Sword, Castle, SunMedium, Crown } from "lucide-react";
+import { User, Swords, ShieldAlert, Crosshair, Sword, Castle, SunMedium, Crown, Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const rankIcons: Record<string, any> = {
@@ -12,6 +12,7 @@ const rankIcons: Record<string, any> = {
   "Knight": Sword,
   "Sentinel": Castle,
   "Paladin": SunMedium,
+  "Champion": Trophy,
   "Grandmaster": Crown,
 };
 

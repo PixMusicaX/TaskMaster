@@ -28,7 +28,7 @@ export async function getPreparationTip(clientDateStr?: string) {
       );
 
       const prompt = getPreparationTipPrompt({
-        futureTasks: futureTasks.map(t => ({
+        futureTasks: futureTasks.slice(0, 30).map(t => ({
           title: t.title,
           type: t.type,
           date: t.date

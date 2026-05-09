@@ -371,8 +371,28 @@ export default function NotesPage() {
               };
             })}
             columns={[
-              { header: "Date", key: "date", render: (val) => <span className="font-mono text-tm-blue-gray">{val}</span> },
-              {
+              { header: "Date", key: "date", render: (val) => {
+                let year = "";
+                let shortDate = val;
+                let full = val;
+                try {
+                  const base = val.replace(/^(\d{4}-\d{2}-\d{2}).*$/, "$1");
+                  const parsed = new Date(base + "T00:00:00");
+                  year = parsed.getFullYear().toString();
+                  shortDate = parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                  full = base;
+                } catch {}
+                return (
+                  <span className="font-mono text-tm-blue-gray whitespace-nowrap">
+                    <span className="sm:hidden flex flex-col leading-tight">
+                      <span className="text-[10px] opacity-50">{year}</span>
+                      <span>{shortDate}</span>
+                    </span>
+                    <span className="hidden sm:inline">{full}</span>
+                  </span>
+                );
+              }}
+              ,{
                 header: "Mood", key: "mood", render: (val) => (
                   <span className="text-2xl">
                     {val === "good" ? "😇" : val === "bad" ? "😢" : "😐"}

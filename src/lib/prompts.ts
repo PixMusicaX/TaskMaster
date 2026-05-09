@@ -21,12 +21,12 @@ Active Habits: ${context.habits.join(", ") || "None"}
 RECENT ACTIVITY (LAST 7 DAYS)
 ═══════════════════════════════
 Activities: ${context.recentTasks.map(t => `- [${t.type.toUpperCase()}] ${t.title} (${t.startTime ? new Date(t.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "All Day"})`).join("\n") || "No recent activities"}
-Notes     : ${context.recentNotes.join(" | ") || "No recent notes"}
+Notes     : ${context.recentNotes.map(n => n.slice(0, 120)).join(" | ") || "No recent notes"}
 
 ═══════════════════════════════
-MISSION HISTORY (LAST 30 DAYS)
+MISSION HISTORY (LAST 10 DAYS)
 ═══════════════════════════════
-${context.missionHistory.map(m => `- ${m.title} (${m.completed ? "COMPLETED" : "FAILED"})`).join("\n") || "No previous missions"}
+${context.missionHistory.slice(0, 10).map(m => `- ${m.title} (${m.completed ? "COMPLETED" : "FAILED"})`).join("\n") || "No previous missions"}
 
 ═══════════════════════════════
 MISSION DESIGN RULES
@@ -89,7 +89,7 @@ Weather : ${context.weather || "Unknown"} (${context.temp || "???"}°C)
 ═══════════════════════════════
 USER CONTEXT (LAST 7 DAYS)
 ═══════════════════════════════
-Notes: ${context.recentNotes.join(" | ") || "No recent notes"}
+Notes: ${context.recentNotes.map(n => n.slice(0, 120)).join(" | ") || "No recent notes"}
 Tasks: ${context.recentTasks.map(t => t.title).join(", ") || "No recent tasks"}
 
 ═══════════════════════════════

@@ -24,15 +24,15 @@ export async function getSmartMission(clientDateStr?: string) {
     if (!mission) {
       if (GEMINI_API_KEY) {
         try {
-          const lastWeek = subDays(new Date(), 7);
-          const lastWeekStr = format(lastWeek, "yyyy-MM-dd");
+          const twoWeeksAgo = subDays(new Date(), 14);
+          const twoWeeksAgoStr = format(twoWeeksAgo, "yyyy-MM-dd");
 
           const [profile, habitData, taskData, notesData, history] = await Promise.all([
             getProfile(),
             getHabits(),
-            getEventsByDateRange(lastWeek, new Date()),
-            db.select().from(note).where(gte(note.date, lastWeekStr)),
-            getSmartMissionHistory(30)
+            getEventsByDateRange(twoWeeksAgo, new Date()),
+            db.select().from(note).where(gte(note.date, twoWeeksAgoStr)),
+            getSmartMissionHistory(twoWeeksAgoStr)
           ]);
 
           const prompt = getSmartMissionPrompt({
@@ -120,11 +120,12 @@ export async function toggleSmartMission(id: string, completed: boolean) {
   }
 }
 
-export async function getSmartMissionHistory(limit: number = 30) {
+export async function getSmartMissionHistory(sinceDate?: string) {
   try {
+    const since = sinceDate || format(subDays(new Date(), 14), "yyyy-MM-dd");
     return await db.select().from(smartMission)
-      .orderBy(desc(smartMission.date))
-      .limit(limit);
+      .where(gte(smartMission.date, since))
+      .orderBy(desc(smartMission.date));
   } catch (e) {
     console.error("Error fetching mission history:", e);
     return [];
