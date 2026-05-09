@@ -161,7 +161,7 @@ export default function NotesPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 md:gap-8">
             <GlassCard className={cn(
-              "min-h-[500px] flex flex-col p-0 overflow-hidden transition-all duration-500 bg-white/40 dark:bg-black/60",
+              "min-h-[500px] flex flex-col p-0 overflow-hidden transition-all duration-500",
               "shadow-xl shadow-tm-purple-dark/5 dark:shadow-none",
               mood === "good" ? "border-tm-yellow/40 shadow-[0_0_20px_rgba(242,194,48,0.15)]" :
                 mood === "bad" ? "border-tm-orange-dark/40 shadow-[0_0_20px_rgba(191,49,0,0.15)]" :

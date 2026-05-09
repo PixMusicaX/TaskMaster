@@ -553,7 +553,7 @@ export default function Home() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-[8px] font-black uppercase text-tm-blue-gray tracking-[0.2em]">Relief Recommendation</span>
-                            <span className="px-1.5 py-0.5 bg-tm-blue-gray/10 rounded-lg text-[8px] font-black text-tm-blue-gray border border-tm-blue-gray/20 whitespace-nowrap">
+                            <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-[8px] font-black text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">
                               +{relief.xpReward === 5 ? 10 : relief.xpReward} XP
                             </span>
                           </div>
