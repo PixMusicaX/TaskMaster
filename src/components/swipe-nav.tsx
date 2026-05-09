@@ -40,8 +40,8 @@ export default function SwipeNav() {
       const distanceX = touchStartX - touchEndX;
       const distanceY = touchStartY - touchEndY;
 
-      // If the vertical distance is greater than horizontal distance, it's likely a vertical scroll
-      if (Math.abs(distanceY) > Math.abs(distanceX)) return;
+      // If the vertical distance is significant compared to horizontal, it's likely a vertical scroll or diagonal swipe
+      if (Math.abs(distanceY) > Math.abs(distanceX) * 0.5) return;
 
       const isLeftSwipe = distanceX > minSwipeDistance;
       const isRightSwipe = distanceX < -minSwipeDistance;

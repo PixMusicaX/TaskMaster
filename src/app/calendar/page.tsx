@@ -506,13 +506,13 @@ export default function CalendarPage() {
                           <div className="flex gap-2 items-center">
                             <button
                               onClick={() => openEdit(event)}
-                              className="opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-tm-yellow transition-all"
+                              className="opacity-100 lg:opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-tm-yellow transition-all"
                             >
                               <Edit2 size={14} />
                             </button>
                             <button
                               onClick={() => handleDelete(event.id)}
-                              className="opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-red-500 transition-all"
+                              className="opacity-100 lg:opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-red-500 transition-all"
                             >
                               <Trash2 size={14} />
                             </button>

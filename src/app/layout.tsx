@@ -28,10 +28,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased overflow-x-hidden`} suppressHydrationWarning>
-      <body className="min-h-full flex flex-col transition-colors duration-300 overflow-x-hidden">
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased overflow-x-clip`} suppressHydrationWarning>
+      <body className="min-h-full flex flex-col transition-colors duration-300 overflow-x-clip">
         <ThemeProvider>
-          <div className="overflow-x-hidden w-full relative flex flex-col flex-1 min-h-full">
+          <div className="overflow-x-clip w-full relative flex flex-col flex-1 min-h-full">
             <ClassWatermark />
             <SwipeNav />
             <Navbar />

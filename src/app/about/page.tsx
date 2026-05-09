@@ -27,7 +27,7 @@ export default function AboutPage() {
 
   async function handlePrune() {
     if (!confirm("Are you sure? This will download your data older than 5 years as a CSV and permanently delete it from the cloud database.")) return;
-    
+
     setPruneLoading(true);
     try {
       const csvData = await generatePruneArchive();
@@ -41,7 +41,7 @@ export default function AboutPage() {
         a.click();
         window.URL.revokeObjectURL(url);
         a.remove();
-        
+
         await deletePrunedData();
         alert("Old data has been archived and successfully pruned from the cloud database.");
       } else {
@@ -339,7 +339,7 @@ export default function AboutPage() {
           <Database className="text-tm-blue-gray" size={32} />
           <h2 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-3xl font-black dark:text-tm-blue-gray italic tracking-tighter uppercase">Cloud Storage</h2>
         </div>
-        
+
         <GlassCard className="p-6 md:p-8 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
             <Database size={120} />
@@ -351,15 +351,15 @@ export default function AboutPage() {
                 Keep your cloud database fast and storage-efficient. This tool will automatically bundle all your records (Habits, Notes, Quests) older than 5 years into a CSV file, download it to your local device, and safely delete the old rows from the cloud.
               </p>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-2">
               <button
                 onClick={handlePrune}
                 disabled={pruneLoading}
                 className={cn(
                   "flex items-center gap-3 px-6 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all",
-                  pruneLoading 
-                    ? "bg-tm-blue-gray/20 text-tm-blue-gray cursor-not-allowed" 
+                  pruneLoading
+                    ? "bg-tm-blue-gray/20 text-tm-blue-gray cursor-not-allowed"
                     : "bg-tm-yellow/10 hover:bg-tm-yellow/20 text-tm-yellow border border-tm-yellow/20 hover:border-tm-yellow/40"
                 )}
               >
@@ -375,7 +375,7 @@ export default function AboutPage() {
                   </>
                 )}
               </button>
-              
+
               <div className="flex items-center gap-2 text-[10px] font-black uppercase text-tm-blue-gray tracking-widest px-4 py-2 bg-tm-blue-gray/10 rounded-lg">
                 <AlertTriangle size={12} className="text-tm-orange-light" />
                 <span>Cannot be undone</span>
@@ -391,22 +391,22 @@ export default function AboutPage() {
           <Zap className="text-tm-yellow" size={32} />
           <h2 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-3xl font-black dark:text-tm-yellow italic tracking-tighter uppercase">App Settings</h2>
         </div>
-        
+
         <GlassCard className="p-6 md:p-8 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 relative overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-               <h3 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-xl font-black dark:text-white leading-tight">Browser Notifications</h3>
-               <p className="text-sm text-tm-blue-gray mt-1 max-w-2xl font-medium">Enable browser notifications to receive alerts for your smart missions and habit reminders.</p>
+              <h3 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-xl font-black dark:text-white leading-tight">Browser Notifications</h3>
+              <p className="text-sm text-tm-blue-gray mt-1 max-w-2xl font-medium">Enable browser notifications to receive alerts for your smart missions and habit reminders.</p>
             </div>
             <button
-               onClick={handleEnableNotifications}
-               disabled={notificationPermission === "granted"}
-               className={cn(
-                 "px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all whitespace-nowrap",
-                 notificationPermission === "granted"
-                   ? "bg-tm-yellow/5 text-tm-yellow/50 border border-tm-yellow/10 cursor-default"
-                   : "bg-tm-yellow/10 hover:bg-tm-yellow/20 text-tm-yellow border border-tm-yellow/20 hover:scale-105"
-               )}
+              onClick={handleEnableNotifications}
+              disabled={notificationPermission === "granted"}
+              className={cn(
+                "px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all whitespace-nowrap",
+                notificationPermission === "granted"
+                  ? "bg-tm-yellow/5 text-tm-yellow/50 border border-tm-yellow/10 cursor-default"
+                  : "bg-tm-yellow/10 hover:bg-tm-yellow/20 text-tm-yellow border border-tm-yellow/20 hover:scale-105"
+              )}
             >
               {notificationPermission === "granted" ? "Notifications Enabled" : "Enable Notifications"}
             </button>
@@ -417,7 +417,7 @@ export default function AboutPage() {
       {/* Footer */}
       <div className="pt-12 text-center space-y-4 border-t border-tm-blue-gray/10">
         <p className="text-xs font-black uppercase text-tm-blue-gray tracking-[0.3em]">
-          Version 1.2.0 • © 2026 TaskMaster
+          Version 2.1.1 • © 2026 TaskMaster
         </p>
       </div>
     </div>
