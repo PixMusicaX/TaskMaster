@@ -60,18 +60,6 @@ export async function getPreparationTip(clientDateStr?: string) {
       }
     }
 
-    if (!tip) {
-      // Fallback
-      const [fallbackTip] = await db.insert(preparationTip).values({
-        date: today,
-        title: "Strategic Observation",
-        description: "Your path ahead is clear. Use this time to refine your existing skills.",
-        xpReward: 25,
-        stat: "charisma"
-      }).returning();
-      tip = fallbackTip;
-    }
-
     return tip;
   } catch (e) {
     console.error("Error in getPreparationTip:", e);

@@ -24,11 +24,22 @@ interface TabularViewModalProps {
 export default function TabularViewModal({ title, isOpen, onClose, data, columns }: TabularViewModalProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredData = data.filter(row => 
-    Object.values(row).some(val => 
-      String(val).toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  const filteredData = data.filter(row => {
+    const searchInAny = (val: any): boolean => {
+      if (val === null || val === undefined) return false;
+      if (typeof val === 'string' || typeof val === 'number') {
+        return String(val).toLowerCase().includes(searchTerm.toLowerCase());
+      }
+      if (Array.isArray(val)) {
+        return val.some(item => searchInAny(item));
+      }
+      if (typeof val === 'object') {
+        return Object.values(val).some(item => searchInAny(item));
+      }
+      return false;
+    };
+    return searchInAny(row);
+  });
 
   return (
     <AnimatePresence>

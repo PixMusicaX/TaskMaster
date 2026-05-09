@@ -304,9 +304,12 @@ export default function Home() {
                           {isDone ? <Check size={16} className="text-tm-purple-dark" /> : <Brain size={14} className="text-tm-yellow/50 group-hover/card:text-tm-yellow" />}
                         </div>
                         <div className="flex-1">
-                          <p className={cn("font-black text-sm", isDone ? "text-tm-yellow line-through opacity-50" : "text-foreground/90")}>
-                            {habit.name}
-                          </p>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <p className={cn("font-black text-sm", isDone ? "text-tm-yellow line-through opacity-50" : "text-foreground/90")}>
+                              {habit.name}
+                            </p>
+                            <span className="text-[9px] font-black text-tm-yellow bg-tm-yellow/10 px-1.5 py-0.5 rounded border border-tm-yellow/20">+{XP_VALUES.HABIT_CHECK} XP</span>
+                          </div>
                           <p className="text-[10px] font-black text-tm-blue-gray/60 uppercase tracking-widest mt-0.5">{getFrequencyLabel(habit.frequency)}</p>
                         </div>
                       </button>
@@ -460,7 +463,26 @@ export default function Home() {
               ) : (
                 <div className="space-y-3">
                   {/* Preparation Tip Card */}
-                  {prepTip && (
+                  {prepLoading ? (
+                    <div className="p-8 rounded-[1.25rem] bg-tm-purple-dark/5 border border-tm-purple-dark/10 flex flex-col items-center gap-3">
+                      <PremiumLoader />
+                      <p className="text-[8px] font-black uppercase text-tm-purple-dark tracking-widest animate-pulse">Calculating Strategy...</p>
+                    </div>
+                  ) : !prepTip && !aiLoading ? (
+                    <div className="p-5 rounded-[1.25rem] bg-tm-orange-dark/10 border border-tm-orange-dark/30 flex flex-col items-center text-center gap-3 animate-in fade-in zoom-in duration-300">
+                      <AlertCircle className="text-tm-orange-dark" size={24} />
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-foreground">Strategic Tip Offline</p>
+                        <p className="text-[10px] text-tm-blue-gray">AI was unable to formulate a strategy for today.</p>
+                      </div>
+                      <button
+                        onClick={handleRegeneratePrep}
+                        className="px-6 py-2 bg-tm-orange-dark/20 hover:bg-tm-orange-dark/40 text-tm-orange-dark text-[9px] font-black uppercase rounded-xl transition-all border border-tm-orange-dark/20 flex items-center gap-2"
+                      >
+                        <RotateCw size={12} /> Try Again
+                      </button>
+                    </div>
+                  ) : prepTip && (
                     <div
                       onClick={handlePrepToggle}
                       className={cn(
@@ -716,12 +738,31 @@ export default function Home() {
                   <span className="text-[10px] uppercase font-black text-tm-blue-gray tracking-widest">Level</span>
                 </div>
               </div>
-              <div className="text-center space-y-1">
-                <p className="text-sm font-bold">
-                  Class: {
-                    [...RPG_TITLES].reverse().find(t => (profile?.level || 1) >= t.minLevel)?.title || "Novice"
-                  }
-                </p>
+              <div className="text-center space-y-2">
+                <div className="space-y-1">
+                  <p className="text-sm font-black text-tm-purple-dark dark:text-tm-yellow">
+                    Class: {
+                      [...RPG_TITLES].reverse().find(t => (profile?.level || 1) >= t.minLevel)?.title || "Novice"
+                    }
+                  </p>
+                  {(() => {
+                    const currentLevel = profile?.level || 1;
+                    const nextTitle = RPG_TITLES.find(t => t.minLevel > currentLevel);
+                    if (nextTitle) {
+                      const diff = nextTitle.minLevel - currentLevel;
+                      return (
+                        <p className="text-[10px] font-black uppercase text-tm-blue-gray/60 tracking-widest">
+                          {diff} {diff === 1 ? 'level' : 'levels'} to reach {nextTitle.title}
+                        </p>
+                      );
+                    }
+                    return (
+                      <p className="text-[10px] font-black uppercase text-tm-orange-dark tracking-widest animate-pulse">
+                        Ultimate Rank Achieved
+                      </p>
+                    );
+                  })()}
+                </div>
                 <p className="text-xs text-tm-blue-gray font-medium">
                   Earn {(profile?.nextLevelXP || 70) - (profile?.levelProgress || 0)} more XP to reach Level {(profile?.level || 1) + 1}.
                 </p>

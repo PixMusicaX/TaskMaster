@@ -558,16 +558,22 @@ export default function HabitsPage() {
             title="Habit Logs"
             isOpen={isTabularOpen}
             onClose={() => setIsTabularOpen(false)}
-            data={[...allLogs].sort((a, b) => b.date.localeCompare(a.date)).map(l => {
-              // Fallback for legacy logs or deleted habits without metadata
-              const h = [...habits, ...archivedHabits].find(habit => habit.id === l.habitId);
-              return {
-                date: l.date,
-                habitName: l.habitName || h?.name || "Deleted Habit",
-                icon: l.habitIcon || h?.icon || "❓",
-                status: l.completed ? "Completed" : "Missed",
-              };
-            })}
+            data={(() => {
+              const completedLogs = allLogs.filter(l => l.completed);
+              const grouped = completedLogs.reduce((acc, l) => {
+                if (!acc[l.date]) acc[l.date] = [];
+                const h = [...habits, ...archivedHabits].find(habit => habit.id === l.habitId);
+                acc[l.date].push({
+                  name: l.habitName || h?.name || "Deleted Habit",
+                  icon: l.habitIcon || h?.icon || "❓"
+                });
+                return acc;
+              }, {} as Record<string, { name: string; icon: string }[]>);
+
+              return Object.entries(grouped)
+                .sort((a, b) => b[0].localeCompare(a[0]))
+                .map(([date, habits]) => ({ date, habits }));
+            })()}
             columns={[
               { header: "Date", key: "date", render: (val) => {
                 const parsed = new Date(val + "T00:00:00");
@@ -584,21 +590,15 @@ export default function HabitsPage() {
                 );
               }},
               {
-                header: "Habit", key: "habitName", wrap: true, render: (val, row) => (
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{row.icon}</span>
-                    <span className="font-bold text-white/90">{val}</span>
+                header: "Habits Completed", key: "habits", wrap: true, render: (habits: { name: string; icon: string }[]) => (
+                  <div className="flex flex-wrap gap-2 md:gap-3">
+                    {habits.map((h, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 shadow-sm">
+                        <span className="text-base md:text-xl">{h.icon}</span>
+                        <span className="font-bold text-white/90 text-xs md:text-sm">{h.name}</span>
+                      </div>
+                    ))}
                   </div>
-                )
-              },
-              {
-                header: "Status", key: "status", render: (val) => (
-                  <span className={cn(
-                    "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                    val === "Completed" ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-orange-dark/20 text-tm-orange-dark"
-                  )}>
-                    {val}
-                  </span>
                 )
               }
             ]}

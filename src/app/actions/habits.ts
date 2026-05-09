@@ -77,6 +77,14 @@ export async function toggleHabitLog(habitId: string, date: string, completed: b
     where: eq(habit.id, habitId),
   });
 
+  if (!completed) {
+    await db.delete(habitLog)
+      .where(and(eq(habitLog.habitId, habitId), eq(habitLog.date, date)));
+    revalidatePath("/habits");
+    revalidatePath("/");
+    return null;
+  }
+
   const [log] = await db.insert(habitLog)
     .values({
       habitId,
