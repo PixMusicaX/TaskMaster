@@ -104,10 +104,10 @@ export default function TabularViewModal({ title, isOpen, onClose, data, columns
                               key={col.key}
                               className={cn(
                                 "px-3 md:px-6 py-4 md:py-5 text-left text-[10px] font-black text-tm-blue-gray uppercase tracking-widest border-b border-white/10",
-                                col.wrap ? "w-full min-w-[150px]" : "w-auto"
+                                col.wrap ? "w-full" : "w-auto"
                               )}
                             >
-                              {col.header}
+                              <span className="truncate block">{col.header}</span>
                             </th>
                           ))}
                         </tr>

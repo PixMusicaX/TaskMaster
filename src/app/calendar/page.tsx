@@ -599,41 +599,50 @@ export default function CalendarPage() {
                 )
               },
               {
-                header: "Title", key: "title", render: (val) => (
-                  <span className="font-bold text-white/90">{val}</span>
+                header: "Title", key: "title", wrap: true, render: (val) => (
+                  <span className="font-bold text-white/90 leading-tight block py-1">{val}</span>
                 )
               },
               {
                 header: "Type", key: "type", render: (val) => (
-                  <span className={cn(
-                    "px-2 py-0.5 rounded text-[10px] font-black uppercase",
-                    val === "task" ? "bg-tm-yellow/10 text-tm-yellow" : "bg-tm-orange-light/10 text-tm-orange-light"
-                  )}>
-                    {val}
-                  </span>
+                  <div className="flex items-center justify-center">
+                    <span className={cn(
+                      "px-2 py-0.5 rounded text-[10px] font-black uppercase whitespace-nowrap",
+                      val === "task" ? "bg-tm-yellow/10 text-tm-yellow" : "bg-tm-orange-light/10 text-tm-orange-light"
+                    )}>
+                      <span className="sm:inline hidden">{val}</span>
+                      <span className="sm:hidden inline">{val === "task" ? "T" : "E"}</span>
+                    </span>
+                  </div>
                 )
               },
               {
                 header: "Status", key: "completed", render: (val, row) => {
                   if (row.type === "task") {
                     return (
-                      <span className={cn(
-                        "px-2 py-0.5 rounded text-[10px] font-black uppercase",
-                        val ? "bg-green-500/20 text-green-500" : "bg-tm-blue-gray/20 text-tm-blue-gray"
-                      )}>
-                        {val ? "Completed" : "Pending"}
-                      </span>
+                      <div className="flex items-center justify-center">
+                        <span className={cn(
+                          "px-2 py-0.5 rounded text-[10px] font-black uppercase whitespace-nowrap",
+                          val ? "bg-green-500/20 text-green-500" : "bg-tm-blue-gray/20 text-tm-blue-gray"
+                        )}>
+                          <span className="sm:inline hidden">{val ? "Completed" : "Pending"}</span>
+                          <span className="sm:hidden inline">{val ? "✓" : "..."}</span>
+                        </span>
+                      </div>
                     );
                   }
                   
                   const isUpcoming = new Date(row.startTime || row.date) > new Date();
                   return (
-                    <span className={cn(
-                      "px-2 py-0.5 rounded text-[10px] font-black uppercase",
-                      isUpcoming ? "bg-tm-orange-light/10 text-tm-orange-light" : "bg-tm-blue-gray/10 text-tm-blue-gray"
-                    )}>
-                      {isUpcoming ? "Upcoming" : "Passed"}
-                    </span>
+                    <div className="flex items-center justify-center">
+                      <span className={cn(
+                        "px-2 py-0.5 rounded text-[10px] font-black uppercase whitespace-nowrap",
+                        isUpcoming ? "bg-tm-orange-light/10 text-tm-orange-light" : "bg-tm-blue-gray/10 text-tm-blue-gray"
+                      )}>
+                        <span className="sm:inline hidden">{isUpcoming ? "Upcoming" : "Passed"}</span>
+                        <span className="sm:hidden inline">{isUpcoming ? "⌚" : "⌛"}</span>
+                      </span>
+                    </div>
                   );
                 }
               }
