@@ -606,7 +606,7 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
-          <GlassCard className="p-8 border-tm-purple-dark/20 flex flex-col gap-8">
+          <GlassCard delay={0.2} className="p-8 border-tm-purple-dark/20 flex flex-col gap-8">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-black flex items-center gap-3">
                 <Swords className="text-tm-yellow" /> Character Stats
@@ -653,7 +653,7 @@ export default function Home() {
             </div>
           </GlassCard>
 
-          <GlassCard className="h-full flex flex-col justify-center items-center gap-8 border-tm-orange-dark/20">
+          <GlassCard delay={0.4} className="h-full flex flex-col justify-center items-center gap-8 border-tm-orange-dark/20">
             <div className="relative w-44 h-44">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                 <circle className="text-tm-blue-gray/10" stroke="currentColor" strokeWidth="8" fill="transparent" r="42" cx="50" cy="50" />
@@ -689,7 +689,7 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
-          <GlassCard delay={0.8} className="p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
+          <GlassCard delay={0.6} className="p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
               <Zap size={120} />
             </div>
@@ -741,7 +741,7 @@ export default function Home() {
             </div>
           </GlassCard>
 
-          <GlassCard className="p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
+          <GlassCard delay={0.8} className="p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
               <Coffee size={120} />
             </div>
