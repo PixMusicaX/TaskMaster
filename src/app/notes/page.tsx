@@ -71,6 +71,14 @@ export default function NotesPage() {
     fetchRecent();
   }, [selectedDate, fetchNote, fetchRecent]);
 
+  useEffect(() => {
+    const textareas = document.querySelectorAll<HTMLTextAreaElement>('.note-textarea');
+    textareas.forEach(textarea => {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    });
+  }, [lines]);
+
   async function handleSave() {
     setIsSaving(true);
     const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -90,7 +98,7 @@ export default function NotesPage() {
   }
 
   function handleKeyDown(e: React.KeyboardEvent, index: number) {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       const newLines = [...lines];
       const newLine = { id: Math.random().toString(36).substr(2, 9), bullet: lines[index].bullet, text: "" };
@@ -251,13 +259,18 @@ export default function NotesPage() {
                         </div>
                       )}
                     </div>
-                    <input
+                    <textarea
                       id={`line-${line.id}`}
                       value={line.text}
-                      onChange={(e) => updateLine(index, { text: e.target.value })}
+                      rows={1}
+                      onChange={(e) => {
+                        updateLine(index, { text: e.target.value });
+                        e.target.style.height = 'auto';
+                        e.target.style.height = `${e.target.scrollHeight}px`;
+                      }}
                       onKeyDown={(e) => handleKeyDown(e, index)}
                       placeholder={index === 0 ? "Start typing your thoughts..." : ""}
-                      className="flex-1 bg-transparent outline-none text-lg leading-relaxed placeholder:text-tm-blue-gray/20 font-medium"
+                      className="note-textarea flex-1 bg-transparent outline-none text-lg leading-relaxed placeholder:text-tm-blue-gray/20 font-medium resize-none overflow-hidden"
                     />
                   </div>
                 ))}
