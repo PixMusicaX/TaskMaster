@@ -19,6 +19,7 @@ import { RPG_TITLES, XP_VALUES } from "@/lib/constants";
 import { PremiumLoader } from "@/components/loader";
 import RecapModal from "@/components/RecapModal";
 import MoodRadar from "@/components/mood-radar";
+import CharacterStatsRadar from "@/components/character-stats-radar";
 
 export default function Home() {
   const [habits, setHabits] = useState<any[]>([]);
@@ -611,45 +612,28 @@ export default function Home() {
               <h3 className="text-2xl font-black flex items-center gap-3">
                 <Swords className="text-tm-yellow" /> Character Stats
               </h3>
-              {profile && (
-                <span className="text-xs font-black uppercase tracking-widest text-tm-blue-gray bg-white/5 px-3 py-1 rounded-full">
-                  Level {profile.level} Master
-                </span>
-              )}
             </div>
 
-            <div className="space-y-6">
-              {[
-                { label: "Strength", stat: "strength", icon: Swords, color: "tm-orange-dark" },
-                { label: "Intelligence", stat: "intelligence", icon: Brain, color: "tm-yellow" },
-                { label: "Wealth", stat: "wealth", icon: Coins, color: "tm-orange-light" },
-                { label: "Vitality", stat: "vitality", icon: HeartPulse, color: "tm-red" },
-                { label: "Charisma", stat: "charisma", icon: Users, color: "tm-blue-gray" },
-              ].map((s) => {
-                const val = profile ? (profile as any)[s.stat] : 0;
-                const max = (profile?.level || 1) * 350;
-                const pct = Math.min((val / max) * 100, 100);
-
-                return (
-                  <div key={s.label} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <s.icon size={16} style={{ color: `var(--${s.color})` }} />
-                        <span className="text-xs font-black uppercase tracking-widest text-tm-blue-gray">{s.label}</span>
-                      </div>
-                      <span className="text-xs font-bold">{val} XP</span>
-                    </div>
-                    <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        whileInView={{ width: `${pct}%` }}
-                        style={{ backgroundColor: `var(--${s.color})` }}
-                        className="h-full shadow-[0_0_15px_rgba(255,255,255,0.2)]"
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="flex-1 flex items-center justify-center">
+              {profile && (
+                <CharacterStatsRadar
+                  size={240}
+                  data={{
+                    strength: profile.strength || 0,
+                    intelligence: profile.intelligence || 0,
+                    wealth: profile.wealth || 0,
+                    vitality: profile.vitality || 0,
+                    charisma: profile.charisma || 0,
+                  }}
+                  totalXP={
+                    (profile.strength || 0) +
+                    (profile.intelligence || 0) +
+                    (profile.wealth || 0) +
+                    (profile.vitality || 0) +
+                    (profile.charisma || 0)
+                  }
+                />
+              )}
             </div>
           </GlassCard>
 
