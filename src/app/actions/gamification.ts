@@ -12,18 +12,14 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
     const startStr = format(startDate, "yyyy-MM-dd");
     const endStr = format(endDate, "yyyy-MM-dd");
 
-    const [habits, events, notes, smartMissions, reliefRecommendations, preparationTips] = await Promise.all([
-      db.query.habit.findMany({
-        with: {
-          logs: {
-            where: and(
-              eq(habitLog.completed, true),
-              gte(habitLog.date, startStr),
-              lte(habitLog.date, endStr)
-            )
-          }
-        }
-      }),
+    const [habitLogs, events, notes, smartMissions, reliefRecommendations, preparationTips] = await Promise.all([
+      db.select().from(habitLog).where(
+        and(
+          eq(habitLog.completed, true),
+          gte(habitLog.date, startStr),
+          lte(habitLog.date, endStr)
+        )
+      ),
       db.select().from(event).where(
         or(
           and(gte(event.startTime, startDate), lte(event.startTime, endDate)),
@@ -64,11 +60,9 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
     let totalXP = 0;
 
     // Add Habit XP -> Vitality
-    habits.forEach((h: any) => {
-      const xp = h.logs.length * XP_VALUES.HABIT_CHECK;
-      totalXP += xp;
-      stats.vitality += xp;
-    });
+    const habitXP = habitLogs.length * XP_VALUES.HABIT_CHECK;
+    totalXP += habitXP;
+    stats.vitality += habitXP;
 
     // Add Event/Task XP
     events.forEach((e: any) => {
@@ -275,22 +269,10 @@ async function getSnapshotForPeriod(startDate: Date, endDate: Date) {
 
 export async function getSeasonHistory(monthsCount: number = 6) {
   const now = new Date();
-  const periods = Array.from({ length: monthsCount }).map((_, i) => format(subMonths(now, i), "yyyy-MM"));
+  const periods = Array.from({ length: monthsCount }).map((_, i) => subMonths(now, i));
 
-  await ensureSeasonSnapshotTable();
-  const snapshots = await db.select().from(seasonSnapshot).where(inArray(seasonSnapshot.period, periods));
-  const snapshotMap = new Map(snapshots.map(s => [s.period, s]));
-
-  const promises = periods.map(async (period, i) => {
-    const date = subMonths(now, i);
-    if (isSameMonth(date, now)) {
-      return getStatsForPeriod(startOfMonth(date), endOfMonth(date));
-    }
-
-    const existing = snapshotMap.get(period);
-    if (existing) return existing;
-
-    return getSnapshotForPeriod(startOfMonth(date), endOfMonth(date));
+  const promises = periods.map(async (date) => {
+    return getStatsForPeriod(startOfMonth(date), endOfMonth(date));
   });
 
   return await Promise.all(promises);
