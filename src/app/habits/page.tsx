@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import GlassCard from "@/components/glass-card";
-import { Plus, Trash2, Check, X, Edit2, Archive, RotateCcw, Search, Swords, Brain, Coins, HeartPulse, Users } from "lucide-react";
+import { Plus, Trash2, Check, X, Edit2, Archive, RotateCcw, Search, Swords, Brain, Coins, HeartPulse, Users, Music, Code, Gamepad2, Book, Dumbbell, Laptop, Target, Zap, Coffee, Sparkles, Mic, Phone, Mail, MessageSquare, GraduationCap, Terminal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { getHabits, addHabit, updateHabit, archiveHabit, restoreHabit, deleteHabitPermanently, toggleHabitLog, getArchivedHabits, getHabitLogs } from "@/app/actions/habits";
@@ -10,6 +10,21 @@ import { getProfile } from "@/app/actions/gamification";
 import { cn } from "@/lib/utils";
 import { PremiumLoader } from "@/components/loader";
 import TabularViewModal, { Column } from "@/components/TabularViewModal";
+
+const LUCIDE_ICONS: Record<string, any> = {
+  Brain, Music, Code, Gamepad2, Book, Dumbbell, HeartPulse, Laptop, Target, Zap, Coffee, Sparkles, Mic, Phone, Mail, MessageSquare, GraduationCap, Terminal
+};
+
+function HabitIconRender({ icon, className, size = 20 }: { icon: string, className?: string, size?: number }) {
+  if (!icon) return <Sparkles className={className} size={size} />;
+  
+  // Check if it's a Lucide icon name
+  const IconComponent = LUCIDE_ICONS[icon];
+  if (IconComponent) return <IconComponent className={className} size={size} />;
+  
+  // Fallback to rendering as emoji/text
+  return <span className={cn("inline-flex items-center justify-center", className)} style={{ fontSize: size }}>{icon}</span>;
+}
 
 export default function HabitsPage() {
   const [habits, setHabits] = useState<any[]>([]);
@@ -23,7 +38,7 @@ export default function HabitsPage() {
   const [allLogs, setAllLogs] = useState<any[]>([]);
 
   const [newName, setNewName] = useState("");
-  const [newIcon, setNewIcon] = useState("✨");
+  const [newIcon, setNewIcon] = useState("Sparkles");
   const [newStat, setNewStat] = useState("intelligence");
   const [newFrequency, setNewFrequency] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
 
@@ -104,7 +119,7 @@ export default function HabitsPage() {
 
   function resetForm() {
     setNewName("");
-    setNewIcon("✨");
+    setNewIcon("Sparkles");
     setNewStat("intelligence");
     setNewFrequency([0, 1, 2, 3, 4, 5, 6]);
     setShowAdd(false);
@@ -256,27 +271,27 @@ export default function HabitsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest pl-1">Emoji Icon</p>
+                      <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest pl-1">Icon</p>
                       <div className="flex flex-col gap-3 p-1 bg-white/5 rounded-2xl border border-white/10">
-                        <div className="flex items-center justify-center p-4 text-4xl bg-white/5 rounded-xl border border-white/5">
-                          {newIcon}
+                        <div className="flex items-center justify-center p-4 bg-white/5 rounded-xl border border-white/5">
+                          <HabitIconRender icon={newIcon} size={40} className="text-tm-yellow" />
                         </div>
-                        <div className="flex items-center justify-between gap-1 p-2 bg-white/5 rounded-xl border border-white/5 overflow-x-auto no-scrollbar">
-                          {["✨", "🧘", "📚", "💪", "🏃", "💧", "🥗", "✍️", "🛌", "🧠"].map(emoji => (
+                        <div className="flex flex-wrap items-center justify-center gap-1 p-2 bg-white/5 rounded-xl border border-white/5">
+                          {Object.keys(LUCIDE_ICONS).map(iconName => (
                             <button
-                              key={emoji}
-                              onClick={() => setNewIcon(emoji)}
+                              key={iconName}
+                              onClick={() => setNewIcon(iconName)}
                               className={cn(
-                                "text-xl p-2 rounded-lg transition-all min-w-[40px]",
-                                newIcon === emoji ? "bg-tm-yellow/20" : "hover:bg-white/10"
+                                "p-2 rounded-lg transition-all",
+                                newIcon === iconName ? "bg-tm-yellow/20 text-tm-yellow" : "hover:bg-white/10 text-tm-blue-gray"
                               )}
+                              title={iconName}
                             >
-                              {emoji}
+                              <HabitIconRender icon={iconName} size={20} />
                             </button>
                           ))}
                         </div>
                       </div>
-                      <p className="text-[8px] text-tm-blue-gray italic pl-1 text-center">Tip: Use Win + . to pick any emoji</p>
                     </div>
 
                     <div className="space-y-2">
@@ -335,7 +350,7 @@ export default function HabitsPage() {
                     <GlassCard key={habit.id} className="p-4 border-l-4 border-l-tm-blue-gray/30 opacity-70 hover:opacity-100 transition-opacity">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">{habit.icon}</span>
+                          <HabitIconRender icon={habit.icon} size={24} className="text-tm-blue-gray" />
                           <div>
                             <h3 className="font-bold text-sm truncate max-w-[150px]">{habit.name}</h3>
                             <p className="text-[10px] text-tm-blue-gray font-black uppercase">{getFrequencyLabel(habit.frequency)}</p>
@@ -395,8 +410,8 @@ export default function HabitsPage() {
                     style={{ gridTemplateColumns: `${nameWidth} repeat(${visibleCount}, 1fr)` }}
                   >
                     <div className="flex items-center gap-2 sm:gap-4 pl-1 sm:pl-4 relative">
-                      <div className="w-10 h-10 bg-tm-yellow/10 rounded-xl hidden sm:flex items-center justify-center text-xl">
-                        {habit.icon}
+                      <div className="w-10 h-10 bg-tm-yellow/10 rounded-xl hidden sm:flex items-center justify-center">
+                        <HabitIconRender icon={habit.icon} size={20} className="text-tm-yellow" />
                       </div>
                       <div className="flex-1 overflow-hidden sm:pr-12">
                         <p className="font-bold text-xs sm:text-sm truncate leading-tight">{habit.name}</p>
@@ -507,7 +522,7 @@ export default function HabitsPage() {
                   <GlassCard key={habit.id} className="p-4 border-l-4 border-l-tm-yellow">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">{habit.icon}</span>
+                        <HabitIconRender icon={habit.icon} size={20} className="text-tm-yellow" />
                         <h3 className="font-bold text-sm truncate max-w-[150px]">{habit.name}</h3>
                       </div>
                       <div className="flex flex-col items-end">
@@ -565,7 +580,7 @@ export default function HabitsPage() {
                 const h = [...habits, ...archivedHabits].find(habit => habit.id === l.habitId);
                 acc[l.date].push({
                   name: l.habitName || h?.name || "Deleted Habit",
-                  icon: l.habitIcon || h?.icon || "❓"
+                  icon: l.habitIcon || h?.icon || "Sparkles"
                 });
                 return acc;
               }, {} as Record<string, { name: string; icon: string }[]>);
@@ -594,7 +609,7 @@ export default function HabitsPage() {
                   <div className="flex flex-wrap gap-2 md:gap-3">
                     {habits.map((h, i) => (
                       <div key={i} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 shadow-sm">
-                        <span className="text-base md:text-xl">{h.icon}</span>
+                        <HabitIconRender icon={h.icon} size={20} className="text-tm-yellow" />
                         <span className="font-bold text-white/90 text-xs md:text-sm">{h.name}</span>
                       </div>
                     ))}

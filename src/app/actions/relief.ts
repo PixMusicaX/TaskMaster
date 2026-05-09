@@ -83,7 +83,8 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
               } catch (e) { return n.content; }
             }),
             recentTasks: taskData.map((t: any) => ({ title: t.title })),
-            history: history.map((r: any) => ({ title: r.title, type: r.type }))
+            history: history.map((r: any) => ({ title: r.title, type: r.type })),
+            today
           });
 
           const content = await safeGenerateContent(prompt, {

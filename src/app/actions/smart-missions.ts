@@ -46,7 +46,8 @@ export async function getSmartMission(clientDateStr?: string) {
               startTime: t.startTime
             })),
             recentNotes: notesData.map((n: any) => n.content),
-            missionHistory: history.map((m: any) => ({ title: m.title, completed: m.completed }))
+            missionHistory: history.map((m: any) => ({ title: m.title, completed: m.completed })),
+            today
           });
 
           console.log("=== GEMINI SDK SMART MISSION PROMPT ===");

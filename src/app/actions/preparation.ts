@@ -8,7 +8,7 @@ import { getPreparationTipPrompt } from "@/lib/prompts";
 import { safeGenerateContent } from "@/lib/ai-utils";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { subDays } from "date-fns";
-import { addXP } from "./gamification";
+import { addXP, getProfile } from "./gamification";
 
 const GEMINI_API_KEY = process.env.gemini_key;
 
@@ -23,14 +23,15 @@ export async function getPreparationTip(clientDateStr?: string) {
     if (!tip && GEMINI_API_KEY) {
       const horizon = addDays(new Date(), 28);
       const twoWeeksAgo = format(subDays(new Date(), 14), "yyyy-MM-dd");
-      const [futureTasks, history] = await Promise.all([
+      const [futureTasks, history, profile] = await Promise.all([
         db.select().from(event).where(
           and(
             gte(event.startTime, new Date()),
             lte(event.startTime, horizon)
           )
         ),
-        getPreparationTipHistory(twoWeeksAgo)
+        getPreparationTipHistory(twoWeeksAgo),
+        getProfile()
       ]);
 
       const prompt = getPreparationTipPrompt({
@@ -39,7 +40,14 @@ export async function getPreparationTip(clientDateStr?: string) {
           type: t.type,
           date: t.date
         })),
-        history: history.map(h => ({ title: h.title, completed: h.completed }))
+        history: history.map(h => ({ title: h.title, completed: h.completed })),
+        today,
+        profile: {
+          level: profile.level,
+          title: profile.title,
+          topStat: profile.topStat,
+          stats: profile.stats
+        }
       });
 
       const content = await safeGenerateContent(prompt, {

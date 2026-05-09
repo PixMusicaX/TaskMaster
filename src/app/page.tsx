@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Clock from "@/components/clock";
 import GlassCard from "@/components/glass-card";
-import { Swords, Brain, Coins, HeartPulse, Users, RotateCw, CheckCircle2, History, Zap, Lock, AlertCircle, Plus, Check, Clock as ClockIcon, TrendingUp, Calendar, Film, Music, Coffee, Dumbbell, MapPin, CloudSun, History as HistoryIcon, Sparkles, Crown, Trophy } from "lucide-react";
+import { Swords, Brain, Coins, HeartPulse, Users, RotateCw, CheckCircle2, History, Zap, Lock, AlertCircle, Plus, Check, Clock as ClockIcon, TrendingUp, Calendar, Film, Music, Coffee, Dumbbell, MapPin, CloudSun, History as HistoryIcon, Sparkles, Crown, Trophy, Book, GraduationCap, Code, Terminal, Gamepad2, Target, Mic, Phone, Mail, MessageSquare, Laptop } from "lucide-react";
 import { format, subDays, isSameDay, addDays, subMonths } from "date-fns";
 import { getHabits, toggleHabitLog } from "@/app/actions/habits";
 import { getEventsByDateRange, toggleEventCompletion, getDashboardTasks } from "@/app/actions/events";
@@ -20,6 +20,22 @@ import { PremiumLoader } from "@/components/loader";
 import RecapModal from "@/components/RecapModal";
 import MoodRadar from "@/components/mood-radar";
 import CharacterStatsRadar from "@/components/character-stats-radar";
+
+function TaskIcon({ title, className, size = 14 }: { title: string, className?: string, size?: number }) {
+  const t = title.toLowerCase();
+  if (t.includes("piano") || t.includes("music") || t.includes("sing") || t.includes("song")) return <Music className={className} size={size} />;
+  if (t.includes("code") || t.includes("nextjs") || t.includes("rust") || t.includes("react") || t.includes("dev") || t.includes("programming")) return <Code className={className} size={size} />;
+  if (t.includes("game") || t.includes("gaming") || t.includes("play") || t.includes("steam")) return <Gamepad2 className={className} size={size} />;
+  if (t.includes("practice") || t.includes("study") || t.includes("learn") || t.includes("class") || t.includes("read") || t.includes("book")) return <Book className={className} size={size} />;
+  if (t.includes("call") || t.includes("phone") || t.includes("mobile")) return <Phone className={className} size={size} />;
+  if (t.includes("mail") || t.includes("email") || t.includes("letter")) return <Mail className={className} size={size} />;
+  if (t.includes("check") || t.includes("ask") || t.includes("talk") || t.includes("msg") || t.includes("message")) return <MessageSquare className={className} size={size} />;
+  if (t.includes("laptop") || t.includes("work") || t.includes("deploy") || t.includes("build")) return <Laptop className={className} size={size} />;
+  if (t.includes("gym") || t.includes("workout") || t.includes("lift") || t.includes("exercise")) return <Dumbbell className={className} size={size} />;
+  if (t.includes("health") || t.includes("vitality") || t.includes("med")) return <HeartPulse className={className} size={size} />;
+  
+  return <Target className={className} size={size} />;
+}
 
 export default function Home() {
   const [habits, setHabits] = useState<any[]>([]);
@@ -301,7 +317,7 @@ export default function Home() {
                           "w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all",
                           isDone ? "bg-tm-yellow border-tm-yellow" : "border-tm-blue-gray/30 group-hover/card:border-tm-yellow/50"
                         )}>
-                          {isDone ? <Check size={16} className="text-tm-purple-dark" /> : <Brain size={14} className="text-tm-yellow/50 group-hover/card:text-tm-yellow" />}
+                          {isDone ? <Check size={16} className="text-tm-purple-dark" /> : <TaskIcon title={habit.name} className="text-tm-yellow/50 group-hover/card:text-tm-yellow" size={14} />}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-0.5">
@@ -374,7 +390,7 @@ export default function Home() {
                             task.completed ? "bg-tm-blue-gray border-tm-blue-gray" : "bg-white/5 border-tm-orange-light/20 group-hover/card:border-tm-orange-light/50"
                           )}>
                             {task.completed ? <Check size={16} className="text-white" /> : (
-                              isEvent ? <ClockIcon size={14} className="text-tm-orange-light" /> : <Zap size={14} className="text-tm-orange-light/50 group-hover/card:text-tm-orange-light" />
+                              isEvent ? <ClockIcon size={14} className="text-tm-orange-light" /> : <TaskIcon title={task.title} className="text-tm-orange-light/50 group-hover/card:text-tm-orange-light" size={14} />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -488,8 +504,8 @@ export default function Home() {
                       className={cn(
                         "group/prep p-4 rounded-[1.25rem] border transition-all cursor-pointer relative overflow-hidden",
                         prepTip.completed
-                          ? "bg-tm-purple-dark/20 border-tm-purple-dark/30 opacity-50 grayscale-[0.5]"
-                          : "bg-white/5 border-white/10 hover:border-tm-purple-dark/40 hover:bg-tm-purple-dark/[0.03] shadow-xl"
+                          ? "bg-tm-purple-dark/20 border-tm-purple-dark/30 dark:bg-tm-yellow/10 dark:border-tm-yellow/20 opacity-50 grayscale-[0.5]"
+                          : "bg-white/5 border-white/10 hover:border-tm-purple-dark/40 hover:bg-tm-purple-dark/[0.03] dark:hover:border-tm-yellow/40 dark:hover:bg-tm-yellow/[0.03] shadow-xl dark:hover:shadow-[0_0_20px_rgba(242,194,48,0.15)]"
                       )}
                     >
                       <div className="absolute top-0 right-0 p-5 opacity-[0.03] group-hover/prep:opacity-[0.07] transition-opacity pointer-events-none">
@@ -499,7 +515,7 @@ export default function Home() {
                       <div className="flex items-start gap-3 relative z-10">
                         <div className={cn(
                           "w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-all mt-0.5",
-                          prepTip.completed ? "bg-tm-purple-dark border-tm-purple-dark dark:bg-tm-yellow dark:border-tm-yellow shadow-[0_0_10px_rgba(45,27,51,0.4)]" : "bg-white/5 border-tm-purple-dark/20 dark:border-tm-yellow/20 group-hover/prep:border-tm-purple-dark/50 dark:group-hover/prep:border-tm-yellow/50"
+                          prepTip.completed ? "bg-tm-purple-dark border-tm-purple-dark dark:bg-tm-yellow dark:border-tm-yellow shadow-[0_0_10px_rgba(45,27,51,0.4)] dark:shadow-[0_0_10px_rgba(242,194,48,0.4)]" : "bg-white/5 border-tm-purple-dark/20 dark:border-tm-yellow/20 group-hover/prep:border-tm-purple-dark/50 dark:group-hover/prep:border-tm-yellow/50"
                         )}>
                           {prepTip.completed ? <Check size={18} className="text-white dark:text-tm-purple-dark" /> : <Brain size={16} className="text-tm-purple-dark dark:text-tm-yellow" />}
                         </div>
@@ -529,7 +545,7 @@ export default function Home() {
                         "group/mission p-4 rounded-[1.25rem] border transition-all cursor-pointer relative overflow-hidden",
                         smartMission.completed
                           ? "bg-tm-yellow/10 border-tm-yellow/20 opacity-50 grayscale-[0.5]"
-                          : "bg-white/5 border-white/10 hover:border-tm-yellow/40 hover:bg-tm-yellow/[0.03] shadow-xl"
+                          : "bg-white/5 border-white/10 hover:border-tm-yellow/40 hover:bg-tm-yellow/[0.03] shadow-xl dark:hover:shadow-[0_0_20px_rgba(242,194,48,0.15)]"
                       )}
                     >
                       <div className="absolute top-0 right-0 p-5 opacity-[0.03] group-hover/mission:opacity-[0.07] transition-opacity pointer-events-none">
@@ -585,11 +601,15 @@ export default function Home() {
                         "group/relief p-4 rounded-[1.25rem] border transition-all cursor-pointer relative overflow-hidden",
                         relief.completed
                           ? "bg-tm-blue-gray/10 border-tm-blue-gray/20 opacity-50 grayscale-[0.5]"
-                          : "bg-white/5 border-white/10 hover:border-tm-blue-gray/40 hover:bg-tm-blue-gray/[0.03] shadow-xl"
+                          : "bg-white/5 border-white/10 hover:border-tm-blue-gray/40 hover:bg-tm-blue-gray/[0.03] shadow-xl dark:hover:shadow-[0_0_20px_rgba(148,163,184,0.15)]"
                       )}
                     >
                       <div className="absolute top-0 right-0 p-5 opacity-[0.03] group-hover/relief:opacity-[0.07] transition-opacity pointer-events-none">
-                        <Coffee size={70} />
+                        {relief.type === 'movie' && <Film size={70} />}
+                        {relief.type === 'song' && <Music size={70} />}
+                        {relief.type === 'food' && <Coffee size={70} />}
+                        {relief.type === 'activity' && <Dumbbell size={70} />}
+                        {!['movie', 'song', 'food', 'activity'].includes(relief.type) && <Coffee size={70} />}
                       </div>
 
                       <div className="flex items-start gap-3 relative z-10">
@@ -597,7 +617,15 @@ export default function Home() {
                           "w-9 h-9 rounded-xl border-2 flex items-center justify-center transition-all mt-0.5",
                           relief.completed ? "bg-tm-blue-gray border-tm-blue-gray shadow-[0_0_10px_rgba(148,163,184,0.4)]" : "bg-white/5 border-tm-blue-gray/20 group-hover/relief:border-tm-blue-gray/50"
                         )}>
-                          {relief.completed ? <Check size={18} className="text-white" /> : <Coffee size={16} className="text-tm-blue-gray" />}
+                          {relief.completed ? <Check size={18} className="text-white" /> : (
+                            <>
+                              {relief.type === 'movie' && <Film size={16} className="text-tm-blue-gray" />}
+                              {relief.type === 'song' && <Music size={16} className="text-tm-blue-gray" />}
+                              {relief.type === 'food' && <Coffee size={16} className="text-tm-blue-gray" />}
+                              {relief.type === 'activity' && <Dumbbell size={16} className="text-tm-blue-gray" />}
+                              {!['movie', 'song', 'food', 'activity'].includes(relief.type) && <Coffee size={16} className="text-tm-blue-gray" />}
+                            </>
+                          )}
                         </div>
 
                         <div className="flex-1 min-w-0">
