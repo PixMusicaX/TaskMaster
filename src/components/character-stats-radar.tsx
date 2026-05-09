@@ -126,13 +126,15 @@ export default function CharacterStatsRadar({
 
         {/* Labels with Icons */}
         {stats.map((s) => {
-          const labelPoint = getPoint(max * 1.25, s.angle);
+          const labelPoint = getPoint(max * 1.35, s.angle);
+          // Add extra vertical padding for bottom stats
+          const adjustedY = (s.angle === 216 || s.angle === 144) ? labelPoint.y + 8 : labelPoint.y;
           const Icon = s.icon;
           return (
             <g key={`label-${s.angle}`}>
               <foreignObject
                 x={labelPoint.x - 12}
-                y={labelPoint.y - 28}
+                y={adjustedY - 28}
                 width={24}
                 height={24}
               >
@@ -142,7 +144,7 @@ export default function CharacterStatsRadar({
               </foreignObject>
               <text
                 x={labelPoint.x}
-                y={labelPoint.y}
+                y={adjustedY}
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize="11"
@@ -154,7 +156,7 @@ export default function CharacterStatsRadar({
               </text>
               <text
                 x={labelPoint.x}
-                y={labelPoint.y + 12}
+                y={adjustedY + 12}
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize="8"
