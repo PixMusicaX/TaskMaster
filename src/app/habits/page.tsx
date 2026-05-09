@@ -185,7 +185,7 @@ export default function HabitsPage() {
   }
 
   return (
-    <div className="p-4 md:p-12 max-w-6xl mx-auto space-y-8 md:space-y-12">
+    <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-6xl mx-auto space-y-8 md:space-y-12">
       {isLoading ? (
         <PremiumLoader />
       ) : (

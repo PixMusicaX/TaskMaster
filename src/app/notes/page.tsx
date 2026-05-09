@@ -125,7 +125,7 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="p-4 md:p-12 max-w-5xl mx-auto space-y-8">
+    <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-5xl mx-auto space-y-8">
       {isLoading ? (
         <PremiumLoader />
       ) : (

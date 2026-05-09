@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import GlassCard from "@/components/glass-card";
 import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Brain, Coins, HeartPulse, Users, Calendar as CalendarIcon } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
@@ -62,8 +62,11 @@ export default function CalendarPage() {
     }
   }, [startDate, endDate]);
 
+  const initialLoad = useRef(true);
+
   useEffect(() => {
-    fetchEvents();
+    fetchEvents(initialLoad.current);
+    initialLoad.current = false;
   }, [fetchEvents]);
 
   useEffect(() => {
@@ -163,7 +166,7 @@ export default function CalendarPage() {
   const selectedEvents = events.filter(e => isSameDay(new Date(e.startTime || e.date), selectedDate));
 
   return (
-    <div className="p-4 md:p-12 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-7xl mx-auto space-y-8">
       {isLoading ? (
         <PremiumLoader />
       ) : (
