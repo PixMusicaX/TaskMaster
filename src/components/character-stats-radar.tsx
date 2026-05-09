@@ -124,45 +124,34 @@ export default function CharacterStatsRadar({
           </linearGradient>
         </defs>
 
-        {/* Labels with Icons */}
+        {/* Labels */}
         {stats.map((s) => {
-          const labelPoint = getPoint(max * 1.35, s.angle);
+          const labelPoint = getPoint(max * 1.25, s.angle);
           // Add extra vertical padding for bottom stats
           const adjustedY = (s.angle === 216 || s.angle === 144) ? labelPoint.y + 8 : labelPoint.y;
-          const Icon = s.icon;
           return (
             <g key={`label-${s.angle}`}>
-              <foreignObject
-                x={labelPoint.x - 12}
-                y={adjustedY - 28}
-                width={24}
-                height={24}
-              >
-                <div className="flex items-center justify-center w-full h-full">
-                  <Icon size={18} style={{ color: `var(--${s.color})` }} />
-                </div>
-              </foreignObject>
               <text
                 x={labelPoint.x}
-                y={adjustedY}
+                y={adjustedY - 4}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fontSize="11"
+                fontSize="10"
                 fontWeight="900"
                 fill="currentColor"
                 className={`text-${s.color} uppercase tracking-widest`}
               >
-                {s.label.split(" ")[0]}
+                {s.label}
               </text>
               <text
                 x={labelPoint.x}
-                y={adjustedY + 12}
+                y={adjustedY + 8}
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize="8"
                 fontWeight="700"
                 fill="currentColor"
-                className="text-tm-blue-gray/60 uppercase tracking-widest"
+                className="text-tm-blue-gray/50 uppercase tracking-widest"
               >
                 {data[s.key]} XP
               </text>
@@ -173,11 +162,11 @@ export default function CharacterStatsRadar({
 
       {/* Total XP Display */}
       {totalXP > 0 && (
-        <div className="text-center">
-          <p className="text-xs font-black uppercase text-tm-blue-gray/60 tracking-widest">
+        <div className="text-center px-8 py-3 bg-tm-yellow/5 rounded-3xl border border-tm-yellow/10 backdrop-blur-sm">
+          <p className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-[0.4em] mb-1">
             Total XP
           </p>
-          <p className="text-2xl font-black text-tm-yellow">{totalXP}</p>
+          <p className="text-4xl font-black text-tm-yellow tracking-tighter">{totalXP}</p>
         </div>
       )}
     </div>

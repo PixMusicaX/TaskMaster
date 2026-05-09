@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Clock from "@/components/clock";
 import GlassCard from "@/components/glass-card";
-import { Swords, Brain, Coins, HeartPulse, Users, RotateCw, CheckCircle2, History, Zap, Lock, AlertCircle, Plus, Check, Clock as ClockIcon, TrendingUp, Calendar, Film, Music, Coffee, Dumbbell, MapPin, CloudSun, History as HistoryIcon, Sparkles } from "lucide-react";
+import { Swords, Brain, Coins, HeartPulse, Users, RotateCw, CheckCircle2, History, Zap, Lock, AlertCircle, Plus, Check, Clock as ClockIcon, TrendingUp, Calendar, Film, Music, Coffee, Dumbbell, MapPin, CloudSun, History as HistoryIcon, Sparkles, Crown, Trophy } from "lucide-react";
 import { format, subDays, isSameDay, addDays, subMonths } from "date-fns";
 import { getHabits, toggleHabitLog } from "@/app/actions/habits";
 import { getEventsByDateRange, toggleEventCompletion, getDashboardTasks } from "@/app/actions/events";
@@ -634,11 +634,22 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
-          <GlassCard delay={0.2} className="p-8 border-tm-purple-dark/20 flex flex-col gap-8">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-black flex items-center gap-3">
-                <Swords className="text-tm-yellow" /> Character Stats
-              </h3>
+          <GlassCard delay={0.2} className="p-8 border-tm-purple-dark/20 flex flex-col gap-8 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
+              <Crown size={120} />
+            </div>
+            <div className="flex items-center justify-between relative z-10">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
+                  <Crown className="text-tm-yellow" size={24} /> Character Stats
+                </h3>
+                <p className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-[0.3em]">
+                  Current Attribute Progression
+                </p>
+              </div>
+              <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-tm-blue-gray">
+                Live Data
+              </div>
             </div>
 
             <div className="flex-1 flex items-center justify-center">
@@ -664,7 +675,26 @@ export default function Home() {
             </div>
           </GlassCard>
 
-          <GlassCard delay={0.4} className="h-full flex flex-col justify-center items-center gap-8 border-tm-orange-dark/20">
+          <GlassCard delay={0.4} className="h-full flex flex-col gap-8 border-tm-orange-dark/20 p-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+              <Trophy size={120} />
+            </div>
+
+            <div className="flex items-center justify-between relative z-10">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
+                  <Trophy className="text-tm-orange-dark" size={24} /> Class Status
+                </h3>
+                <p className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-[0.3em]">
+                  Level & Ranking
+                </p>
+              </div>
+              <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-tm-blue-gray">
+                Live Data
+              </div>
+            </div>
+
+            <div className="flex-1 flex flex-col justify-center items-center gap-8 relative z-10">
             <div className="relative w-44 h-44">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                 <circle className="text-tm-blue-gray/10" stroke="currentColor" strokeWidth="8" fill="transparent" r="42" cx="50" cy="50" />
@@ -696,6 +726,7 @@ export default function Home() {
                 Earn {(profile?.nextLevelXP || 70) - (profile?.levelProgress || 0)} more XP to reach Level {(profile?.level || 1) + 1}.
               </p>
             </div>
+          </div>
           </GlassCard>
         </div>
 
