@@ -212,7 +212,7 @@ export default function AboutPage() {
       <div className="space-y-8">
         <div className="flex items-center gap-4">
           <History className="text-tm-orange-light" size={32} />
-          <h2 className="text-3xl font-black text-foreground dark:text-tm-orange-light italic tracking-tighter uppercase">Quest Log</h2>
+          <h2 className="text-3xl font-black text-foreground dark:text-tm-orange-light italic tracking-tighter uppercase">Smart Quest Log</h2>
         </div>
 
         {loading ? (
@@ -242,7 +242,7 @@ export default function AboutPage() {
                     </div>
                     {mission.completed && (
                       <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-1 rounded-lg border border-tm-yellow/20">
-                        +25 XP
+                        +50 XP
                       </div>
                     )}
                   </div>
@@ -319,7 +319,7 @@ export default function AboutPage() {
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <span className="text-[10px] font-black text-tm-blue-gray/70 uppercase tracking-tighter italic">{r.location || "Global"}</span>
                     <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">
-                      +{([r.completed, r.alt1Completed, r.alt2Completed].filter(Boolean).length * 5)} XP
+                      +{([r.completed, r.alt1Completed, r.alt2Completed].filter(Boolean).length * 10)} XP
                     </div>
                   </div>
                 </div>
@@ -418,7 +418,7 @@ export default function AboutPage() {
       {/* Footer */}
       <div className="pt-12 text-center space-y-4 border-t border-tm-blue-gray/10">
         <p className="text-xs font-black uppercase text-tm-blue-gray tracking-[0.3em]">
-          Version 2.3.0 • © 2026 TaskMaster
+          Version 2.4.1 • © 2026 TaskMaster
         </p>
       </div>
     </div>
