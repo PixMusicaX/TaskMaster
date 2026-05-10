@@ -64,7 +64,7 @@ function TaskIcon({ title, className, size = 14 }: { title: string, className?: 
   
   // Communication
   if (t.includes("phone") || t.includes("mobile") || t.includes("whatsapp") || t.includes("signal")) return <Phone className={className} size={size} />;
-  if (t.includes("mail") || t.includes("email") || t.includes("message") || t.includes("msg") || t.includes("talk") || t.includes("chat")) return <MessageSquare className={className} size={size} />;
+  if (t.includes("mail") || t.includes("email") || t.includes("message") || t.includes("text") || t.includes("msg") || t.includes("talk") || t.includes("chat")) return <MessageSquare className={className} size={size} />;
   
   return <Target className={className} size={size} />;
 }
