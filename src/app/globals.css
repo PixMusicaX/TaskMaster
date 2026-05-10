@@ -26,12 +26,12 @@
 }
 
 :root[data-rank="Vanguard"] {
-  --tm-yellow: #475569;
-  --tm-orange-light: #334155;
-  --tm-orange-dark: #1E3A8A;
-  --tm-blue-gray: #475569;
-  --tm-purple-dark: #0F172A;
-  --tm-red: #334155;
+  --tm-yellow: #B8860B; /* Ochre Gold */
+  --tm-orange-light: #C18E92; /* Dusty Rose */
+  --tm-orange-dark: #5F8A8B; /* Steel Teal */
+  --tm-blue-gray: #64748B;
+  --tm-purple-dark: #1A202C; /* Dusty Midnight */
+  --tm-red: #C18E92;
 }
 
 :root[data-rank="Veteran"] {
@@ -44,12 +44,12 @@
 }
 
 :root[data-rank="Knight"] {
-  --tm-yellow: #94A3B8; /* Steel/Silver */
-  --tm-orange-light: #64748B; /* Darker Steel */
-  --tm-orange-dark: #991B1B; /* Crimson */
-  --tm-blue-gray: #475569;
-  --tm-purple-dark: #1E293B; /* Slate */
-  --tm-red: #7F1D1D; /* Deep Crimson */
+  --tm-yellow: #334155; /* Deep Steel (Visible on Light) */
+  --tm-orange-light: #EF4444; /* Bright Red */
+  --tm-orange-dark: #991B1B; /* Royal Crimson */
+  --tm-blue-gray: #475569; /* Iron Slate */
+  --tm-purple-dark: #2D0A0A; /* Deep Maroon */
+  --tm-red: #B91C1C; /* Blood Red */
 }
 
 :root[data-rank="Champion"] {
@@ -105,9 +105,14 @@
 /* Dark mode overrides */
 .dark[data-rank="Novice"] { --tm-blue-gray: #8082A6; }
 .dark[data-rank="Squire"] { --tm-blue-gray: #A1A1AA; }
-.dark[data-rank="Vanguard"] { --tm-blue-gray: #94A3B8; --tm-yellow: #94A3B8; --tm-red: #64748B; }
+.dark[data-rank="Vanguard"] { --tm-blue-gray: #94A3B8; --tm-yellow: #B8860B; --tm-red: #C18E92; }
 .dark[data-rank="Veteran"] { --tm-blue-gray: #94A3B8; --tm-yellow: #60A5FA; --tm-red: #3B82F6; }
-.dark[data-rank="Knight"] { --tm-blue-gray: #CBD5E1; --tm-yellow: #E2E8F0; --tm-red: #EF4444; }
+.dark[data-rank="Knight"] { 
+  --tm-blue-gray: #CBD5E1; 
+  --tm-yellow: #FFFFFF; 
+  --tm-red: #FF3131; 
+  --tm-purple-dark: #1A0000; 
+}
 .dark[data-rank="Champion"] { --tm-blue-gray: #C4B5FD; --tm-yellow: #FDE047; --tm-red: #D8B4FE; }
 .dark[data-rank="Sentinel"] { --tm-blue-gray: #94A3B8; --tm-yellow: #34D399; --tm-red: #10B981; }
 .dark[data-rank="Paladin"] { --tm-blue-gray: #94A3B8; --tm-yellow: #FDE047; --tm-red: #38BDF8; }
