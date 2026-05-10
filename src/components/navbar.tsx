@@ -173,16 +173,19 @@ export default function Navbar() {
           )}
 
           <div className="flex items-center gap-1 md:bg-white/5 md:p-1 rounded-full md:border border-white/10">
-            <button
-              onClick={cycleRank}
-              onContextMenu={(e) => { e.preventDefault(); resetRank(); }}
-              className="hidden md:block p-2 rounded-full hover:bg-tm-blue-gray/10 text-tm-blue-gray transition-colors"
-              title="Cycle Class Scheme (Left Click) | Reset to Auto (Right Click)"
-            >
-              <Shield size={20} className={cn("transition-colors", isManuallySet ? "text-tm-yellow" : "text-tm-orange-light")} />
-            </button>
-
-            <div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
+            {process.env.NODE_ENV === "development" && (
+              <>
+                <button
+                  onClick={cycleRank}
+                  onContextMenu={(e) => { e.preventDefault(); resetRank(); }}
+                  className="hidden md:block p-2 rounded-full hover:bg-tm-blue-gray/10 text-tm-blue-gray transition-colors"
+                  title="Cycle Class Scheme (Left Click) | Reset to Auto (Right Click)"
+                >
+                  <Shield size={20} className={cn("transition-colors", isManuallySet ? "text-tm-yellow" : "text-tm-orange-light")} />
+                </button>
+                <div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
+              </>
+            )}
 
             <button
               onClick={toggleTheme}

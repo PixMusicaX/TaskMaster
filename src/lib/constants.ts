@@ -1,5 +1,5 @@
 export const XP_VALUES = {
-  HABIT_CHECK: 20,
+  HABIT_CHECK: 10,
   QUEST_SIDE: 40,
   QUEST_MAIN: 60,
   QUEST_EPIC: 80,
