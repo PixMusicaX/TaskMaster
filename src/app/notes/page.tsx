@@ -79,6 +79,11 @@ export default function NotesPage() {
     setAllNotesForTable(data);
   }, []);
 
+  const fetchProfile = useCallback(async () => {
+    const profileData = await getProfile();
+    setProfile(profileData);
+  }, []);
+
   const autoSave = useCallback(async (date: Date, currentLines: NoteLine[], currentMood: string) => {
     setIsSaving(true);
     const dateStr = format(date, "yyyy-MM-dd");
@@ -87,10 +92,11 @@ export default function NotesPage() {
       setLastSaved(new Date());
       setIsDirty(false);
       fetchRecent();
+      fetchProfile(); // Update intelligence stat
     } finally {
       setIsSaving(false);
     }
-  }, [fetchRecent]);
+  }, [fetchRecent, fetchProfile]);
 
   useEffect(() => {
     if (!isDirty) {
