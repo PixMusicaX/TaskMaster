@@ -84,6 +84,11 @@ function HabitIconRender({ icon, className, size = 20 }: { icon: string, classNa
   return <span className={cn("inline-flex items-center justify-center", className)} style={{ fontSize: size }}>{icon}</span>;
 }
 
+function formatReliefTemp(temp?: string) {
+  if (!temp) return "";
+  return temp.split("°")[0].split(" ")[0];
+}
+
 export default function Home() {
   const [habits, setHabits] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
@@ -964,7 +969,7 @@ export default function Home() {
                   <div className="flex items-center gap-3 text-[10px] font-black uppercase text-tm-blue-gray/60 tracking-[0.2em]">
                     <span className="flex items-center gap-1.5"><MapPin size={12} className="text-tm-yellow/40" /> {relief.location}</span>
                     <span className="w-1 h-1 rounded-full bg-white/10" />
-                    <span className="flex items-center gap-1.5"><CloudSun size={12} className="text-tm-yellow/40" /> {relief.temp}°C {relief.weather}</span>
+                    <span className="flex items-center gap-1.5"><CloudSun size={12} className="text-tm-yellow/40" /> {formatReliefTemp(relief.temp)}°C {relief.weather}</span>
                   </div>
                 )}
               </div>

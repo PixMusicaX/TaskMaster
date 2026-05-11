@@ -102,7 +102,7 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
               type: main.type,
               location: weatherInfo.location,
               weather: weatherInfo.weather,
-              temp: weatherInfo.temp,
+              temp: weatherInfo.temp.split('°')[0], // Store only the max temp for display
               alternatives: data.alternatives || [],
               xpReward: 10,
               stat: "charisma"
@@ -122,7 +122,7 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
           type: "song",
           location: weatherInfo.location,
           weather: weatherInfo.weather,
-          temp: weatherInfo.temp,
+          temp: weatherInfo.temp ? weatherInfo.temp.split('°')[0] : "22", // Store only the max temp for display
           alternatives: [
             { title: "Quick 5-min Stretch", type: "activity" },
             { title: "Hot Herbal Tea", type: "food" }
