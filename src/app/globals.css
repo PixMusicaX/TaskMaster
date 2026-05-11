@@ -176,3 +176,28 @@ body {
   border-radius: 10px;
   opacity: 0.3;
 }
+
+/* Orientation Lock for Mobile */
+@media screen and (max-width: 900px) and (orientation: landscape) {
+  body::before {
+    content: "Screen Rotation Detected. Please use Portrait Mode for the best experience.";
+    position: fixed;
+    inset: 0;
+    background: var(--background);
+    color: var(--tm-yellow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    text-align: center;
+    padding: 40px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  body > * {
+    display: none !important;
+  }
+}

@@ -18,9 +18,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "TaskMaster - Your Personal Planner",
   description: "A feature-rich planner with habits, notes, and calendar.",
+  manifest: "/manifest.json",
   icons: {
     apple: "/logo.png",
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 import ClassWatermark from "@/components/class-watermark";
