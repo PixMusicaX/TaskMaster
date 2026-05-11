@@ -44,7 +44,7 @@ function TaskIcon({ title, className, size = 14 }: { title: string, className?: 
   if (t.includes("laptop") || t.includes("work") || t.includes("office") || t.includes("meeting") || t.includes("sync") || t.includes("call") || t.includes("zoom") || t.includes("deploy") || t.includes("build")) return <Laptop className={className} size={size} />;
 
   // Entertainment & Hobby
-  if (t.includes("piano") || t.includes("music") || t.includes("sing") || t.includes("song") || t.includes("guitar") || t.includes("instrument")) return <Music className={className} size={size} />;
+  if (t.includes("piano") || t.includes("music") || t.includes("sing") || t.includes("song") || t.includes("guitar") || t.includes("listen") || t.includes("instrument")) return <Music className={className} size={size} />;
   if (t.includes("game") || t.includes("gaming") || t.includes("play") || t.includes("steam") || t.includes("ps5") || t.includes("xbox")) return <Gamepad2 className={className} size={size} />;
 
   // Learning
