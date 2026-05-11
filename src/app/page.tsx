@@ -95,12 +95,13 @@ export default function Home() {
   const [profile, setProfile] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [recapData, setRecapData] = useState<any>(null);
-  const [futureEvents, setFutureEvents] = useState<any[]>([]);
+
   const [showRecap, setShowRecap] = useState(false);
   const [smartMission, setSmartMission] = useState<any>(null);
   const [relief, setRelief] = useState<any>(null);
   const [prepTip, setPrepTip] = useState<any>(null);
   const [moodData, setMoodData] = useState<any[]>([]);
+  const [futureEvents, setFutureEvents] = useState<any[]>([]);
   const [missingInfo, setMissingInfo] = useState<string[]>([]);
   const [habitsLoading, setHabitsLoading] = useState(true);
   const [tasksLoading, setTasksLoading] = useState(true);
