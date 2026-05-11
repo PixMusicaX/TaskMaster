@@ -166,9 +166,6 @@ export const GaseousDivider = ({ hoveredSide, variant = "default", className = "
           g.addColorStop(0.96, `rgba(0,0,0,${layer.alpha})`);
           g.addColorStop(1, `rgba(0,0,0,0)`);
         } else {
-          // Keep other variants hardcoded or map them too if needed, 
-          // but "artpaint" is the main one used in Navbar.
-          // For now, let's just make "artpaint" dynamic.
           g.addColorStop(0, `rgba(255,255,255,0)`);
           g.addColorStop(0.04, `rgba(255,255,255,${layer.alpha})`);
           g.addColorStop(0.5, `rgba(255,255,255,${layer.alpha})`);

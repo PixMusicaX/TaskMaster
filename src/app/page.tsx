@@ -69,6 +69,21 @@ function TaskIcon({ title, className, size = 14 }: { title: string, className?: 
   return <Target className={className} size={size} />;
 }
 
+const LUCIDE_ICONS: Record<string, any> = {
+  Brain, Music, Code, Gamepad2, Book, Dumbbell, HeartPulse, Laptop, Target, Zap, Coffee, Sparkles, Mic, Phone, Mail, MessageSquare, GraduationCap, Terminal
+};
+
+function HabitIconRender({ icon, className, size = 20 }: { icon: string, className?: string, size?: number }) {
+  if (!icon) return <Sparkles className={className} size={size} />;
+  
+  // Check if it's a Lucide icon name
+  const IconComponent = LUCIDE_ICONS[icon];
+  if (IconComponent) return <IconComponent className={className} size={size} />;
+  
+  // Fallback to rendering as emoji/text
+  return <span className={cn("inline-flex items-center justify-center", className)} style={{ fontSize: size }}>{icon}</span>;
+}
+
 export default function Home() {
   const [habits, setHabits] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
@@ -349,7 +364,7 @@ export default function Home() {
                           "w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all",
                           isDone ? "bg-tm-yellow border-tm-yellow" : "border-tm-blue-gray/30 group-hover/card:border-tm-yellow/50"
                         )}>
-                          {isDone ? <Check size={16} className="text-tm-purple-dark" /> : <TaskIcon title={habit.name} className="text-tm-yellow/50 group-hover/card:text-tm-yellow" size={14} />}
+                          {isDone ? <Check size={16} className="text-tm-purple-dark" /> : <HabitIconRender icon={habit.icon} className="text-tm-yellow/50 group-hover/card:text-tm-yellow" size={14} />}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-0.5">
