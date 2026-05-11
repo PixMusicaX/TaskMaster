@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import GlassCard from "@/components/glass-card";
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Brain, Coins, HeartPulse, Users, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Brain, Coins, HeartPulse, Users, Lock, Calendar as CalendarIcon } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent, getAllEvents } from "@/app/actions/events";
+import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent, getAllEvents, cleanupDuplicateSpecialDays } from "@/app/actions/events";
 import { getProfile } from "@/app/actions/gamification";
 import { getRecentNotes } from "@/app/actions/notes";
 import { getReliefHistory } from "@/app/actions/relief";
-import { cn } from "@/lib/utils";
+import { cn, getSpecialDayColors } from "@/lib/utils";
 import { PremiumLoader } from "@/components/loader";
 import TabularViewModal, { Column } from "@/components/TabularViewModal";
 import { Search } from "lucide-react";
@@ -69,6 +69,14 @@ export default function CalendarPage() {
   }, [startDate, endDate]);
 
   const initialLoad = useRef(true);
+  const cleanupStarted = useRef(false);
+
+  useEffect(() => {
+    if (!cleanupStarted.current) {
+      cleanupStarted.current = true;
+      cleanupDuplicateSpecialDays().then(() => fetchEvents(false));
+    }
+  }, [fetchEvents]);
 
   useEffect(() => {
     fetchEvents(initialLoad.current);
@@ -103,6 +111,7 @@ export default function CalendarPage() {
   }, [events]);
 
   function openEdit(event: any) {
+    if (event.isApi) return;
     setEditingEvent(event);
     setNewTitle(event.title);
     setNewType(event.type);
@@ -120,7 +129,7 @@ export default function CalendarPage() {
 
     const [hours, minutes] = newTime.split(":").map(Number);
     const baseDate = new Date(newDateStr);
-    const eventTime = setMinutes(setHours(baseDate, hours), minutes);
+    const eventTime = newType === "special_day" ? null : setMinutes(setHours(baseDate, hours), minutes);
 
     const eventData = {
       title: newTitle,
@@ -174,7 +183,20 @@ export default function CalendarPage() {
     }
   }
 
-  const selectedEvents = events.filter(e => isSameDay(new Date(e.startTime || e.date), selectedDate));
+  const selectedEvents = events
+    .filter((e) => isSameDay(new Date(e.startTime || e.date), selectedDate))
+    .filter((e) => {
+      if (e.type === "special_day" && e.startTime) {
+        const d = new Date(e.startTime);
+        return d.getHours() !== 0 || d.getMinutes() !== 0;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (a.type === "special_day" && b.type !== "special_day") return -1;
+      if (a.type !== "special_day" && b.type === "special_day") return 1;
+      return 0;
+    });
 
   return (
     <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-7xl mx-auto space-y-8">
@@ -205,7 +227,7 @@ export default function CalendarPage() {
                 resetForm();
                 setShowAdd(true);
               }}
-              className="flex items-center gap-2 bg-tm-orange-dark/80 backdrop-blur-xl saturate-150 text-white px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl border border-tm-orange-dark/30 relative z-10"
+              className="flex items-center gap-2 bg-tm-yellow backdrop-blur-xl text-tm-purple-dark px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl relative z-10"
             >
               <Plus size={20} /> New Item
             </button>
@@ -221,7 +243,14 @@ export default function CalendarPage() {
               >
                 <GlassCard className="w-full max-w-md space-y-6">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold">{editingEvent ? "Edit" : "New"} {newType === "task" ? "Task" : "Event"}</h2>
+                    <h2 className="text-2xl font-bold">
+                      {editingEvent ? "Edit" : "New"}{" "}
+                      {newType === "task"
+                        ? "Task"
+                        : newType === "special_day"
+                        ? "Special Day"
+                        : "Event"}
+                    </h2>
                     <button onClick={resetForm}><X /></button>
                   </div>
                   <div className="space-y-4">
@@ -237,6 +266,17 @@ export default function CalendarPage() {
                         className={cn("flex-1 py-2 rounded-lg font-bold text-sm transition-all", newType === "event" ? "bg-tm-orange-light text-white" : "text-tm-blue-gray")}
                       >
                         Event
+                      </button>
+                      <button
+                        onClick={() => setNewType("special_day")}
+                        className={cn(
+                          "flex-1 py-2 rounded-lg font-bold text-sm transition-all",
+                          newType === "special_day" 
+                            ? "bg-tm-orange-dark text-white shadow-lg shadow-tm-orange-dark/20" 
+                            : "text-tm-blue-gray"
+                        )}
+                      >
+                        Special Day
                       </button>
                     </div>
 
@@ -270,7 +310,7 @@ export default function CalendarPage() {
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                     />
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className={cn("grid gap-4", newType !== "special_day" ? "grid-cols-2" : "grid-cols-1")}>
                       <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
                         <p className="text-[10px] font-black uppercase text-tm-blue-gray mb-1">Date</p>
                         <input
@@ -280,15 +320,17 @@ export default function CalendarPage() {
                           className="bg-transparent font-bold text-lg outline-none w-full [color-scheme:light] dark:[color-scheme:dark]"
                         />
                       </div>
-                      <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
-                        <p className="text-[10px] font-black uppercase text-tm-blue-gray mb-1">Time</p>
-                        <input
-                          type="time"
-                          value={newTime}
-                          onChange={(e) => setNewTime(e.target.value)}
-                          className="bg-transparent font-bold text-lg outline-none w-full [color-scheme:light] dark:[color-scheme:dark]"
-                        />
-                      </div>
+                      {newType !== "special_day" && (
+                        <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
+                          <p className="text-[10px] font-black uppercase text-tm-blue-gray mb-1">Time</p>
+                          <input
+                            type="time"
+                            value={newTime}
+                            onChange={(e) => setNewTime(e.target.value)}
+                            className="bg-transparent font-bold text-lg outline-none w-full [color-scheme:light] dark:[color-scheme:dark]"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <button
@@ -366,7 +408,20 @@ export default function CalendarPage() {
                   const isToday = isSameDay(day, new Date());
                   const isCurrentMonth = isSameMonth(day, monthStart);
                   const isSelected = isSameDay(day, selectedDate);
-                  const dayEvents = events.filter(e => isSameDay(new Date(e.startTime || e.date), day));
+                  const dayEvents = events
+                    .filter(e => isSameDay(new Date(e.startTime || e.date), day))
+                    .filter(e => {
+                      if (e.type === "special_day" && e.startTime) {
+                        const d = new Date(e.startTime);
+                        return d.getHours() !== 0 || d.getMinutes() !== 0;
+                      }
+                      return true;
+                    })
+                    .sort((a, b) => {
+                      if (a.type === "special_day" && b.type !== "special_day") return -1;
+                      if (a.type !== "special_day" && b.type === "special_day") return 1;
+                      return 0;
+                    });
                   const dayMood = moods.find(m => m.date === format(day, "yyyy-MM-dd"))?.mood;
 
                   return (
@@ -396,19 +451,23 @@ export default function CalendarPage() {
                       </div>
 
                       <div className="flex flex-col gap-1 mt-1 overflow-hidden">
-                        {dayEvents.slice(0, 3).map((event) => (
+                        {dayEvents.slice(0, 3).map((event) => {
+                          const sdColors = event.type === "special_day" ? getSpecialDayColors(event.title) : null;
+                          return (
                           <div
                             key={event.id}
                             className={cn(
                               "px-1.5 py-0.5 rounded text-[8px] font-bold truncate border-l-2",
-                              event.type === "task"
+                              event.type === "special_day"
+                                ? `${sdColors?.bg}/20 ${sdColors?.text} ${sdColors?.border}`
+                                : event.type === "task"
                                 ? (event.completed ? "bg-tm-blue-gray/10 text-tm-blue-gray/50 border-tm-blue-gray/30" : "bg-tm-yellow/20 text-tm-purple-dark border-tm-yellow")
                                 : "bg-tm-orange-light/20 text-tm-orange-dark border-tm-orange-light"
                             )}
                           >
                             {event.title}
                           </div>
-                        ))}
+                        )})}
                         {dayEvents.length > 3 && (
                           <div className="text-[8px] font-black text-tm-blue-gray text-center">+{dayEvents.length - 3} more</div>
                         )}
@@ -441,6 +500,9 @@ export default function CalendarPage() {
                 const dayEvents = events.filter(e => isSameDay(new Date(e.startTime || e.date), day));
                 const hasTask = dayEvents.some(e => e.type === "task");
                 const hasEvent = dayEvents.some(e => e.type === "event");
+                const specialDays = dayEvents.filter(e => e.type === "special_day");
+                const hasSpecialDay = specialDays.length > 0;
+                const sdColor = hasSpecialDay ? getSpecialDayColors(specialDays[0].title) : null;
 
                 return (
                   <button
@@ -457,6 +519,7 @@ export default function CalendarPage() {
                     <div className="flex gap-0.5 mt-0.5 h-1">
                       {hasTask && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-purple-dark" : "bg-tm-yellow")} />}
                       {hasEvent && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-purple-dark/60" : "bg-tm-orange-light")} />}
+                      {hasSpecialDay && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-purple-dark/40" : sdColor?.bg)} />}
                     </div>
                   </button>
                 );
@@ -492,8 +555,10 @@ export default function CalendarPage() {
                     <p className="text-sm font-bold">No plans for today.</p>
                     <p className="text-xs">Click the + button to add items.</p>
                   </div>
-                ) : (
-                  selectedEvents.map((event) => (
+                ) :
+                  selectedEvents.map((event) => {
+                    const sdColors = event.type === "special_day" ? getSpecialDayColors(event.title) : null;
+                    return (
                     <motion.div
                       layout
                       initial={{ opacity: 0, x: 20 }}
@@ -502,11 +567,13 @@ export default function CalendarPage() {
                     >
                       <GlassCard className={cn(
                         "p-4 space-y-3 group",
+                        event.type === "special_day" ? `border-l-4 border-l-transparent ${sdColors?.shadow}` :
                         event.type === "task" ? "border-l-4 border-l-tm-blue-gray/30" :
                           event.tier === "epic" ? "border-l-4 border-l-tm-orange-dark shadow-[0_0_15px_rgba(239,68,68,0.1)]" :
                             event.tier === "main" ? "border-l-4 border-l-tm-orange-light" :
                               "border-l-4 border-l-tm-yellow"
                       )}>
+                        {event.type === "special_day" && <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl", sdColors?.bg)} />}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             {event.type === "task" && (
@@ -525,18 +592,22 @@ export default function CalendarPage() {
                             <h4 className={cn("font-bold text-sm", event.completed && "line-through text-tm-blue-gray")}>{event.title}</h4>
                           </div>
                           <div className="flex gap-2 items-center">
-                            <button
-                              onClick={() => openEdit(event)}
-                              className="opacity-100 lg:opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-tm-yellow transition-all"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(event.id)}
-                              className="opacity-100 lg:opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-red-500 transition-all"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            {!event.isApi && (
+                              <button
+                                onClick={() => openEdit(event)}
+                                className="opacity-100 lg:opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-tm-yellow transition-all"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                            )}
+                            {(!event.isApi || event.type === "special_day") && (
+                              <button
+                                onClick={() => handleDelete(event.id)}
+                                className="opacity-100 lg:opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-red-500 transition-all"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
                           </div>
                         </div>
                         {event.description && (
@@ -549,14 +620,26 @@ export default function CalendarPage() {
                             </div>
                             <span className={cn(
                               "px-2 py-0.5 rounded",
+                              event.type === "special_day" ? `${sdColors?.bg}/10 ${sdColors?.text}` :
                               event.type === "task" ? "bg-tm-blue-gray/10 text-tm-blue-gray/60" :
                                 event.tier === "epic" ? "bg-tm-orange-dark/20 text-tm-orange-dark border border-tm-orange-dark/30" :
                                   event.tier === "main" ? "bg-tm-orange-light/10 text-tm-orange-light" :
                                     "bg-tm-yellow/10 text-tm-yellow"
                             )}>
-                              {event.type === "event" ? `${event.tier} ` : ""}{event.type}
+                              {event.type === "special_day" ? (
+                                <span className="flex items-center gap-1">
+                                  {event.isApi && <Lock size={10} className="opacity-60" />}
+                                  Special Day
+                                </span>
+                              ) : event.type === "event" ? `${event.tier} event` : event.type}
                             </span>
                           </div>
+                          {event.isApi && (
+                            <div className="flex items-center gap-1 text-[8px] font-black uppercase text-tm-blue-gray/40">
+                              <Lock size={10} />
+                              <span>System Item (Uneditable)</span>
+                            </div>
+                          )}
                           {event.notification && (
                             <div className="flex items-center gap-1 text-tm-orange-dark">
                               <Bell size={12} fill="currentColor" className="opacity-50" />
@@ -566,8 +649,8 @@ export default function CalendarPage() {
                         </div>
                       </GlassCard>
                     </motion.div>
-                  ))
-                )}
+                  )})
+                }
               </div>
             </div>
           </div>

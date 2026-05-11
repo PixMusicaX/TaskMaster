@@ -7,14 +7,14 @@ import GlassCard from "@/components/glass-card";
 import { Swords, Brain, Coins, HeartPulse, Users, RotateCw, CheckCircle2, History, Zap, Lock, AlertCircle, Plus, Check, Clock as ClockIcon, TrendingUp, Calendar, Film, Music, Coffee, Dumbbell, MapPin, CloudSun, History as HistoryIcon, Sparkles, Crown, Trophy, Book, GraduationCap, Code, Terminal, Gamepad2, Target, Mic, Phone, Mail, MessageSquare, Laptop, Wallet, Home as HomeIcon, PenTool, Map, Moon, Lightbulb, Bath, ShoppingCart, Utensils, Plane, Camera, Palette, Briefcase, Mic2 } from "lucide-react";
 import { format, subDays, isSameDay, addDays, subMonths } from "date-fns";
 import { getHabits, toggleHabitLog } from "@/app/actions/habits";
-import { getEventsByDateRange, toggleEventCompletion, getDashboardTasks } from "@/app/actions/events";
+import { getEventsByDateRange, toggleEventCompletion, getDashboardTasks, syncMonthlyHolidays } from "@/app/actions/events";
 import { getProfile, getSeasonHistory } from "@/app/actions/gamification";
 import { getNoteByDate, getRecentNotes } from "@/app/actions/notes";
 import { getSmartMission, toggleSmartMission, regenerateSmartMission } from "@/app/actions/smart-missions";
 import { getReliefRecommendation, toggleReliefRecommendation, regenerateReliefRecommendation } from "@/app/actions/relief";
 import { getPreparationTip, togglePreparationTip, regeneratePreparationTip } from "@/app/actions/preparation";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn, getSpecialDayColors } from "@/lib/utils";
 import { RPG_TITLES, XP_VALUES } from "@/lib/constants";
 import { PremiumLoader } from "@/components/loader";
 import RecapModal from "@/components/RecapModal";
@@ -181,6 +181,24 @@ export default function Home() {
         setTasks(data);
         setTasksLoading(false);
       });
+
+      // Handle Monthly Calendarific Sync
+      const syncKey = `calendarific_sync_${format(today, "yyyy_MM")}`;
+      if (!localStorage.getItem(syncKey)) {
+        console.log("Syncing calendarific holidays for this month...");
+        // Run as if it is the 1st of the month for testing purposes
+        syncMonthlyHolidays(format(today, "yyyy-MM-01")).then((res) => {
+          if (res.success) {
+            console.log("Holiday sync completed:", res.message);
+            localStorage.setItem(syncKey, "true");
+            // Refresh tasks to grab any newly inserted special days
+            getDashboardTasks(todayStr).then(setTasks);
+          } else {
+            console.error("Holiday sync failed:", res.message);
+            // Don't set item on failure so it can retry
+          }
+        });
+      }
 
       // 3. Profile Stats
       getProfile().then(setProfile);
@@ -372,6 +390,34 @@ export default function Home() {
         {/* Central Hero: Clock & Quote */}
         <div className="flex flex-col items-center text-center gap-2 z-10">
           <Clock />
+          
+          {tasks.filter(t => {
+            if (t.type !== "special_day") return false;
+            if (t.startTime) {
+              const d = new Date(t.startTime);
+              return d.getHours() !== 0 || d.getMinutes() !== 0;
+            }
+            return true;
+          }).length > 0 && (
+            <div className="flex flex-row items-center justify-center gap-3 my-2 flex-wrap text-lg md:text-xl font-black uppercase tracking-tighter italic">
+              {tasks.filter(t => {
+                if (t.type !== "special_day") return false;
+                if (t.startTime) {
+                  const d = new Date(t.startTime);
+                  return d.getHours() !== 0 || d.getMinutes() !== 0;
+                }
+                return true;
+              }).map((sd, index) => {
+                const sdColors = getSpecialDayColors(sd.title);
+                return (
+                  <div key={sd.id} className="flex items-center gap-3">
+                    {index > 0 && <span className="text-tm-blue-gray/30">/</span>}
+                    <span className={sdColors.text}>{sd.title}</span>
+                  </div>
+              )})}
+            </div>
+          )}
+
           <p className="text-sm md:text-base font-medium text-tm-blue-gray italic opacity-80 max-w-xl">
             "{profile?.quote || smartMission?.quote || "Master your day, master your life."}"
           </p>
@@ -455,7 +501,7 @@ export default function Home() {
                 <PremiumLoader />
               ) : (
                 <div className="space-y-3">
-                  {tasks.map(task => {
+                  {tasks.filter(t => t.type !== "special_day").map(task => {
                     const isEvent = task.type === "event";
                     const xp = task.type === "task"
                       ? XP_VALUES.TASK
@@ -963,7 +1009,7 @@ export default function Home() {
             <div className="flex items-center justify-between relative z-10">
               <div className="flex flex-col gap-1">
                 <h3 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
-                  <Coffee className="text-tm-blue-gray" size={24} /> Relief Hub
+                  <Coffee className="text-tm-blue-gray" size={24} /> Tavern
                 </h3>
                 {relief && (
                   <div className="flex items-center gap-3 text-[10px] font-black uppercase text-tm-blue-gray/60 tracking-[0.2em]">

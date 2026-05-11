@@ -86,7 +86,10 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
               title: t.title,
               completed: t.completed
             })),
-            history: history.map((r: any) => ({ title: r.title, type: r.type })),
+            history: history.flatMap((r: any) => [
+              { title: r.title, type: r.type },
+              ...(r.alternatives || []).map((alt: any) => ({ title: alt.title, type: alt.type }))
+            ]),
             today
           });
 

@@ -23,11 +23,14 @@ export async function getPreparationTip(clientDateStr?: string) {
     if (!tip && GEMINI_API_KEY) {
       const horizon = addDays(new Date(), 28);
       const twoWeeksAgo = format(subDays(new Date(), 14), "yyyy-MM-dd");
+      const todayStr = today;
+      const horizonStr = format(horizon, "yyyy-MM-dd");
+      
       const [futureTasks, history, profile] = await Promise.all([
         db.select().from(event).where(
           and(
-            gte(event.startTime, new Date()),
-            lte(event.startTime, horizon)
+            gte(event.date, todayStr),
+            lte(event.date, horizonStr)
           )
         ),
         getPreparationTipHistory(twoWeeksAgo),

@@ -77,6 +77,7 @@ export const event = pgTable("Event", {
   stat: text("stat"), // strength, intelligence, wealth, vitality, charisma
   completed: boolean("completed").default(false).notNull(),
   notification: boolean("notification").default(false).notNull(),
+  isApi: boolean("isApi").default(false).notNull(),
   createdAt: timestamp("createdAt", { precision: 3, mode: 'date' }).defaultNow().notNull(),
 });
 
