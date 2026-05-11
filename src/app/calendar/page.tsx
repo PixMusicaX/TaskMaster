@@ -628,18 +628,11 @@ export default function CalendarPage() {
                             )}>
                               {event.type === "special_day" ? (
                                 <span className="flex items-center gap-1">
-                                  {event.isApi && <Lock size={10} className="opacity-60" />}
                                   Special Day
                                 </span>
                               ) : event.type === "event" ? `${event.tier} event` : event.type}
                             </span>
                           </div>
-                          {event.isApi && (
-                            <div className="flex items-center gap-1 text-[8px] font-black uppercase text-tm-blue-gray/40">
-                              <Lock size={10} />
-                              <span>System Item (Uneditable)</span>
-                            </div>
-                          )}
                           {event.notification && (
                             <div className="flex items-center gap-1 text-tm-orange-dark">
                               <Bell size={12} fill="currentColor" className="opacity-50" />

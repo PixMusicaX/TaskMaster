@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Clock from "@/components/clock";
 import GlassCard from "@/components/glass-card";
-import { Swords, Brain, Coins, HeartPulse, Users, RotateCw, CheckCircle2, History, Zap, Lock, AlertCircle, Plus, Check, Clock as ClockIcon, TrendingUp, Calendar, Film, Music, Coffee, Dumbbell, MapPin, CloudSun, History as HistoryIcon, Sparkles, Crown, Trophy, Book, GraduationCap, Code, Terminal, Gamepad2, Target, Mic, Phone, Mail, MessageSquare, Laptop, Wallet, Home as HomeIcon, PenTool, Map, Moon, Lightbulb, Bath, ShoppingCart, Utensils, Plane, Camera, Palette, Briefcase, Mic2 } from "lucide-react";
+import { Swords, Brain, Coins, HeartPulse, Users, RotateCw, CheckCircle2, History, Zap, Lock, AlertCircle, Plus, Check, Clock as ClockIcon, TrendingUp, Calendar, Film, Music, Coffee, Dumbbell, MapPin, CloudSun, History as HistoryIcon, Sparkles, Crown, Trophy, Book, GraduationCap, Code, Terminal, Gamepad2, Target, Mic, Phone, Mail, MessageSquare, Laptop, Wallet, Home as HomeIcon, PenTool, Map as MapIcon, Moon, Lightbulb, Bath, ShoppingCart, Utensils, Plane, Camera, Palette, Briefcase, Mic2, Eye } from "lucide-react";
 import { format, subDays, isSameDay, addDays, subMonths } from "date-fns";
 import { getHabits, toggleHabitLog } from "@/app/actions/habits";
 import { getEventsByDateRange, toggleEventCompletion, getDashboardTasks, syncMonthlyHolidays } from "@/app/actions/events";
@@ -23,49 +23,49 @@ import CharacterStatsRadar from "@/components/character-stats-radar";
 
 function TaskIcon({ title, className, size = 14 }: { title: string, className?: string, size?: number }) {
   const t = title.toLowerCase();
-  
+
   // Finance
   if (t.includes("money") || t.includes("pay") || t.includes("bill") || t.includes("salary") || t.includes("expense") || t.includes("tax") || t.includes("bank") || t.includes("wallet") || t.includes("coin")) return <Coins className={className} size={size} />;
-  
+
   // Social & People
   if (t.includes("meet") || t.includes("date") || t.includes("friend") || t.includes("hangout") || t.includes("party") || t.includes("dinner") || t.includes("lunch") || t.includes("people")) return <Users className={className} size={size} />;
-  
+
   // Home & Chores
   if (t.includes("home") || t.includes("clean") || t.includes("laundry") || t.includes("room") || t.includes("house") || t.includes("dish") || t.includes("fix") || t.includes("buy") || t.includes("order") || t.includes("shop")) return <HomeIcon className={className} size={size} />;
-  
+
   // Creative & Writing
   if (t.includes("write") || t.includes("blog") || t.includes("journal") || t.includes("pen") || t.includes("draft") || t.includes("copy") || t.includes("edit")) return <PenTool className={className} size={size} />;
   if (t.includes("paint") || t.includes("draw") || t.includes("art") || t.includes("design") || t.includes("sketch") || t.includes("palette")) return <Palette className={className} size={size} />;
-  
+
   // Tech & Programming
   if (t.includes("code") || t.includes("nextjs") || t.includes("rust") || t.includes("react") || t.includes("dev") || t.includes("programming") || t.includes("git") || t.includes("api") || t.includes("bug")) return <Code className={className} size={size} />;
   if (t.includes("laptop") || t.includes("work") || t.includes("office") || t.includes("meeting") || t.includes("sync") || t.includes("call") || t.includes("zoom") || t.includes("deploy") || t.includes("build")) return <Laptop className={className} size={size} />;
-  
+
   // Entertainment & Hobby
   if (t.includes("piano") || t.includes("music") || t.includes("sing") || t.includes("song") || t.includes("guitar") || t.includes("instrument")) return <Music className={className} size={size} />;
   if (t.includes("game") || t.includes("gaming") || t.includes("play") || t.includes("steam") || t.includes("ps5") || t.includes("xbox")) return <Gamepad2 className={className} size={size} />;
-  
+
   // Learning
   if (t.includes("practice") || t.includes("study") || t.includes("learn") || t.includes("class") || t.includes("read") || t.includes("book") || t.includes("course") || t.includes("lecture")) return <Book className={className} size={size} />;
-  
+
   // Health & Vitality
   if (t.includes("gym") || t.includes("workout") || t.includes("lift") || t.includes("exercise") || t.includes("run") || t.includes("walk") || t.includes("yoga") || t.includes("sport")) return <Dumbbell className={className} size={size} />;
   if (t.includes("health") || t.includes("vitality") || t.includes("med") || t.includes("doctor") || t.includes("hospital") || t.includes("dentist")) return <HeartPulse className={className} size={size} />;
-  
+
   // Travel & Location
   if (t.includes("travel") || t.includes("trip") || t.includes("flight") || t.includes("plane") || t.includes("airport") || t.includes("hotel") || t.includes("stay") || t.includes("vacation")) return <Plane className={className} size={size} />;
-  if (t.includes("map") || t.includes("location") || t.includes("visit") || t.includes("place")) return <Map className={className} size={size} />;
-  
+  if (t.includes("map") || t.includes("location") || t.includes("visit") || t.includes("place")) return <MapIcon className={className} size={size} />;
+
   // Ideas & Strategy
   if (t.includes("idea") || t.includes("think") || t.includes("plan") || t.includes("brainstorm") || t.includes("strategy") || t.includes("lightbulb")) return <Lightbulb className={className} size={size} />;
-  
+
   // Rest
   if (t.includes("sleep") || t.includes("nap") || t.includes("bed") || t.includes("rest") || t.includes("night") || t.includes("dream")) return <Moon className={className} size={size} />;
-  
+
   // Communication
   if (t.includes("phone") || t.includes("mobile") || t.includes("whatsapp") || t.includes("signal")) return <Phone className={className} size={size} />;
   if (t.includes("mail") || t.includes("email") || t.includes("message") || t.includes("text") || t.includes("msg") || t.includes("talk") || t.includes("chat")) return <MessageSquare className={className} size={size} />;
-  
+
   return <Target className={className} size={size} />;
 }
 
@@ -75,11 +75,11 @@ const LUCIDE_ICONS: Record<string, any> = {
 
 function HabitIconRender({ icon, className, size = 20 }: { icon: string, className?: string, size?: number }) {
   if (!icon) return <Sparkles className={className} size={size} />;
-  
+
   // Check if it's a Lucide icon name
   const IconComponent = LUCIDE_ICONS[icon];
   if (IconComponent) return <IconComponent className={className} size={size} />;
-  
+
   // Fallback to rendering as emoji/text
   return <span className={cn("inline-flex items-center justify-center", className)} style={{ fontSize: size }}>{icon}</span>;
 }
@@ -95,6 +95,7 @@ export default function Home() {
   const [profile, setProfile] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [recapData, setRecapData] = useState<any>(null);
+  const [futureEvents, setFutureEvents] = useState<any[]>([]);
   const [showRecap, setShowRecap] = useState(false);
   const [smartMission, setSmartMission] = useState<any>(null);
   const [relief, setRelief] = useState<any>(null);
@@ -203,6 +204,10 @@ export default function Home() {
       // 3. Profile Stats
       getProfile().then(setProfile);
       getRecentNotes(30).then(setMoodData);
+      getEventsByDateRange(addDays(today, 1), addDays(today, 14)).then(data => {
+        setFutureEvents(data.filter(e => e.type !== "task"));
+      });
+
       getSeasonHistory(6).then(historyData => {
         setHistory(historyData);
         const lastMonth = subMonths(today, 1);
@@ -390,7 +395,7 @@ export default function Home() {
         {/* Central Hero: Clock & Quote */}
         <div className="flex flex-col items-center text-center gap-2 z-10">
           <Clock />
-          
+
           {tasks.filter(t => {
             if (t.type !== "special_day") return false;
             if (t.startTime) {
@@ -399,24 +404,25 @@ export default function Home() {
             }
             return true;
           }).length > 0 && (
-            <div className="flex flex-row items-center justify-center gap-3 my-2 flex-wrap text-lg md:text-xl font-black uppercase tracking-tighter italic">
-              {tasks.filter(t => {
-                if (t.type !== "special_day") return false;
-                if (t.startTime) {
-                  const d = new Date(t.startTime);
-                  return d.getHours() !== 0 || d.getMinutes() !== 0;
-                }
-                return true;
-              }).map((sd, index) => {
-                const sdColors = getSpecialDayColors(sd.title);
-                return (
-                  <div key={sd.id} className="flex items-center gap-3">
-                    {index > 0 && <span className="text-tm-blue-gray/30">/</span>}
-                    <span className={sdColors.text}>{sd.title}</span>
-                  </div>
-              )})}
-            </div>
-          )}
+              <div className="flex flex-row items-center justify-center gap-3 my-2 flex-wrap text-lg md:text-xl font-black uppercase tracking-tighter italic">
+                {tasks.filter(t => {
+                  if (t.type !== "special_day") return false;
+                  if (t.startTime) {
+                    const d = new Date(t.startTime);
+                    return d.getHours() !== 0 || d.getMinutes() !== 0;
+                  }
+                  return true;
+                }).map((sd, index) => {
+                  const sdColors = getSpecialDayColors(sd.title);
+                  return (
+                    <div key={sd.id} className="flex items-center gap-3">
+                      {index > 0 && <span className="text-tm-blue-gray/30">/</span>}
+                      <span className={sdColors.text}>{sd.title}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
 
           <p className="text-sm md:text-base font-medium text-tm-blue-gray italic opacity-80 max-w-xl">
             "{profile?.quote || smartMission?.quote || "Master your day, master your life."}"
@@ -949,6 +955,61 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
+          <GlassCard delay={0.5} className="p-6 md:p-8 border-tm-yellow/20 flex flex-col gap-8 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 md:p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
+              <Eye size={120} />
+            </div>
+            <div className="flex items-center justify-between relative z-10">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
+                  <Eye className="text-tm-yellow" size={24} /> Future Sight
+                </h3>
+                <p className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-[0.3em]">
+                  Upcoming Quests
+                </p>
+              </div>
+              <div className="hidden sm:block px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-tm-blue-gray whitespace-nowrap">
+                Prophecy
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-4 relative z-10">
+              {futureEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {futureEvents.slice(0, 5).map((e, idx) => {
+                    const eventDate = new Date(e.date);
+                    return (
+                      <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all group/event">
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "w-10 h-10 rounded-xl flex flex-col items-center justify-center border transition-all",
+                            e.type === "special_day" ? "bg-tm-orange-dark/10 border-tm-orange-dark/20 text-tm-orange-dark" : "bg-tm-yellow/10 border-tm-yellow/20 text-tm-yellow"
+                          )}>
+                            <span className="text-[8px] font-black uppercase leading-none">{format(eventDate, "MMM")}</span>
+                            <span className="text-lg font-black leading-none mt-0.5">{format(eventDate, "dd")}</span>
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-sm text-foreground/90">{e.title}</h4>
+                            <p className="text-[10px] font-black uppercase text-tm-blue-gray/60 tracking-widest">
+                              {e.type === "special_day" ? "Special Day" : `${e.tier} Quest`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-widest">
+                          {isSameDay(eventDate, addDays(new Date(), 1)) ? "Tomorrow" : format(eventDate, "EEEE")}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="h-48 flex flex-col items-center justify-center text-center opacity-30 gap-4">
+                  <div className="w-12 h-12 rounded-full border-2 border-dashed border-tm-blue-gray animate-spin-slow" />
+                  <p className="text-xs font-bold italic">The future is yet unwritten...</p>
+                </div>
+              )}
+            </div>
+          </GlassCard>
           <GlassCard delay={0.6} className="p-6 md:p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 md:p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
               <Zap size={120} />
@@ -1000,7 +1061,9 @@ export default function Home() {
               ))}
             </div>
           </GlassCard>
+        </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
           <GlassCard delay={0.8} className="p-6 md:p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 md:p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
               <Coffee size={120} />
@@ -1139,9 +1202,56 @@ export default function Home() {
               )}
             </div>
 
-            <p className="text-[10px] text-tm-blue-gray/40 uppercase font-black tracking-[0.5em] text-center mt-auto relative z-10">
-              Personalized Growth Neural-Link
-            </p>
+          </GlassCard>
+
+          <GlassCard delay={1.0} className="p-6 md:p-8 border-tm-blue-gray/10 bg-white/5 flex flex-col gap-8 group relative overflow-hidden h-full">
+            <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03] pointer-events-none" />
+            <div className="absolute top-0 right-0 p-6 md:p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
+              <MapIcon size={120} />
+            </div>
+
+            <div className="flex items-center justify-between relative z-10">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
+                  <MapIcon className="text-tm-blue-gray" size={24} /> THE MAP
+                </h3>
+                <p className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-[0.3em]">
+                  World Exploration
+                </p>
+              </div>
+              <div className="hidden sm:block px-3 py-1 bg-tm-yellow/10 rounded-full border border-tm-yellow/20 text-[9px] font-black uppercase tracking-widest text-tm-yellow whitespace-nowrap animate-pulse">
+                Locked
+              </div>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center text-center gap-6 relative z-10">
+              <div className="relative">
+                <div className="absolute inset-0 bg-tm-yellow/20 blur-3xl rounded-full" />
+                <div className="w-24 h-24 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-xl relative">
+                  <Swords size={48} className="text-tm-yellow opacity-20" />
+                  <div className="absolute -bottom-2 -right-2 px-3 py-1 bg-tm-yellow text-tm-purple-dark text-[10px] font-black rounded-lg shadow-xl uppercase italic">
+                    Coming Soon
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-lg font-black uppercase tracking-tighter italic">Expansion in Progress</h4>
+                <p className="text-[10px] text-tm-blue-gray font-black uppercase tracking-widest leading-relaxed max-w-xs mx-auto">
+                  Venture into unknown territories and track your journey across the realm.
+                  <span className="block mt-1 text-tm-yellow opacity-60">Architects are currently drafting the terrain.</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-auto pt-6 border-t border-white/5 relative z-10">
+              <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-tm-blue-gray/40">
+                <span>Fog of War Active</span>
+                <span>0% Explored</span>
+              </div>
+              <div className="w-full h-1 bg-white/5 rounded-full mt-2 overflow-hidden">
+                <div className="w-12 h-full bg-tm-yellow/20 animate-pulse" />
+              </div>
+            </div>
           </GlassCard>
         </div>
       </section>

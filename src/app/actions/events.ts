@@ -16,7 +16,7 @@ export async function getEventsByDateRange(start: Date, end: Date) {
       gte(event.date, startStr),
       lte(event.date, endStr)
     )
-  ).orderBy(asc(event.startTime));
+  ).orderBy(asc(event.date), asc(event.startTime));
 }
 
 export async function getDashboardTasks(targetDateStr: string) {
@@ -29,7 +29,7 @@ export async function getDashboardTasks(targetDateStr: string) {
         lte(event.date, targetDateStr)
       )
     )
-  ).orderBy(asc(event.startTime));
+  ).orderBy(asc(event.date), asc(event.startTime));
 }
 
 export async function addEvent(data: {
