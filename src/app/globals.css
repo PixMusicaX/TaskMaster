@@ -7,7 +7,8 @@
 }
 
 /* Base Rank Colors (Novice) */
-:root, :root[data-rank="Novice"] {
+:root,
+:root[data-rank="Novice"] {
   --tm-yellow: #F2C230;
   --tm-orange-light: #F2921D;
   --tm-orange-dark: #F24F13;
@@ -26,11 +27,15 @@
 }
 
 :root[data-rank="Vanguard"] {
-  --tm-yellow: #B8860B; /* Ochre Gold */
-  --tm-orange-light: #C18E92; /* Dusty Rose */
-  --tm-orange-dark: #5F8A8B; /* Steel Teal */
+  --tm-yellow: #B8860B;
+  /* Ochre Gold */
+  --tm-orange-light: #C18E92;
+  /* Dusty Rose */
+  --tm-orange-dark: #5F8A8B;
+  /* Steel Teal */
   --tm-blue-gray: #64748B;
-  --tm-purple-dark: #1A202C; /* Dusty Midnight */
+  --tm-purple-dark: #1A202C;
+  /* Dusty Midnight */
   --tm-red: #C18E92;
 }
 
@@ -44,21 +49,33 @@
 }
 
 :root[data-rank="Knight"] {
-  --tm-yellow: #09090B; /* Midnight Black */
-  --tm-orange-light: #71717A; /* Steel Silver */
-  --tm-orange-dark: #27272A; /* Onyx */
-  --tm-blue-gray: #52525B; /* Iron Grey */
-  --tm-purple-dark: #000000; /* Pure Black */
-  --tm-red: #D4D4D8; /* Silver Shine */
+  --tm-yellow: #09090B;
+  /* Midnight Black */
+  --tm-orange-light: #71717A;
+  /* Steel Silver */
+  --tm-orange-dark: #27272A;
+  /* Onyx */
+  --tm-blue-gray: #52525B;
+  /* Iron Grey */
+  --tm-purple-dark: #000000;
+  /* Pure Black */
+  --tm-red: #D4D4D8;
+  /* Silver Shine */
 }
 
 :root[data-rank="Champion"] {
-  --tm-yellow: #FBBF24; /* Amber Gold */
-  --tm-orange-light: #8B5CF6; /* Bright Violet */
-  --tm-orange-dark: #6D28D9; /* Deep Purple */
-  --tm-blue-gray: #5B21B6; /* Royal Indigo */
-  --tm-purple-dark: #2E1065; /* Dark Amethyst */
-  --tm-red: #A855F7; /* Purple accent */
+  --tm-yellow: #FBBF24;
+  /* Amber Gold */
+  --tm-orange-light: #8B5CF6;
+  /* Bright Violet */
+  --tm-orange-dark: #6D28D9;
+  /* Deep Purple */
+  --tm-blue-gray: #5B21B6;
+  /* Royal Indigo */
+  --tm-purple-dark: #2E1065;
+  /* Dark Amethyst */
+  --tm-red: #A855F7;
+  /* Purple accent */
 }
 
 :root[data-rank="Sentinel"] {
@@ -80,21 +97,33 @@
 }
 
 :root[data-rank="Grandmaster"] {
-  --tm-yellow: #F59E0B; /* Amber/Gold */
-  --tm-orange-light: #BE123C; /* Rose Crimson */
-  --tm-orange-dark: #881337; /* Deep Ruby */
-  --tm-blue-gray: #3F3F46; /* Zinc */
-  --tm-purple-dark: #18181B; /* Obsidian */
-  --tm-red: #E11D48; /* Bright Rose */
+  --tm-yellow: #F59E0B;
+  /* Amber/Gold */
+  --tm-orange-light: #BE123C;
+  /* Rose Crimson */
+  --tm-orange-dark: #881337;
+  /* Deep Ruby */
+  --tm-blue-gray: #3F3F46;
+  /* Zinc */
+  --tm-purple-dark: #18181B;
+  /* Obsidian */
+  --tm-red: #E11D48;
+  /* Bright Rose */
 }
 
-:root[data-rank="Ascendant"] {
-  --tm-yellow: #F43F5E; /* Rose/Red */
-  --tm-orange-light: #F59E0B; /* Amber/Orange */
-  --tm-orange-dark: #10B981; /* Emerald/Green */
-  --tm-blue-gray: #3B82F6; /* Blue */
-  --tm-purple-dark: #8B5CF6; /* Purple */
-  --tm-red: #EC4899; /* Pink */
+:root[data-rank="Hero"] {
+  --tm-yellow: #F43F5E;
+  /* Rose/Red */
+  --tm-orange-light: #F59E0B;
+  /* Amber/Orange */
+  --tm-orange-dark: #10B981;
+  /* Emerald/Green */
+  --tm-blue-gray: #3B82F6;
+  /* Blue */
+  --tm-purple-dark: #8B5CF6;
+  /* Purple */
+  --tm-red: #EC4899;
+  /* Pink */
 }
 
 .dark {
@@ -103,30 +132,75 @@
 }
 
 /* Dark mode overrides */
-.dark[data-rank="Novice"] { --tm-blue-gray: #8082A6; }
-.dark[data-rank="Squire"] { --tm-blue-gray: #A1A1AA; }
-.dark[data-rank="Vanguard"] { --tm-blue-gray: #94A3B8; --tm-yellow: #B8860B; --tm-red: #C18E92; }
-.dark[data-rank="Veteran"] { --tm-blue-gray: #94A3B8; --tm-yellow: #60A5FA; --tm-red: #3B82F6; }
-.dark[data-rank="Knight"] { 
-  --tm-blue-gray: #94A3B8; /* Bright Steel */
-  --tm-yellow: #FFFFFF; /* Pure White */
-  --tm-red: #E2E8F0; /* Platinum */
-  --tm-purple-dark: #000000; /* Absolute Black */
-  --tm-orange-light: #CBD5E1; /* Silver */
-  --tm-orange-dark: #F8FAFC; /* White Chrome */
+.dark[data-rank="Novice"] {
+  --tm-blue-gray: #8082A6;
 }
-.dark[data-rank="Champion"] { --tm-blue-gray: #C4B5FD; --tm-yellow: #FDE047; --tm-red: #D8B4FE; }
-.dark[data-rank="Sentinel"] { --tm-blue-gray: #94A3B8; --tm-yellow: #34D399; --tm-red: #10B981; }
-.dark[data-rank="Paladin"] { --tm-blue-gray: #94A3B8; --tm-yellow: #FDE047; --tm-red: #38BDF8; }
-.dark[data-rank="Grandmaster"] { 
-  --tm-yellow: #FDE047; /* Bright Gold */
-  --tm-orange-light: #F43F5E; /* Bright Rose */
-  --tm-orange-dark: #BE123C; /* Ruby */
-  --tm-blue-gray: #A1A1AA; /* Light Zinc */
-  --tm-purple-dark: #4C0519; /* Dark Ruby Obsidian */
-  --tm-red: #FB7185; /* Soft Rose */
+
+.dark[data-rank="Squire"] {
+  --tm-blue-gray: #A1A1AA;
 }
-.dark[data-rank="Ascendant"] { 
+
+.dark[data-rank="Vanguard"] {
+  --tm-blue-gray: #94A3B8;
+  --tm-yellow: #B8860B;
+  --tm-red: #C18E92;
+}
+
+.dark[data-rank="Veteran"] {
+  --tm-blue-gray: #94A3B8;
+  --tm-yellow: #60A5FA;
+  --tm-red: #3B82F6;
+}
+
+.dark[data-rank="Knight"] {
+  --tm-blue-gray: #94A3B8;
+  /* Bright Steel */
+  --tm-yellow: #FFFFFF;
+  /* Pure White */
+  --tm-red: #E2E8F0;
+  /* Platinum */
+  --tm-purple-dark: #000000;
+  /* Absolute Black */
+  --tm-orange-light: #CBD5E1;
+  /* Silver */
+  --tm-orange-dark: #F8FAFC;
+  /* White Chrome */
+}
+
+.dark[data-rank="Champion"] {
+  --tm-blue-gray: #C4B5FD;
+  --tm-yellow: #FDE047;
+  --tm-red: #D8B4FE;
+}
+
+.dark[data-rank="Sentinel"] {
+  --tm-blue-gray: #94A3B8;
+  --tm-yellow: #34D399;
+  --tm-red: #10B981;
+}
+
+.dark[data-rank="Paladin"] {
+  --tm-blue-gray: #94A3B8;
+  --tm-yellow: #FDE047;
+  --tm-red: #38BDF8;
+}
+
+.dark[data-rank="Grandmaster"] {
+  --tm-yellow: #FDE047;
+  /* Bright Gold */
+  --tm-orange-light: #F43F5E;
+  /* Bright Rose */
+  --tm-orange-dark: #BE123C;
+  /* Ruby */
+  --tm-blue-gray: #A1A1AA;
+  /* Light Zinc */
+  --tm-purple-dark: #4C0519;
+  /* Dark Ruby Obsidian */
+  --tm-red: #FB7185;
+  /* Soft Rose */
+}
+
+.dark[data-rank="Hero"] {
   --tm-yellow: #F87171;
   --tm-orange-light: #FBBF24;
   --tm-orange-dark: #34D399;
@@ -138,7 +212,7 @@
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
+
   --color-tm-yellow: var(--tm-yellow);
   --color-tm-orange-light: var(--tm-orange-light);
   --color-tm-orange-dark: var(--tm-orange-dark);
@@ -160,6 +234,7 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -168,9 +243,11 @@ body {
 .thin-scrollbar::-webkit-scrollbar {
   height: 4px;
 }
+
 .thin-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .thin-scrollbar::-webkit-scrollbar-thumb {
   background: var(--tm-blue-gray);
   border-radius: 10px;
@@ -197,7 +274,8 @@ body {
     font-size: 14px;
     line-height: 1.6;
   }
-  body > * {
+
+  body>* {
     display: none !important;
   }
 }

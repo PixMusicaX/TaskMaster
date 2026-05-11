@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-type Rank = "Novice" | "Squire" | "Vanguard" | "Veteran" | "Knight" | "Sentinel" | "Paladin" | "Grandmaster";
+type Rank = "Novice" | "Squire" | "Vanguard" | "Veteran" | "Knight" | "Champion" | "Sentinel" | "Paladin" | "Grandmaster" | "Hero";
 
 interface ThemeContextType {
   theme: "light" | "dark";

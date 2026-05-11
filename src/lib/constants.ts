@@ -17,5 +17,5 @@ export const RPG_TITLES = [
   { minLevel: 30, title: "Sentinel" },
   { minLevel: 35, title: "Paladin" },
   { minLevel: 40, title: "Grandmaster" },
-  { minLevel: 45, title: "Ascendant" },
+  { minLevel: 45, title: "Hero" },
 ];

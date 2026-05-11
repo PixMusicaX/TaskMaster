@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 type BiomeKey =
   | "temperate" | "tropical" | "arctic" | "desert" | "swamp"
   | "volcanic" | "alpine" | "savanna" | "tundra" | "mushroom"
-  | "deadlands" | "coastal";
+  | "deadlands" | "coastal" | "hero";
 
 interface MapParams {
   seed: number;
@@ -148,8 +148,16 @@ const BIOMES: Record<BiomeKey, BiomePalette> = {
     deepWater: [40, 30, 80], shallowWater: [70, 55, 130], shore: [160, 140, 180],
     lowland: [100, 70, 130], midland: [120, 55, 145], highland: [85, 55, 110], peak: [185, 160, 200],
     volcano: [90, 25, 60], volcanoGlow: [200, 50, 150],
-    road: [155, 120, 170], cityColor: [190, 160, 205], forestColor: [130, 40, 160], riverColor: [80, 100, 180],
-    glowTint: [160, 80, 220],
+    road: [140, 120, 160], cityColor: [180, 150, 210], forestColor: [120, 40, 180], riverColor: [100, 150, 220],
+    sporeTint: [180, 100, 255],
+  },
+  hero: {
+    label: "Heroic", icon: "🌈", desc: "The Radiant Rainbow Realm",
+    deepWater: [40, 60, 150], shallowWater: [80, 120, 220], shore: [255, 230, 150],
+    lowland: [100, 255, 180], midland: [150, 150, 255], highland: [255, 150, 200], peak: [255, 255, 255],
+    volcano: [255, 100, 100], volcanoGlow: [255, 255, 100],
+    road: [255, 255, 255], cityColor: [255, 255, 200], forestColor: [150, 255, 100], riverColor: [100, 255, 255],
+    rainbowEffect: true,
   },
   deadlands: {
     label: "Deadlands", icon: "💀", desc: "Ashen wastes & bone-dry crags",
@@ -176,6 +184,13 @@ const SUFFIXES = ["burg", "crest", "dale", "deep", "fen", "ford", "gate", "haven
   "moor", "mouth", "reach", "ridge", "shire", "spire", "stead", "ton", "vale", "ward", "watch", "well", "wick"];
 function cityName(rng: () => number) {
   return PREFIXES[Math.floor(rng() * PREFIXES.length)] + SUFFIXES[Math.floor(rng() * SUFFIXES.length)];
+}
+
+function rainbow(t: number): number[] {
+  const r = Math.sin(t * 6.28 + 0) * 127 + 128;
+  const g = Math.sin(t * 6.28 + 2.09) * 127 + 128;
+  const b = Math.sin(t * 6.28 + 4.18) * 127 + 128;
+  return [r, g, b];
 }
 
 // ─── Terrain colour ───────────────────────────────────────────────────────────
@@ -242,6 +257,17 @@ function generateMap(params: MapParams, W: number, H: number, h: Float32Array): 
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const v = h[y * W + x];
       if (v > wl + 0.38) blendPixel(x, y, sr, sg, sb, Math.min(1, (v - wl - 0.38) * 5) * 0.85);
+    }
+  }
+
+  // Rainbow haze (Hero rank exclusive)
+  if (pal.rainbowEffect) {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const hv = h[y * W + x];
+      if (hv > wl) {
+        const [rr, rg, rb] = rainbow(x / W * 0.5 + y / H * 0.5 + hv * 0.2);
+        blendPixel(x, y, rr, rg, rb, 0.12);
+      }
     }
   }
 
@@ -629,6 +655,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number
 // ─── Gamified World Map Widget ────────────────────────────────────────────────
 import { RPG_TITLES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useTheme } from "./theme-provider";
 
 const SIZES: Record<string, [number, number]> = { small: [480, 360], medium: [640, 480], large: [800, 600] };
 
@@ -684,15 +711,16 @@ const BIOME_MATRIX: Record<string, Record<"low" | "balanced" | "peak", { name: s
     balanced: { name: "The Floating Archives", biome: "coastal", params: { waterLevel: 0.6, volcanos: 0, forestDensity: 0.4, cities: 8 } },
     peak: { name: "The Celestial Peak", biome: "alpine", params: { waterLevel: 0.2, volcanos: 0, forestDensity: 0.2, cities: 5 } },
   },
-  Ascendant: {
-    low: { name: "The Dying Sun", biome: "volcanic", params: { waterLevel: 0.1, volcanos: 5, forestDensity: 0.0, cities: 2 } },
-    balanced: { name: "The Eternal Realm", biome: "mushroom", params: { waterLevel: 0.4, volcanos: 0, forestDensity: 0.7, cities: 6 } },
-    peak: { name: "The Throne of Light", biome: "coastal", params: { waterLevel: 0.3, volcanos: 0, forestDensity: 0.5, cities: 8 } },
+  Hero: {
+    low: { name: "The Prism Void", biome: "hero", params: { waterLevel: 0.1, volcanos: 3, forestDensity: 0.1, cities: 3 } },
+    balanced: { name: "The Rainbow Realm", biome: "hero", params: { waterLevel: 0.4, volcanos: 0, forestDensity: 0.7, cities: 7 } },
+    peak: { name: "The Citadel of Light", biome: "hero", params: { waterLevel: 0.3, volcanos: 0, forestDensity: 0.5, cities: 12 } },
   }
 };
 
 export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: any[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { rank } = useTheme();
   const [randomOffset] = useState(() => Math.floor(Math.random() * 1000000));
   const [mapConfig, setMapConfig] = useState<{ 
     name: string; 
@@ -746,21 +774,23 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
     else if (performanceScore <= 40) performance = "low";
 
     const level = profile?.level || 1;
+    // Prioritize the global rank (which supports manual overrides) over calculated level
+    const currentTitle = rank || "Novice";
+    
     const titles = [...RPG_TITLES].reverse();
-    const currentTitleIndex = titles.findIndex(t => level >= t.minLevel);
-    const currentTitle = titles[currentTitleIndex]?.title || "Novice";
+    const currentTitleIndex = titles.findIndex(t => currentTitle === t.title);
 
     const matrixEntry = BIOME_MATRIX[currentTitle] || BIOME_MATRIX["Novice"];
     const perfConfig = matrixEntry[performance];
 
-    const nextTitle = currentTitleIndex > 0 ? titles[currentTitleIndex - 1].title : "Ascendant";
-    const nextEntry = BIOME_MATRIX[nextTitle] || BIOME_MATRIX["Ascendant"];
+    const nextTitle = currentTitleIndex > 0 ? titles[currentTitleIndex - 1].title : "Hero";
+    const nextEntry = BIOME_MATRIX[nextTitle] || BIOME_MATRIX["Hero"];
     
     const allStops = [
-      { name: matrixEntry["low"].name, biome: matrixEntry["low"].biome },
-      { name: matrixEntry["balanced"].name, biome: matrixEntry["balanced"].biome },
-      { name: matrixEntry["peak"].name, biome: matrixEntry["peak"].biome },
-      { name: nextEntry["low"].name, biome: nextEntry["low"].biome },
+      { name: matrixEntry?.["low"]?.name || "The Wilds", biome: matrixEntry?.["low"]?.biome || "temperate" },
+      { name: matrixEntry?.["balanced"]?.name || "The Plains", biome: matrixEntry?.["balanced"]?.biome || "temperate" },
+      { name: matrixEntry?.["peak"]?.name || "The Citadel", biome: matrixEntry?.["peak"]?.biome || "temperate" },
+      { name: nextEntry?.["low"]?.name || "The Beyond", biome: nextEntry?.["low"]?.biome || "hero" },
     ];
 
     // Filter out current biome and take top 3
