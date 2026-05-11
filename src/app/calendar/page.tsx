@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import GlassCard from "@/components/glass-card";
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Brain, Coins, HeartPulse, Users, Lock, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Brain, Coins, HeartPulse, Users, Lock, Calendar as CalendarIcon } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent, getAllEvents, cleanupDuplicateSpecialDays } from "@/app/actions/events";
@@ -369,7 +369,30 @@ export default function CalendarPage() {
             <GlassCard className="hidden lg:flex flex-col p-0 overflow-x-auto thin-scrollbar border-tm-blue-gray/10">
               <div className="min-w-[700px] flex flex-col h-full">
                 <div className="p-6 flex items-center justify-between bg-white/5 border-b border-tm-blue-gray/10">
-                  <h2 className="text-2xl font-black text-tm-purple-dark dark:text-tm-yellow">{format(currentDate, "MMMM yyyy")}</h2>
+                  <div className="relative group">
+                    <button 
+                      onClick={(e) => {
+                        const input = e.currentTarget.nextElementSibling as HTMLInputElement;
+                        if (input.showPicker) input.showPicker();
+                        else input.click();
+                      }}
+                      className="flex items-center gap-2 text-2xl font-black text-tm-purple-dark dark:text-tm-yellow"
+                    >
+                      {format(currentDate, "MMMM yyyy")}
+                      <ChevronDown size={20} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                    <input
+                      type="month"
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full z-10"
+                      value={format(currentDate, "yyyy-MM")}
+                      onChange={(e) => {
+                        const [y, m] = e.target.value.split("-");
+                        if (y && m) {
+                          setCurrentDate(new Date(parseInt(y), parseInt(m) - 1, 1));
+                        }
+                      }}
+                    />
+                  </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCurrentDate(subMonths(currentDate, 1))}
@@ -482,7 +505,30 @@ export default function CalendarPage() {
           {/* Mobile Mini Calendar */}
           <GlassCard className="lg:hidden p-4 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-tm-purple-dark dark:text-tm-yellow">{format(currentDate, "MMMM yyyy")}</h2>
+              <div className="relative group">
+                <button 
+                  onClick={(e) => {
+                    const input = e.currentTarget.nextElementSibling as HTMLInputElement;
+                    if (input.showPicker) input.showPicker();
+                    else input.click();
+                  }}
+                  className="flex items-center gap-2 text-xl font-black text-tm-purple-dark dark:text-tm-yellow"
+                >
+                  {format(currentDate, "MMMM yyyy")}
+                  <ChevronDown size={18} className="opacity-40" />
+                </button>
+                <input
+                  type="month"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full z-10"
+                  value={format(currentDate, "yyyy-MM")}
+                  onChange={(e) => {
+                    const [y, m] = e.target.value.split("-");
+                    if (y && m) {
+                      setCurrentDate(new Date(parseInt(y), parseInt(m) - 1, 1));
+                    }
+                  }}
+                />
+              </div>
               <div className="flex gap-1">
                 <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-2 text-tm-blue-gray hover:text-tm-yellow"><ChevronLeft size={20} /></button>
                 <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-2 text-tm-blue-gray hover:text-tm-yellow"><ChevronRight size={20} /></button>
