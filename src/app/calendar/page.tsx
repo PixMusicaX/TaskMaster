@@ -33,6 +33,8 @@ export default function CalendarPage() {
   const [isTabularOpen, setIsTabularOpen] = useState(false);
   const [allEventsForTable, setAllEventsForTable] = useState<any[]>([]);
 
+  const [updatingEvents, setUpdatingEvents] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
@@ -158,9 +160,18 @@ export default function CalendarPage() {
   }
 
   async function handleToggle(id: string, current: boolean) {
-    await toggleEventCompletion(id, !current);
-    await fetchEvents(false);
-    window.dispatchEvent(new CustomEvent("profile-updated"));
+    setUpdatingEvents(prev => new Set(prev).add(id));
+    try {
+      await toggleEventCompletion(id, !current);
+      await fetchEvents(false);
+      window.dispatchEvent(new CustomEvent("profile-updated"));
+    } finally {
+      setUpdatingEvents(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
   }
 
   const selectedEvents = events.filter(e => isSameDay(new Date(e.startTime || e.date), selectedDate));
@@ -500,9 +511,11 @@ export default function CalendarPage() {
                           <div className="flex items-center gap-3">
                             {event.type === "task" && (
                               <button
-                                onClick={() => handleToggle(event.id, event.completed)}
+                                onClick={updatingEvents.has(event.id) ? undefined : () => handleToggle(event.id, event.completed)}
+                                disabled={updatingEvents.has(event.id)}
                                 className={cn(
                                   "w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center",
+                                  updatingEvents.has(event.id) && "opacity-50 pointer-events-none",
                                   event.completed ? "bg-tm-yellow border-tm-yellow" : "border-tm-blue-gray/20 hover:border-tm-yellow"
                                 )}
                               >

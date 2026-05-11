@@ -102,6 +102,12 @@ export default function Home() {
   const [reliefLoading, setReliefLoading] = useState(false);
   const [prepLoading, setPrepLoading] = useState(false);
 
+  const [updatingHabits, setUpdatingHabits] = useState<Set<string>>(new Set());
+  const [updatingTasks, setUpdatingTasks] = useState<Set<string>>(new Set());
+  const [updatingSmart, setUpdatingSmart] = useState(false);
+  const [updatingRelief, setUpdatingRelief] = useState<Set<string>>(new Set());
+  const [updatingPrep, setUpdatingPrep] = useState(false);
+
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
   const scale = useTransform(scrollYProgress, [0, 0.15], [1, 0.95]);
@@ -223,11 +229,20 @@ export default function Home() {
   }, []);
 
   async function handleHabitToggle(habitId: string, currentStatus: boolean) {
-    await toggleHabitLog(habitId, todayStr, !currentStatus);
-    const [data, prof] = await Promise.all([getHabits(), getProfile()]);
-    setHabits(data);
-    setProfile(prof);
-    window.dispatchEvent(new CustomEvent("profile-updated"));
+    setUpdatingHabits(prev => new Set(prev).add(habitId));
+    try {
+      await toggleHabitLog(habitId, todayStr, !currentStatus);
+      const [data, prof] = await Promise.all([getHabits(), getProfile()]);
+      setHabits(data);
+      setProfile(prof);
+      window.dispatchEvent(new CustomEvent("profile-updated"));
+    } finally {
+      setUpdatingHabits(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(habitId);
+        return newSet;
+      });
+    }
   }
 
   // Midnight Reload Logic
@@ -244,36 +259,55 @@ export default function Home() {
   }, [todayStr]);
 
   async function handleTaskToggle(id: string, current: boolean) {
-    await toggleEventCompletion(id, !current);
-    const [taskData, prof] = await Promise.all([
-      getDashboardTasks(todayStr),
-      getProfile()
-    ]);
-    setTasks(taskData);
-    setProfile(prof);
-    window.dispatchEvent(new CustomEvent("profile-updated"));
+    setUpdatingTasks(prev => new Set(prev).add(id));
+    try {
+      await toggleEventCompletion(id, !current);
+      const [taskData, prof] = await Promise.all([
+        getDashboardTasks(todayStr),
+        getProfile()
+      ]);
+      setTasks(taskData);
+      setProfile(prof);
+      window.dispatchEvent(new CustomEvent("profile-updated"));
+    } finally {
+      setUpdatingTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
   }
 
   async function handleSmartToggle() {
     if (!smartMission) return;
-    const newStatus = !smartMission.completed;
-    await toggleSmartMission(smartMission.id, newStatus);
-    const [data, prof] = await Promise.all([getSmartMission(todayStr), getProfile()]);
-    setSmartMission(data);
-    setProfile(prof);
-    if (newStatus) {
-      window.dispatchEvent(new CustomEvent("profile-updated"));
+    setUpdatingSmart(true);
+    try {
+      const newStatus = !smartMission.completed;
+      await toggleSmartMission(smartMission.id, newStatus);
+      const [data, prof] = await Promise.all([getSmartMission(todayStr), getProfile()]);
+      setSmartMission(data);
+      setProfile(prof);
+      if (newStatus) {
+        window.dispatchEvent(new CustomEvent("profile-updated"));
+      }
+    } finally {
+      setUpdatingSmart(false);
     }
   }
 
   async function handlePrepToggle() {
     if (!prepTip) return;
-    const newStatus = !prepTip.completed;
-    setPrepTip({ ...prepTip, completed: newStatus });
-    await togglePreparationTip(prepTip.id, newStatus);
-    const prof = await getProfile();
-    setProfile(prof);
-    window.dispatchEvent(new CustomEvent("profile-updated"));
+    setUpdatingPrep(true);
+    try {
+      const newStatus = !prepTip.completed;
+      setPrepTip({ ...prepTip, completed: newStatus });
+      await togglePreparationTip(prepTip.id, newStatus);
+      const prof = await getProfile();
+      setProfile(prof);
+      window.dispatchEvent(new CustomEvent("profile-updated"));
+    } finally {
+      setUpdatingPrep(false);
+    }
   }
 
   async function handleRegeneratePrep() {
@@ -285,19 +319,29 @@ export default function Home() {
 
   async function handleReliefToggle(index: number = 0) {
     if (!relief) return;
-    const isCompleted = index === 0 ? relief.completed : index === 1 ? relief.alt1Completed : relief.alt2Completed;
-    const newStatus = !isCompleted;
-    await toggleReliefRecommendation(relief.id, newStatus, index);
+    const key = `${relief.id}-${index}`;
+    setUpdatingRelief(prev => new Set(prev).add(key));
+    try {
+      const isCompleted = index === 0 ? relief.completed : index === 1 ? relief.alt1Completed : relief.alt2Completed;
+      const newStatus = !isCompleted;
+      await toggleReliefRecommendation(relief.id, newStatus, index);
 
-    const updatedRelief = { ...relief };
-    if (index === 0) updatedRelief.completed = newStatus;
-    else if (index === 1) updatedRelief.alt1Completed = newStatus;
-    else if (index === 2) updatedRelief.alt2Completed = newStatus;
-    setRelief(updatedRelief);
+      const updatedRelief = { ...relief };
+      if (index === 0) updatedRelief.completed = newStatus;
+      else if (index === 1) updatedRelief.alt1Completed = newStatus;
+      else if (index === 2) updatedRelief.alt2Completed = newStatus;
+      setRelief(updatedRelief);
 
-    const prof = await getProfile();
-    setProfile(prof);
-    window.dispatchEvent(new CustomEvent("profile-updated"));
+      const prof = await getProfile();
+      setProfile(prof);
+      window.dispatchEvent(new CustomEvent("profile-updated"));
+    } finally {
+      setUpdatingRelief(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(key);
+        return newSet;
+      });
+    }
   }
 
   async function handleRegenerate() {
@@ -353,8 +397,10 @@ export default function Home() {
                       <button
                         key={habit.id}
                         onClick={() => handleHabitToggle(habit.id, isDone)}
+                        disabled={updatingHabits.has(habit.id)}
                         className={cn(
                           "w-full flex items-center gap-4 p-4 rounded-[1.5rem] border transition-all text-left group/card",
+                          updatingHabits.has(habit.id) && "opacity-50 pointer-events-none",
                           isDone
                             ? "bg-tm-yellow/10 border-tm-yellow/20 opacity-50"
                             : "bg-white/5 border-white/10 hover:border-tm-yellow/40 hover:bg-tm-yellow/[0.03] shadow-lg"
@@ -418,8 +464,10 @@ export default function Home() {
                       <button
                         key={task.id}
                         onClick={() => !isEvent && handleTaskToggle(task.id, task.completed)}
+                        disabled={updatingTasks.has(task.id)}
                         className={cn(
                           "w-full flex flex-col gap-2 p-4 rounded-[1.5rem] border transition-all text-left group/card",
+                          updatingTasks.has(task.id) && "opacity-50 pointer-events-none",
                           task.completed && !isEvent
                             ? "bg-tm-blue-gray/5 border-transparent opacity-40 grayscale"
                             : cn(
@@ -547,9 +595,10 @@ export default function Home() {
                     </div>
                   ) : prepTip && (
                     <div
-                      onClick={handlePrepToggle}
+                      onClick={updatingPrep ? undefined : handlePrepToggle}
                       className={cn(
                         "group/prep p-4 rounded-[1.25rem] border transition-all cursor-pointer relative overflow-hidden",
+                        updatingPrep && "opacity-50 pointer-events-none",
                         prepTip.completed
                           ? "bg-tm-purple-dark/20 border-tm-purple-dark/30 dark:bg-tm-yellow/10 dark:border-tm-yellow/20 opacity-50 grayscale-[0.5]"
                           : "bg-white/5 border-white/10 hover:border-tm-purple-dark/40 hover:bg-tm-purple-dark/[0.03] dark:hover:border-tm-yellow/40 dark:hover:bg-tm-yellow/[0.03] shadow-xl dark:hover:shadow-[0_0_20px_rgba(242,194,48,0.15)]"
@@ -587,9 +636,10 @@ export default function Home() {
                   {/* Smart Mission Card */}
                   {smartMission && (
                     <div
-                      onClick={handleSmartToggle}
+                      onClick={updatingSmart ? undefined : handleSmartToggle}
                       className={cn(
                         "group/mission p-4 rounded-[1.25rem] border transition-all cursor-pointer relative overflow-hidden",
+                        updatingSmart && "opacity-50 pointer-events-none",
                         smartMission.completed
                           ? "bg-tm-yellow/10 border-tm-yellow/20 opacity-50 grayscale-[0.5]"
                           : "bg-white/5 border-white/10 hover:border-tm-yellow/40 hover:bg-tm-yellow/[0.03] shadow-xl dark:hover:shadow-[0_0_20px_rgba(242,194,48,0.15)]"
@@ -643,9 +693,10 @@ export default function Home() {
                   {/* Relief Primary Path Copy */}
                   {relief && (
                     <div
-                      onClick={() => handleReliefToggle(0)}
+                      onClick={updatingRelief.has(`${relief.id}-0`) ? undefined : () => handleReliefToggle(0)}
                       className={cn(
                         "group/relief p-4 rounded-[1.25rem] border transition-all cursor-pointer relative overflow-hidden",
+                        updatingRelief.has(`${relief.id}-0`) && "opacity-50 pointer-events-none",
                         relief.completed
                           ? "bg-tm-blue-gray/10 border-tm-blue-gray/20 opacity-50 grayscale-[0.5]"
                           : "bg-white/5 border-white/10 hover:border-tm-blue-gray/40 hover:bg-tm-blue-gray/[0.03] shadow-xl dark:hover:shadow-[0_0_20px_rgba(148,163,184,0.15)]"
@@ -942,9 +993,11 @@ export default function Home() {
                       Primary Path
                     </div>
                     <button
-                      onClick={() => handleReliefToggle(0)}
+                      onClick={updatingRelief.has(`${relief.id}-0`) ? undefined : () => handleReliefToggle(0)}
+                      disabled={updatingRelief.has(`${relief.id}-0`)}
                       className={cn(
                         "w-full text-left p-6 rounded-[2rem] border transition-all relative overflow-hidden group/card shadow-2xl",
+                        updatingRelief.has(`${relief.id}-0`) && "opacity-50 pointer-events-none",
                         relief.completed
                           ? "bg-tm-yellow/10 border-tm-yellow/40 shadow-inner opacity-50 grayscale-[0.5]"
                           : "bg-white/5 border-white/10 hover:border-tm-yellow/30 hover:bg-white/10"
@@ -989,9 +1042,11 @@ export default function Home() {
                           return (
                             <button
                               key={i}
-                              onClick={() => handleReliefToggle(i + 1)}
+                              onClick={updatingRelief.has(`${relief.id}-${i + 1}`) ? undefined : () => handleReliefToggle(i + 1)}
+                              disabled={updatingRelief.has(`${relief.id}-${i + 1}`)}
                               className={cn(
                                 "flex flex-col gap-3 p-5 rounded-[1.5rem] border transition-all text-left group/alt relative overflow-hidden",
+                                updatingRelief.has(`${relief.id}-${i + 1}`) && "opacity-50 pointer-events-none",
                                 isAltCompleted
                                   ? "bg-tm-yellow/5 border-tm-yellow/10 opacity-40 grayscale"
                                   : "bg-white/[0.02] border-white/5 hover:border-tm-yellow/20 hover:bg-white/[0.05] shadow-lg"
