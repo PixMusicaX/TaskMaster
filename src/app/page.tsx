@@ -1220,7 +1220,7 @@ export default function Home() {
                   <MapIcon className="text-tm-blue-gray" size={24} /> THE MAP
                 </h3>
                 <p className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-[0.3em]">
-                  World Exploration
+                  Embrace The Journey
                 </p>
               </div>
               <div className="hidden sm:flex items-center gap-2">

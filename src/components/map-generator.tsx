@@ -71,6 +71,8 @@ interface BiomePalette {
   sandDune?: number[];
   ashTint?: number[];
   glowTint?: number[];
+  sporeTint?: number[];
+  rainbowEffect?: boolean;
 }
 
 const BIOMES: Record<BiomeKey, BiomePalette> = {
@@ -783,7 +785,7 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
     const matrixEntry = BIOME_MATRIX[currentTitle] || BIOME_MATRIX["Novice"];
     const perfConfig = matrixEntry[performance];
 
-    const nextTitle = currentTitleIndex > 0 ? titles[currentTitleIndex - 1].title : "Hero";
+    const nextTitle = titles[(currentTitleIndex - 1 + titles.length) % titles.length].title;
     const nextEntry = BIOME_MATRIX[nextTitle] || BIOME_MATRIX["Hero"];
     
     const allStops = [
@@ -791,12 +793,14 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
       { name: matrixEntry?.["balanced"]?.name || "The Plains", biome: matrixEntry?.["balanced"]?.biome || "temperate" },
       { name: matrixEntry?.["peak"]?.name || "The Citadel", biome: matrixEntry?.["peak"]?.biome || "temperate" },
       { name: nextEntry?.["low"]?.name || "The Beyond", biome: nextEntry?.["low"]?.biome || "hero" },
+      { name: nextEntry?.["balanced"]?.name || "The Horizon", biome: nextEntry?.["balanced"]?.biome || "hero" },
+      { name: nextEntry?.["peak"]?.name || "The Zenith", biome: nextEntry?.["peak"]?.biome || "hero" },
     ];
 
-    // Filter out current biome and take top 3
+    // Filter out current biome and take top 5
     const nextStops = allStops
       .filter(s => s.name !== perfConfig.name)
-      .slice(0, 3);
+      .slice(0, 5);
 
     // High sensitivity seed: changes completely with even 1 XP + random session offset
     const seed = (level * 7777) + (profile?.xp || 0) + (performance.length * 123) + randomOffset;
@@ -890,13 +894,11 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
           </span>
         </div>
         
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-wrap gap-1.5 justify-center">
           {mapConfig.nextStops.map((stop, i) => (
-            <div key={i} className="py-2.5 px-1.5 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-1.5 hover:bg-white/10 transition-colors group/stop text-center min-w-0">
-              <div className="w-6 h-6 rounded-md bg-tm-yellow/5 border border-tm-yellow/10 flex items-center justify-center shrink-0 group-hover/stop:bg-tm-yellow/10 transition-colors">
-                <span className="text-[10px]">{BIOMES[stop.biome].icon}</span>
-              </div>
-              <h5 className="text-[10px] font-black uppercase text-foreground/90 tracking-widest leading-tight truncate w-full px-1">{stop.name}</h5>
+            <div key={i} className="flex-[0_0_calc(33.33%-6px)] py-2.5 px-1 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-colors group/stop text-center min-w-0">
+              <span className="text-[10px] opacity-70 group-hover/stop:opacity-100 transition-opacity mb-0.5">{BIOMES[stop.biome].icon}</span>
+              <h5 className="text-[9px] font-black uppercase text-foreground/90 tracking-tighter leading-tight w-full px-1 whitespace-normal break-words">{stop.name}</h5>
             </div>
           ))}
         </div>
