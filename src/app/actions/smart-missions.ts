@@ -43,7 +43,8 @@ export async function getSmartMission(clientDateStr?: string) {
             recentTasks: taskData.map((t: any) => ({
               title: t.title,
               type: t.type,
-              startTime: t.startTime
+              startTime: t.startTime,
+              completed: t.completed
             })),
             recentNotes: notesData.map((n: any) => n.content),
             missionHistory: history.map((m: any) => ({ title: m.title, completed: m.completed })),

@@ -22,7 +22,7 @@ Active Habits: ${context.habits.join(", ") || "None"}
 ═══════════════════════════════
 RECENT ACTIVITY (LAST 7 DAYS)
 ═══════════════════════════════
-Activities: ${context.recentTasks.map(t => `- [${t.type.toUpperCase()}] ${t.title} (${t.startTime ? new Date(t.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "All Day"})`).join("\n") || "No recent activities"}
+Activities: ${context.recentTasks.map(t => `- [${t.type.toUpperCase()}] ${t.title} (${t.startTime ? new Date(t.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "All Day"}) [${t.completed ? "COMPLETED" : "PENDING"}]`).join("\n") || "No recent activities"}
 Notes     : ${context.recentNotes.map(n => n.slice(0, 120)).join(" | ") || "No recent notes"}
 
 ═══════════════════════════════
@@ -94,7 +94,7 @@ Weather : ${context.weather || "Unknown"} (${context.temp || "???"}°C)
 USER CONTEXT (LAST 7 DAYS)
 ═══════════════════════════════
 Notes: ${context.recentNotes.map(n => n.slice(0, 120)).join(" | ") || "No recent notes"}
-Tasks: ${context.recentTasks.map(t => t.title).join(", ") || "No recent tasks"}
+Tasks: ${context.recentTasks.map(t => `${t.title} [${t.completed ? "COMPLETED" : "PENDING"}]`).join(", ") || "No recent tasks"}
 
 ═══════════════════════════════
 RECOMMENDATION HISTORY

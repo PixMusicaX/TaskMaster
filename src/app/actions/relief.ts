@@ -82,7 +82,10 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
                 return Array.isArray(parsed) ? parsed.map((p: any) => p.text).join(" ") : n.content;
               } catch (e) { return n.content; }
             }),
-            recentTasks: taskData.map((t: any) => ({ title: t.title })),
+            recentTasks: taskData.map((t: any) => ({
+              title: t.title,
+              completed: t.completed
+            })),
             history: history.map((r: any) => ({ title: r.title, type: r.type })),
             today
           });
