@@ -18,6 +18,7 @@ import { cn, getSpecialDayColors } from "@/lib/utils";
 import { RPG_TITLES, XP_VALUES } from "@/lib/constants";
 import { PremiumLoader } from "@/components/loader";
 import RecapModal from "@/components/RecapModal";
+import TaskmasterDialog from "@/components/taskmaster-dialog";
 import MoodRadar from "@/components/mood-radar";
 import CharacterStatsRadar from "@/components/character-stats-radar";
 import { WorldMapWidget } from "@/components/map-generator";
@@ -98,6 +99,7 @@ export default function Home() {
   const [recapData, setRecapData] = useState<any>(null);
 
   const [showRecap, setShowRecap] = useState(false);
+  const [showTaskmaster, setShowTaskmaster] = useState(false);
   const [smartMission, setSmartMission] = useState<any>(null);
   const [relief, setRelief] = useState<any>(null);
   const [prepTip, setPrepTip] = useState<any>(null);
@@ -1240,6 +1242,23 @@ export default function Home() {
             </div>
           </GlassCard>
         </div>
+
+        {/* Taskmaster Summon Button */}
+        <div className="w-full max-w-6xl flex justify-center mt-8">
+          <button
+            onClick={() => setShowTaskmaster(true)}
+            className="group relative px-8 py-4 bg-tm-purple-dark border border-tm-yellow/30 rounded-[2rem] hover:bg-tm-purple-dark/80 transition-all shadow-[0_0_30px_rgba(242,194,48,0.15)] hover:shadow-[0_0_40px_rgba(242,194,48,0.3)] flex items-center gap-4 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-tm-yellow/0 via-tm-yellow/10 to-tm-yellow/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+            <div className="w-10 h-10 rounded-xl bg-tm-yellow/20 flex items-center justify-center relative z-10">
+              <MessageSquare className="text-tm-yellow" size={20} />
+            </div>
+            <div className="text-left relative z-10">
+              <p className="text-xs font-black text-tm-yellow tracking-[0.2em] uppercase">Need Guidance?</p>
+              <p className="text-lg font-black text-white italic tracking-tight">Ask The Taskmaster</p>
+            </div>
+          </button>
+        </div>
       </section>
 
       {recapData && (
@@ -1249,6 +1268,11 @@ export default function Home() {
           onClose={() => setShowRecap(false)}
         />
       )}
+
+      <TaskmasterDialog 
+        isOpen={showTaskmaster} 
+        onClose={() => setShowTaskmaster(false)} 
+      />
     </div>
   );
 }

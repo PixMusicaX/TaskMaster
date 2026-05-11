@@ -133,3 +133,9 @@ export const habitLogRelations = relations(habitLog, ({ one }) => ({
     references: [habit.id],
   }),
 }));
+
+export const taskmasterQueryCount = pgTable("TaskmasterQueryCount", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  date: text("date").unique().notNull(), // Format: YYYY-MM-DD
+  count: integer("count").default(0).notNull(),
+});
