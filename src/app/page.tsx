@@ -20,6 +20,7 @@ import { PremiumLoader } from "@/components/loader";
 import RecapModal from "@/components/RecapModal";
 import MoodRadar from "@/components/mood-radar";
 import CharacterStatsRadar from "@/components/character-stats-radar";
+import { WorldMapWidget } from "@/components/map-generator";
 
 function TaskIcon({ title, className, size = 14 }: { title: string, className?: string, size?: number }) {
   const t = title.toLowerCase();
@@ -114,6 +115,8 @@ export default function Home() {
   const [updatingSmart, setUpdatingSmart] = useState(false);
   const [updatingRelief, setUpdatingRelief] = useState<Set<string>>(new Set());
   const [updatingPrep, setUpdatingPrep] = useState(false);
+
+  const [mapRefreshKey, setMapRefreshKey] = useState(0);
 
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
@@ -1220,38 +1223,20 @@ export default function Home() {
                   World Exploration
                 </p>
               </div>
-              <div className="hidden sm:block px-3 py-1 bg-tm-yellow/10 rounded-full border border-tm-yellow/20 text-[9px] font-black uppercase tracking-widest text-tm-yellow whitespace-nowrap animate-pulse">
-                Locked
-              </div>
-            </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center text-center gap-6 relative z-10">
-              <div className="relative">
-                <div className="absolute inset-0 bg-tm-yellow/20 blur-3xl rounded-full" />
-                <div className="w-24 h-24 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-xl relative">
-                  <Swords size={48} className="text-tm-yellow opacity-20" />
-                  <div className="absolute -bottom-2 -right-2 px-3 py-1 bg-tm-yellow text-tm-purple-dark text-[10px] font-black rounded-lg shadow-xl uppercase italic">
-                    Coming Soon
-                  </div>
+              <div className="hidden sm:flex items-center gap-2">
+                {process.env.NODE_ENV === 'development' && (
+                  <button onClick={() => setMapRefreshKey(k => k + 1)} className="p-1.5 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-tm-blue-gray hover:text-tm-yellow transition-all" title="Reload Map">
+                    <RotateCw size={12} />
+                  </button>
+                )}
+                <div className="px-3 py-1 bg-tm-yellow/10 rounded-full border border-tm-yellow/20 text-[9px] font-black uppercase tracking-widest text-tm-yellow whitespace-nowrap">
+                  En Route
                 </div>
               </div>
-              <div className="space-y-2">
-                <h4 className="text-lg font-black uppercase tracking-tighter italic">Expansion in Progress</h4>
-                <p className="text-[10px] text-tm-blue-gray font-black uppercase tracking-widest leading-relaxed max-w-xs mx-auto">
-                  Venture into unknown territories and track your journey across the realm.
-                  <span className="block mt-1 text-tm-yellow opacity-60">Architects are currently drafting the terrain.</span>
-                </p>
-              </div>
             </div>
 
-            <div className="mt-auto pt-6 border-t border-white/5 relative z-10">
-              <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-tm-blue-gray/40">
-                <span>Fog of War Active</span>
-                <span>0% Explored</span>
-              </div>
-              <div className="w-full h-1 bg-white/5 rounded-full mt-2 overflow-hidden">
-                <div className="w-12 h-full bg-tm-yellow/20 animate-pulse" />
-              </div>
+            <div className="flex-1 flex flex-col relative z-10 min-h-[300px]">
+              <WorldMapWidget key={mapRefreshKey} profile={profile} moodData={moodData} />
             </div>
           </GlassCard>
         </div>
