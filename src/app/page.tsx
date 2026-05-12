@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Clock from "@/components/clock";
 import GlassCard from "@/components/glass-card";
-import { Swords, Brain, Coins, HeartPulse, Users, RotateCw, CheckCircle2, History, Zap, Lock, AlertCircle, Plus, Check, Clock as ClockIcon, TrendingUp, Calendar, Film, Music, Coffee, Dumbbell, MapPin, CloudSun, History as HistoryIcon, Sparkles, Crown, Trophy, Book, GraduationCap, Code, Terminal, Gamepad2, Target, Mic, Phone, Mail, MessageSquare, Laptop, Wallet, Home as HomeIcon, PenTool, Map as MapIcon, Moon, Lightbulb, Bath, ShoppingCart, Utensils, Plane, Camera, Palette, Briefcase, Mic2, Eye } from "lucide-react";
+import { Swords, Brain, Coins, HeartPulse, Users, RotateCw, CheckCircle2, History, Zap, Lock, AlertCircle, Plus, Check, Clock as ClockIcon, TrendingUp, Calendar, Film, Music, Coffee, Dumbbell, MapPin, CloudSun, History as HistoryIcon, Sparkles, Crown, Trophy, Book, GraduationCap, Code, Terminal, Gamepad2, Target, Mic, Phone, Mail, MessageSquare, Laptop, Wallet, Home as HomeIcon, PenTool, Map as MapIcon, Moon, Lightbulb, Bath, ShoppingCart, Utensils, Plane, Camera, Palette, Briefcase, Mic2, Eye, Newspaper } from "lucide-react";
 import { format, subDays, isSameDay, addDays, subMonths } from "date-fns";
 import { getHabits, toggleHabitLog } from "@/app/actions/habits";
 import { getEventsByDateRange, toggleEventCompletion, getDashboardTasks, syncMonthlyHolidays } from "@/app/actions/events";
@@ -770,7 +770,12 @@ export default function Home() {
                         {relief.type === 'song' && <Music size={70} />}
                         {relief.type === 'food' && <Coffee size={70} />}
                         {relief.type === 'activity' && <Dumbbell size={70} />}
-                        {!['movie', 'song', 'food', 'activity'].includes(relief.type) && <Coffee size={70} />}
+                        {relief.type === 'game' && <Gamepad2 size={70} />}
+                        {relief.type === 'book' && <Book size={70} />}
+                        {relief.type === 'podcast' && <Mic size={70} />}
+                        {relief.type === 'place' && <MapPin size={70} />}
+                        {relief.type === 'article' && <Newspaper size={70} />}
+                        {!['movie', 'song', 'food', 'activity', 'game', 'book', 'podcast', 'place', 'article'].includes(relief.type) && <Coffee size={70} />}
                       </div>
 
                       <div className="flex items-start gap-3 relative z-10">
@@ -784,7 +789,12 @@ export default function Home() {
                               {relief.type === 'song' && <Music size={16} className="text-tm-blue-gray" />}
                               {relief.type === 'food' && <Coffee size={16} className="text-tm-blue-gray" />}
                               {relief.type === 'activity' && <Dumbbell size={16} className="text-tm-blue-gray" />}
-                              {!['movie', 'song', 'food', 'activity'].includes(relief.type) && <Coffee size={16} className="text-tm-blue-gray" />}
+                              {relief.type === 'game' && <Gamepad2 size={16} className="text-tm-blue-gray" />}
+                              {relief.type === 'book' && <Book size={16} className="text-tm-blue-gray" />}
+                              {relief.type === 'podcast' && <Mic size={16} className="text-tm-blue-gray" />}
+                              {relief.type === 'place' && <MapPin size={16} className="text-tm-blue-gray" />}
+                              {relief.type === 'article' && <Newspaper size={16} className="text-tm-blue-gray" />}
+                              {!['movie', 'song', 'food', 'activity', 'game', 'book', 'podcast', 'place', 'article'].includes(relief.type) && <Coffee size={16} className="text-tm-blue-gray" />}
                             </>
                           )}
                         </div>
@@ -1137,6 +1147,11 @@ export default function Home() {
                               {relief.type === 'song' && <Music size={12} />}
                               {relief.type === 'food' && <Coffee size={12} />}
                               {relief.type === 'activity' && <Dumbbell size={12} />}
+                              {relief.type === 'game' && <Gamepad2 size={12} />}
+                              {relief.type === 'book' && <Book size={12} />}
+                              {relief.type === 'podcast' && <Mic size={12} />}
+                              {relief.type === 'place' && <MapPin size={12} />}
+                              {relief.type === 'article' && <Newspaper size={12} />}
                               {relief.type || 'Suggestion'}
                             </span>
                             <span className="text-xs font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">+{relief.xpReward === 5 ? 10 : relief.xpReward} XP</span>
@@ -1181,10 +1196,15 @@ export default function Home() {
                                     <Check size={16} className="text-tm-purple-dark" />
                                   ) : (
                                     <>
-                                      {alt.type === 'movie' && <Film size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                     {alt.type === 'movie' && <Film size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
                                       {alt.type === 'song' && <Music size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
                                       {alt.type === 'food' && <Coffee size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
                                       {alt.type === 'activity' && <Dumbbell size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                      {alt.type === 'game' && <Gamepad2 size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                      {alt.type === 'book' && <Book size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                      {alt.type === 'podcast' && <Mic size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                      {alt.type === 'place' && <MapPin size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                                      {alt.type === 'article' && <Newspaper size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
                                     </>
                                   )}
                                 </div>
@@ -1222,7 +1242,7 @@ export default function Home() {
                   <MapIcon className="text-tm-blue-gray" size={24} /> THE MAP
                 </h3>
                 <p className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-[0.3em]">
-                  Embrace The Journey
+                  Feel The Journey
                 </p>
               </div>
               <div className="hidden sm:flex items-center gap-2">
@@ -1269,9 +1289,9 @@ export default function Home() {
         />
       )}
 
-      <TaskmasterDialog 
-        isOpen={showTaskmaster} 
-        onClose={() => setShowTaskmaster(false)} 
+      <TaskmasterDialog
+        isOpen={showTaskmaster}
+        onClose={() => setShowTaskmaster(false)}
       />
     </div>
   );

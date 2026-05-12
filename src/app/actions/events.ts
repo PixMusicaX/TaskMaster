@@ -32,6 +32,47 @@ export async function getDashboardTasks(targetDateStr: string) {
   ).orderBy(asc(event.date), asc(event.startTime));
 }
 
+export async function syncRecurringEvents() {
+  const recurringEvents = await db.select().from(event).where(eq(event.repeatsYearly, true));
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3];
+  
+  let totalInserted = 0;
+
+  for (const sourceEvent of recurringEvents) {
+    const [_, month, day] = sourceEvent.date.split("-");
+    for (const year of years) {
+      const targetDate = `${year}-${month}-${day}`;
+      
+      // Don't overwrite the source event itself if it's in this year
+      if (targetDate === sourceEvent.date) continue;
+
+      const [existing] = await db.select().from(event).where(
+        and(
+          eq(event.title, sourceEvent.title),
+          eq(event.date, targetDate),
+          eq(event.type, sourceEvent.type)
+        )
+      );
+
+      if (!existing) {
+        // Create a copy for the future year
+        const { id, createdAt, ...eventData } = sourceEvent;
+        await db.insert(event).values({
+          ...eventData,
+          date: targetDate,
+          completed: false,
+          isApi: true, // Mark instances as system-managed
+          startTime: sourceEvent.startTime ? new Date(new Date(sourceEvent.startTime).setFullYear(year)) : null,
+          endTime: sourceEvent.endTime ? new Date(new Date(sourceEvent.endTime).setFullYear(year)) : null,
+        });
+        totalInserted++;
+      }
+    }
+  }
+  return totalInserted;
+}
+
 export async function addEvent(data: {
   title: string;
   description?: string;
@@ -41,11 +82,32 @@ export async function addEvent(data: {
   type: string;
   tier?: string;
   notification?: boolean;
+  repeatsYearly?: boolean;
 }) {
   const [newEvent] = await db.insert(event).values(data).returning();
+  if (data.repeatsYearly) {
+    await syncRecurringEvents();
+  }
   revalidatePath("/calendar");
   revalidatePath("/");
   return newEvent;
+}
+
+export async function updateEvent(id: string, data: any) {
+  const [existing] = await db.select().from(event).where(eq(event.id, id));
+  if (existing?.isApi) return;
+  const [updatedEvent] = await db.update(event)
+    .set(data)
+    .where(eq(event.id, id))
+    .returning();
+    
+  if (data.repeatsYearly || existing?.repeatsYearly) {
+    await syncRecurringEvents();
+  }
+  
+  revalidatePath("/calendar");
+  revalidatePath("/");
+  return updatedEvent;
 }
 
 export async function toggleEventCompletion(id: string, completed: boolean) {
@@ -73,25 +135,28 @@ export async function toggleEventCompletion(id: string, completed: boolean) {
 
 export async function deleteEvent(id: string) {
   const [existing] = await db.select().from(event).where(eq(event.id, id));
-  if (existing?.isApi && existing.type !== "special_day") return;
-  await db.delete(event).where(eq(event.id, id));
+  if (!existing) return;
+
+  if (existing.isApi && existing.type !== "special_day") return;
+
+  if (existing.repeatsYearly) {
+    // If it's a recurring event, delete all instances across years
+    const [_, month, day] = existing.date.split("-");
+    await db.delete(event).where(
+      and(
+        eq(event.title, existing.title),
+        eq(event.type, existing.type),
+        like(event.date, `%-${month}-${day}`)
+      )
+    );
+  } else {
+    // Otherwise just delete the single instance
+    await db.delete(event).where(eq(event.id, id));
+  }
+
   revalidatePath("/calendar");
   revalidatePath("/");
 }
-
-export async function updateEvent(id: string, data: any) {
-  const [existing] = await db.select().from(event).where(eq(event.id, id));
-  if (existing?.isApi) return;
-  const [updatedEvent] = await db.update(event)
-    .set(data)
-    .where(eq(event.id, id))
-    .returning();
-    
-  revalidatePath("/calendar");
-  revalidatePath("/");
-  return updatedEvent;
-}
-
 
 export async function getAllEvents() {
   return await db.select().from(event).orderBy(asc(event.startTime));
@@ -157,9 +222,12 @@ export async function syncMonthlyHolidays(testDateStr?: string) {
     }
   }
   
+  // Also sync user recurring events
+  const userRecurringInserted = await syncRecurringEvents();
+  
   revalidatePath("/calendar");
   revalidatePath("/");
-  return { success: true, message: `Inserted ${totalInserted} new holidays` };
+  return { success: true, message: `Inserted ${totalInserted} new holidays and ${userRecurringInserted} recurring user events` };
 }
 
 export async function cleanupDuplicateSpecialDays() {

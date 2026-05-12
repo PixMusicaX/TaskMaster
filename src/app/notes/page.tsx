@@ -375,19 +375,28 @@ export default function NotesPage() {
                   const existingNote = recentNotes.find(n => n.date === dateStr);
                   const isSelected = isSameDay(day, selectedDate);
                   const cardMood = existingNote?.mood || "neutral";
+                  const noteContent = (() => {
+                      if (!existingNote) return "No entry yet.";
+                      try {
+                        const parsed = JSON.parse(existingNote.content);
+                        return parsed.map((l: any) => l.text).filter(Boolean).join(" • ");
+                      } catch (e) {
+                        return existingNote.content.replace(/\n/g, " • ");
+                      }
+                    })();
 
                   return (
                     <button
                       key={dateStr}
                       onClick={() => handleDateChange(day)}
                       className={cn(
-                        "w-full text-left p-4 rounded-2xl border transition-all relative overflow-hidden group",
+                        "w-full text-left p-4 rounded-2xl border transition-all relative overflow-hidden group min-h-[82px] flex flex-col justify-center",
                         isSelected ? "bg-tm-yellow/20 border-tm-yellow shadow-lg scale-[1.02]" : "bg-white/40 dark:bg-white/5 border-white/20 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10 shadow-sm",
                         !isSelected && cardMood === "good" && "bg-tm-yellow/10 border-tm-yellow/30",
                         !isSelected && cardMood === "bad" && "bg-tm-orange-dark/10 border-tm-orange-dark/30"
                       )}
                     >
-                      <div className="flex justify-between items-start">
+                      <div className="flex justify-between items-start w-full">
                         <p className="text-[10px] font-black text-tm-blue-gray uppercase tracking-widest">{format(day, "EEE, MMM d")}</p>
                         {existingNote?.mood && (
                           <span className="text-sm opacity-80 group-hover:opacity-100 transition-all">
@@ -395,17 +404,11 @@ export default function NotesPage() {
                           </span>
                         )}
                       </div>
-                      <p className={`text-sm line-clamp-1 mt-1 font-medium ${existingNote ? "text-foreground" : "text-tm-blue-gray/40 italic"}`}>
-                        {existingNote ? (
-                          (() => {
-                            try {
-                              const parsed = JSON.parse(existingNote.content);
-                              return parsed.map((l: any) => l.text).filter(Boolean).join(" • ");
-                            } catch (e) {
-                              return existingNote.content.replace(/\n/g, " • ");
-                            }
-                          })()
-                        ) : "No entry yet."}
+                      <p className={cn(
+                        "text-sm line-clamp-1 mt-1 font-medium h-5 w-full",
+                        existingNote ? "text-foreground" : "text-tm-blue-gray/40 italic"
+                      )}>
+                        {noteContent}
                       </p>
                       {isSelected && (
                         <motion.div

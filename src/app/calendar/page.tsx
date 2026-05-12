@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import GlassCard from "@/components/glass-card";
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Brain, Coins, HeartPulse, Users, Lock, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Brain, Coins, HeartPulse, Users, Lock, RotateCw, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent, getAllEvents, cleanupDuplicateSpecialDays } from "@/app/actions/events";
@@ -29,8 +29,10 @@ export default function CalendarPage() {
   const [newTier, setNewTier] = useState("main");
   const [newTime, setNewTime] = useState("12:00");
   const [newNotification, setNewNotification] = useState(true);
+  const [newRepeatsYearly, setNewRepeatsYearly] = useState(false);
   const [newDateStr, setNewDateStr] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isTabularOpen, setIsTabularOpen] = useState(false);
+  const [isPickingMonth, setIsPickingMonth] = useState(false);
   const [allEventsForTable, setAllEventsForTable] = useState<any[]>([]);
 
   const [updatingEvents, setUpdatingEvents] = useState<Set<string>>(new Set());
@@ -120,6 +122,7 @@ export default function CalendarPage() {
     setNewTime(format(dateObj, "HH:mm"));
     setNewDateStr(format(dateObj, "yyyy-MM-dd"));
     setNewNotification(event.notification ?? true);
+    setNewRepeatsYearly(event.repeatsYearly ?? false);
     setSelectedDate(dateObj);
     setShowAdd(true);
   }
@@ -138,6 +141,7 @@ export default function CalendarPage() {
       tier: newType === "task" ? "side" : newTier,
       startTime: eventTime,
       notification: newNotification,
+      repeatsYearly: newRepeatsYearly,
     };
 
     if (editingEvent) {
@@ -158,6 +162,7 @@ export default function CalendarPage() {
     setNewTime("12:00");
     setNewDateStr(format(selectedDate, "yyyy-MM-dd"));
     setNewNotification(true);
+    setNewRepeatsYearly(false);
     setEditingEvent(null);
     setShowAdd(false);
   }
@@ -182,6 +187,25 @@ export default function CalendarPage() {
       });
     }
   }
+
+  const sortedAndFilteredArchive = useMemo(() => {
+    const sorted = [...allEventsForTable].sort((a, b) => {
+      const dateA = new Date(a.startTime || a.date).getTime();
+      const dateB = new Date(b.startTime || b.date).getTime();
+      return dateB - dateA;
+    });
+
+    const userEvents = allEventsForTable.filter(e => e.type === "task" || e.type === "event");
+    if (userEvents.length === 0) return sorted;
+
+    const maxUserDate = Math.max(...userEvents.map(e => new Date(e.startTime || e.date).getTime()));
+
+    return sorted.filter(e => {
+      if (e.type !== "special_day") return true;
+      const d = new Date(e.startTime || e.date).getTime();
+      return d <= maxUserDate;
+    });
+  }, [allEventsForTable]);
 
   const selectedEvents = events
     .filter((e) => isSameDay(new Date(e.startTime || e.date), selectedDate))
@@ -332,6 +356,27 @@ export default function CalendarPage() {
                         </div>
                       )}
                     </div>
+                    
+                    {newType === "special_day" && (
+                      <button
+                        onClick={() => setNewRepeatsYearly(!newRepeatsYearly)}
+                        className={cn(
+                          "w-full flex items-center justify-between p-4 rounded-2xl border transition-all",
+                          newRepeatsYearly ? "bg-tm-yellow/10 border-tm-yellow text-tm-yellow" : "bg-white/5 border-white/10 text-tm-blue-gray"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <RotateCw size={18} className={cn(newRepeatsYearly && "animate-spin-slow")} />
+                          <span className="text-sm font-bold">Repeats Yearly</span>
+                        </div>
+                        <div className={cn("w-10 h-5 rounded-full relative transition-colors", newRepeatsYearly ? "bg-tm-yellow" : "bg-tm-blue-gray/30")}>
+                          <motion.div
+                            animate={{ x: newRepeatsYearly ? 20 : 2 }}
+                            className="absolute top-1 w-3 h-3 bg-white rounded-full"
+                          />
+                        </div>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => setNewNotification(!newNotification)}
@@ -369,7 +414,61 @@ export default function CalendarPage() {
             <GlassCard className="hidden lg:flex flex-col p-0 overflow-x-auto thin-scrollbar border-tm-blue-gray/10">
               <div className="min-w-[700px] flex flex-col h-full">
                 <div className="p-6 flex items-center justify-between bg-white/5 border-b border-tm-blue-gray/10">
-                  <h2 className="text-2xl font-black text-tm-purple-dark dark:text-tm-yellow">{format(currentDate, "MMMM yyyy")}</h2>
+                  {isPickingMonth ? (
+                    <div className="flex items-center gap-3 animate-in fade-in zoom-in-95 duration-300">
+                      <div className="relative group/sel">
+                        <select 
+                          value={format(currentDate, "MM")}
+                          onChange={(e) => {
+                            const newDate = new Date(currentDate);
+                            newDate.setMonth(parseInt(e.target.value) - 1);
+                            setCurrentDate(newDate);
+                          }}
+                          className="appearance-none bg-tm-yellow/10 border border-tm-yellow/30 rounded-xl px-4 py-2 text-sm font-black uppercase tracking-widest outline-none focus:border-tm-yellow transition-all cursor-pointer pr-10 text-tm-purple-dark dark:text-tm-yellow hover:bg-tm-yellow/20"
+                        >
+                          {Array.from({ length: 12 }, (_, i) => (
+                            <option key={i} value={(i + 1).toString().padStart(2, '0')} className="bg-tm-purple-dark text-white font-sans uppercase">
+                              {format(new Date(2024, i, 1), "MMMM")}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-tm-yellow/50 group-hover/sel:text-tm-yellow pointer-events-none transition-colors" />
+                      </div>
+
+                      <div className="relative group/sel">
+                        <select
+                          value={format(currentDate, "yyyy")}
+                          onChange={(e) => {
+                            const newDate = new Date(currentDate);
+                            newDate.setFullYear(parseInt(e.target.value));
+                            setCurrentDate(newDate);
+                          }}
+                          className="appearance-none bg-tm-yellow/10 border border-tm-yellow/30 rounded-xl px-4 py-2 text-sm font-black uppercase tracking-widest outline-none focus:border-tm-yellow transition-all cursor-pointer pr-10 text-tm-purple-dark dark:text-tm-yellow hover:bg-tm-yellow/20"
+                        >
+                          {Array.from({ length: 101 }, (_, i) => {
+                            const year = new Date().getFullYear() - 50 + i;
+                            return <option key={year} value={year} className="bg-tm-purple-dark text-white font-sans">{year}</option>;
+                          })}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-tm-yellow/50 group-hover/sel:text-tm-yellow pointer-events-none transition-colors" />
+                      </div>
+                      
+                      <button 
+                        onClick={() => setIsPickingMonth(false)} 
+                        className="p-2 bg-tm-yellow text-tm-purple-dark rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all"
+                      >
+                        <Check size={18} />
+                      </button>
+                    </div>
+                  ) : (
+                    <h2 
+                      onClick={() => setIsPickingMonth(true)}
+                      className="text-2xl font-black text-tm-purple-dark dark:text-tm-yellow cursor-pointer hover:opacity-70 transition-opacity flex items-center gap-2 group"
+                    >
+                      {format(currentDate, "MMMM yyyy")}
+                      <ChevronDown size={18} className="opacity-0 group-hover:opacity-100 transition-all" />
+                    </h2>
+                  )}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setCurrentDate(subMonths(currentDate, 1))}
@@ -483,7 +582,61 @@ export default function CalendarPage() {
             {/* Mobile Mini Calendar */}
             <GlassCard className="lg:hidden p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-black text-tm-purple-dark dark:text-tm-yellow">{format(currentDate, "MMMM yyyy")}</h2>
+                {isPickingMonth ? (
+                  <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="relative">
+                      <select 
+                        value={format(currentDate, "MM")}
+                        onChange={(e) => {
+                          const newDate = new Date(currentDate);
+                          newDate.setMonth(parseInt(e.target.value) - 1);
+                          setCurrentDate(newDate);
+                        }}
+                        className="appearance-none bg-tm-yellow/10 border border-tm-yellow/20 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none focus:border-tm-yellow text-tm-purple-dark dark:text-tm-yellow pr-8"
+                      >
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <option key={i} value={(i + 1).toString().padStart(2, '0')} className="bg-tm-purple-dark text-white">
+                            {format(new Date(2024, i, 1), "MMM")}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={10} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-tm-yellow/50 pointer-events-none" />
+                    </div>
+
+                    <div className="relative">
+                      <select
+                        value={format(currentDate, "yyyy")}
+                        onChange={(e) => {
+                          const newDate = new Date(currentDate);
+                          newDate.setFullYear(parseInt(e.target.value));
+                          setCurrentDate(newDate);
+                        }}
+                        className="appearance-none bg-tm-yellow/10 border border-tm-yellow/20 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none focus:border-tm-yellow text-tm-purple-dark dark:text-tm-yellow pr-8"
+                      >
+                        {Array.from({ length: 101 }, (_, i) => {
+                          const year = new Date().getFullYear() - 50 + i;
+                          return <option key={year} value={year} className="bg-tm-purple-dark text-white">{year}</option>;
+                        })}
+                      </select>
+                      <ChevronDown size={10} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-tm-yellow/50 pointer-events-none" />
+                    </div>
+                    
+                    <button 
+                      onClick={() => setIsPickingMonth(false)} 
+                      className="p-2 bg-tm-yellow text-tm-purple-dark rounded-lg shadow-lg"
+                    >
+                      <Check size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <h2 
+                    onClick={() => setIsPickingMonth(true)}
+                    className="text-xl font-black text-tm-purple-dark dark:text-tm-yellow flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {format(currentDate, "MMMM yyyy")}
+                    <ChevronDown size={16} className="text-tm-blue-gray/50" />
+                  </h2>
+                )}
                 <div className="flex gap-1">
                   <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-2 text-tm-blue-gray hover:text-tm-yellow"><ChevronLeft size={20} /></button>
                   <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-2 text-tm-blue-gray hover:text-tm-yellow"><ChevronRight size={20} /></button>
@@ -663,7 +816,7 @@ export default function CalendarPage() {
             title="Calendar Archive"
             isOpen={isTabularOpen}
             onClose={() => setIsTabularOpen(false)}
-            data={[...allEventsForTable].reverse()}
+            data={sortedAndFilteredArchive}
             columns={[
               {
                 header: "Date", key: "date", render: (val, row) => {
@@ -701,7 +854,7 @@ export default function CalendarPage() {
                       "px-2 py-0.5 rounded text-[10px] font-black uppercase whitespace-nowrap",
                       val === "task" ? "bg-tm-yellow/10 text-tm-yellow" : "bg-tm-orange-light/10 text-tm-orange-light"
                     )}>
-                      <span className="sm:inline hidden">{val}</span>
+                      <span className="sm:inline hidden">{val?.replace("_", " ")}</span>
                       <span className="sm:hidden inline">{val === "task" ? "T" : "E"}</span>
                     </span>
                   </div>

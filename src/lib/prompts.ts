@@ -105,19 +105,24 @@ ${context.history.map(h => `- ${h.title} (${h.type})`).join("\n") || "No previou
 RECOMMENDATION RULES
 ═══════════════════════════════
 WEATHER & MOOD SIGNALS:
-- Hot & sunny        → outdoor activity, cold drink, upbeat song
-- Cold & rainy       → cozy movie, hot food, ambient/lo-fi music
-- Mild & clear       → walk, café visit, podcast
-- Stressed in notes  → slow & calming: instrumental music, comfort food, a bath
-- Busy/productive    → reward-framing: something indulgent or fun
-- Low energy in notes → low-commitment: a short film, familiar comfort food
-- Creative in notes  → feed the creativity: a visually rich film, an inspiring artist
+- Hot & sunny        → outdoor activity, cold drink, upbeat song, a scenic place
+- Cold & rainy       → cozy movie, hot food, ambient/lo-fi music, a book
+- Mild & clear       → walk, café visit, podcast, game
+- Stressed in notes  → slow & calming: instrumental music, comfort food, a bath, short article
+- Busy/productive    → reward-framing: something indulgent, fun game, epic movie
+- Low energy in notes → low-commitment: a short film, familiar comfort food, short podcast
+- Creative in notes  → feed the creativity: visually rich film, inspiring artist, deep-dive book
 
 QUALITY BAR:
 - Movies  : IMDb 7.5+ or a beloved cult classic — name the specific film
 - Songs   : a specific track (not just an artist), matched to their mood
 - Food    : a specific dish or drink, not just "get a coffee"
 - Activity: doable given the weather and location, completable in under 1 hour
+- Games   : a specific title (indie gems or classics)
+- Books   : a specific title (short reads or compelling chapters)
+- Podcasts: a specific episode title and show name
+- Places  : a specific type of location (e.g., "The local botanical garden" or "A quiet library")
+- Articles: a specific topic or publication (e.g., "A Longread on Space Exploration")
 
 VARIETY RULES:
 - Never recommend the same title as anything in recommendation history
@@ -129,6 +134,7 @@ STAT MAPPING
 - Activity      → According to Location and Weather (both indoor and outdoor suggestions)
 - Food          → According to Location and Weather (Both Order and Cooking suggestion)
 - Creative task → According to recent notes and activities
+- Media         → (Game/Book/Podcast/Article) According to interests found in notes
 
 ═══════════════════════════════
 OUTPUT FORMAT
@@ -138,19 +144,19 @@ Return ONLY a valid JSON object. No preamble, no markdown, no extra keys.
 {
   "recommendations": [
     {
-      "title": "Specific name of the movie/song/food/activity",
-      "type": "movie | song | activity | food",
+      "title": "Specific name of the item",
+      "type": "movie | song | activity | food | game | book | podcast | place | article",
       "description": "1-2 sentences. Less than 20 words. Why this is the perfect relief given their weather, mood, and recent activity."
     }
   ],
   "alternatives": [
     {
       "title": "Specific name",
-      "type": "movie | song | activity | food"
+      "type": "movie | song | activity | food | game | book | podcast | place | article"
     },
     {
       "title": "Specific name",
-      "type": "movie | song | activity | food"
+      "type": "movie | song | activity | food | game | book | podcast | place | article"
     }
   ]
 }

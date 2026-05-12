@@ -1,4 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react";
+import { RPG_TITLES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import { useTheme } from "./theme-provider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type BiomeKey =
@@ -654,11 +660,195 @@ function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number
   // ── Border (Removed to fix extra lines on edges) ──────────────────────────
 }
 
-// ─── Gamified World Map Widget ────────────────────────────────────────────────
-import { RPG_TITLES } from "@/lib/constants";
-import { cn } from "@/lib/utils";
-import { useTheme } from "./theme-provider";
+// ─── Map Popup Modal ───────────────────────────────────────────────────────────
+function MapPopupModal({ 
+  mapConfig, 
+  profile, 
+  moodData, 
+  onClose 
+}: { 
+  mapConfig: {
+    name: string;
+    biome: BiomeKey;
+    params: MapParams;
+    performanceScore: number;
+    performanceState: string;
+    nextStops: { name: string; biome: BiomeKey }[];
+  }; 
+  profile: any; 
+  moodData: any[]; 
+  onClose: () => void;
+}) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isClosing, setIsClosing] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Audio Logic
+  useEffect(() => {
+    if (!mounted) return;
+    
+    const audio = audioRef.current;
+    if (audio) {
+      audio.volume = 0;
+      audio.play().catch(err => console.error("Audio play failed:", err));
+      
+      const fadeInterval = setInterval(() => {
+        if (audio.volume < 0.5) {
+          audio.volume = Math.min(0.5, audio.volume + 0.05);
+        } else {
+          clearInterval(fadeInterval);
+        }
+      }, 100);
+      
+      return () => clearInterval(fadeInterval);
+    }
+  }, [mounted]);
+
+  const handleClose = () => {
+    const audio = audioRef.current;
+    setIsClosing(true);
+
+    if (audio) {
+      const fadeInterval = setInterval(() => {
+        if (audio.volume > 0.05) {
+          audio.volume = Math.max(0, audio.volume - 0.05);
+        } else {
+          audio.volume = 0;
+          audio.pause();
+          clearInterval(fadeInterval);
+          onClose();
+        }
+      }, 50);
+    } else {
+      onClose();
+    }
+  };
+
+  // Canvas Logic
+  useEffect(() => {
+    if (!mounted || !mapConfig || !canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const p = mapConfig.params;
+    const [W, H] = [1280, 960];
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d")!;
+    const rng = makePRNG(p.seed);
+    const h = fbm(rng, W, H, 7);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const nx = (x / W) * 2 - 1, ny = (y / H) * 2 - 1;
+      const d = Math.sqrt(nx * nx + ny * ny);
+      h[y * W + x] = h[y * W + x] * 0.7 + Math.max(0, 1 - d * 1.3) * 0.3;
+    }
+    if (["alpine", "volcanic"].includes(p.biome)) {
+      const bump = valueNoise(makePRNG(p.seed + 1234), W, H, W / 6);
+      for (let i = 0; i < h.length; i++) h[i] = Math.min(1, h[i] * 0.85 + bump[i] * 0.25);
+    }
+    const playerProgress = (profile?.levelProgress || 0) / (profile?.nextLevelXP || 100);
+    ctx.putImageData(generateMap(p, W, H, h), 0, 0);
+    drawOverlay(ctx, p, W, H, h, playerProgress);
+  }, [mounted, mapConfig, profile]);
+
+  if (!mounted) return null;
+
+  const musicFile = mapConfig.name.toLowerCase().replace(/\s+/g, "-") + ".mp3";
+  const tornEdge = "polygon(0% 1.5%, 1% 0.5%, 2% 1.2%, 3% 0.2%, 4% 1.8%, 5% 0.4%, 6% 1.1%, 7% 0.1%, 8% 1.6%, 9% 0.3%, 10% 1.3%, 11% 0.5%, 12% 1.7%, 13% 0.2%, 14% 1.4%, 15% 0.6%, 16% 1.9%, 17% 0.3%, 18% 1.2%, 19% 0.4%, 20% 1.5%, 21% 0.1%, 22% 1.8%, 23% 0.4%, 24% 1.3%, 25% 0.6%, 26% 1.6%, 27% 0.2%, 28% 1.4%, 29% 0.5%, 30% 1.7%, 31% 0.3%, 32% 1.1%, 33% 0.6%, 34% 1.8%, 35% 0.4%, 36% 1.3%, 37% 0.1%, 38% 1.6%, 39% 0.5%, 40% 1.4%, 41% 0.2%, 42% 1.9%, 43% 0.4%, 44% 1.1%, 45% 0.6%, 46% 1.7%, 47% 0.3%, 48% 1.5%, 49% 0.1%, 50% 1.8%, 51% 0.4%, 52% 1.3%, 53% 0.6%, 54% 1.6%, 55% 0.2%, 56% 1.4%, 57% 0.5%, 58% 1.7%, 59% 0.3%, 60% 1.1%, 61% 0.6%, 62% 1.8%, 63% 0.4%, 64% 1.3%, 65% 0.1%, 66% 1.6%, 67% 0.5%, 68% 1.4%, 69% 0.2%, 70% 1.9%, 71% 0.4%, 72% 1.1%, 73% 0.6%, 74% 1.7%, 75% 0.3%, 76% 1.5%, 77% 0.1%, 78% 1.8%, 79% 0.4%, 80% 1.3%, 81% 0.6%, 82% 1.6%, 83% 0.2%, 84% 1.4%, 85% 0.5%, 86% 1.7%, 87% 0.3%, 88% 1.1%, 89% 0.6%, 90% 1.8%, 91% 0.4%, 92% 1.3%, 93% 0.1%, 94% 1.6%, 95% 0.5%, 96% 1.4%, 97% 0.2%, 98% 1.9%, 99% 0.4%, 100% 1.5%, 100% 98.5%, 99% 99.6%, 98% 98.1%, 97% 99.8%, 96% 98.2%, 95% 99.6%, 94% 98.9%, 93% 99.9%, 92% 98.4%, 91% 99.7%, 90% 98.7%, 89% 99.5%, 88% 98.3%, 87% 99.8%, 86% 98.6%, 85% 99.4%, 84% 98.1%, 83% 99.7%, 82% 98.8%, 81% 99.6%, 80% 98.5%, 79% 99.9%, 78% 98.2%, 77% 99.6%, 76% 98.7%, 75% 99.4%, 74% 98.3%, 73% 99.8%, 72% 98.9%, 71% 99.6%, 70% 98.1%, 69% 99.8%, 68% 98.6%, 67% 99.5%, 66% 98.4%, 65% 99.9%, 64% 98.7%, 63% 99.6%, 62% 98.2%, 61% 99.4%, 60% 98.9%, 59% 99.7%, 58% 98.3%, 57% 99.8%, 56% 98.6%, 55% 99.8%, 54% 98.4%, 53% 99.4%, 52% 98.7%, 51% 99.6%, 50% 98.2%, 49% 99.9%, 48% 98.5%, 47% 99.7%, 46% 98.4%, 45% 99.4%, 44% 98.7%, 43% 99.9%, 42% 98.1%, 41% 99.8%, 40% 98.5%, 39% 99.5%, 38% 98.4%, 37% 99.9%, 36% 98.7%, 35% 99.6%, 34% 98.2%, 33% 99.4%, 32% 98.9%, 31% 99.7%, 30% 98.3%, 29% 99.8%, 28% 98.6%, 27% 99.8%, 26% 98.4%, 25% 99.4%, 24% 98.7%, 23% 99.6%, 22% 98.2%, 21% 99.9%, 20% 98.5%, 19% 99.7%, 18% 98.4%, 17% 99.4%, 16% 98.7%, 15% 99.9%, 14% 98.1%, 13% 99.8%, 12% 98.5%, 11% 99.5%, 10% 98.4%, 9% 99.9%, 8% 98.7%, 7% 99.6%, 6% 98.2%, 5% 99.4%, 4% 98.9%, 3% 99.7%, 2% 98.3%, 1% 99.8%, 0% 98.5%)";
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-12 overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={handleClose}
+        className="absolute inset-0 bg-black/95 backdrop-blur-3xl"
+      />
+      
+      <motion.button 
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        onClick={handleClose}
+        className="absolute top-8 right-8 z-[10000] p-4 bg-tm-purple-dark hover:bg-tm-orange-dark text-white rounded-full transition-all hover:rotate-90 shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/20"
+      >
+        <X size={32} strokeWidth={3} />
+      </motion.button>
+
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0, rotate: -2 }}
+        animate={{ 
+          scale: isClosing ? 0.8 : 1, 
+          opacity: isClosing ? 0 : 1, 
+          rotate: isClosing ? 2 : 0 
+        }}
+        exit={{ scale: 0.8, opacity: 0, rotate: 2 }}
+        transition={{ type: "spring", damping: 20, stiffness: 100 }}
+        className="relative w-full max-w-6xl h-full flex items-center justify-center"
+      >
+        <div 
+          style={{ clipPath: tornEdge }}
+          className="relative w-full aspect-[4/3] max-h-full bg-[#e6d5b8] shadow-[0_0_120px_rgba(0,0,0,1)] overflow-hidden"
+        >
+          {/* Parchment Overlays */}
+          <div className="absolute inset-0 pointer-events-none z-10 opacity-60 mix-blend-multiply bg-[radial-gradient(circle_at_center,transparent_0%,rgba(139,69,19,0.3)_100%)]" />
+          <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-overlay bg-gradient-to-br from-[#8b4513]/30 via-transparent to-[#4b3621]/50" />
+          
+          {/* Folds Logic */}
+          <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.15] mix-blend-multiply bg-[linear-gradient(90deg,transparent_33%,rgba(0,0,0,0.8)_33.5%,transparent_34%,transparent_66%,rgba(0,0,0,0.8)_66.5%,transparent_67%)]" />
+          <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.1] mix-blend-screen bg-[linear-gradient(90deg,transparent_32.5%,rgba(255,255,255,0.4)_33%,transparent_33.5%,transparent_65.5%,rgba(255,255,255,0.4)_66%,transparent_66.5%)]" />
+          <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.15] mix-blend-multiply bg-[linear-gradient(0deg,transparent_49%,rgba(0,0,0,0.8)_50%,transparent_51%)]" />
+
+          {/* Stains & Grime */}
+          <div className="absolute inset-0 pointer-events-none z-30 opacity-20 mix-blend-multiply bg-[radial-gradient(circle_at_15%_25%,#5d4037_0%,transparent_15%),radial-gradient(circle_at_85%_75%,#5d4037_0%,transparent_20%),radial-gradient(circle_at_50%_10%,#5d4037_0%,transparent_12%)] blur-2xl" />
+          
+          {/* Paper Texture Grain */}
+          <div className="absolute inset-0 pointer-events-none z-20 opacity-[0.05] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]" />
+
+          {/* The Actual Map Content */}
+          <div className="w-full h-full p-2 bg-[#e6d5b8]">
+             <canvas
+                ref={canvasRef}
+                className="w-full h-full object-cover"
+                style={{ 
+                  imageRendering: "pixelated",
+                  filter: "sepia(0.25) contrast(1.15) brightness(1.02) saturate(0.9)"
+                }}
+              />
+          </div>
+
+          {/* Edge Burn/Shadow */}
+          <div 
+            style={{ clipPath: tornEdge }}
+            className="absolute inset-0 pointer-events-none border-[16px] border-black/40 blur-md z-40" 
+          />
+
+          {/* Archaic Location Title at Bottom */}
+          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-50 pointer-events-none text-center w-full">
+            <h2 
+              style={{ fontFamily: "'Georgia', serif" }}
+              className="text-4xl md:text-5xl font-bold text-[#4b3621]/60 italic tracking-[0.2em] uppercase drop-shadow-[0_2px_2px_rgba(255,255,255,0.3)]"
+            >
+              {mapConfig.name}
+            </h2>
+          </div>
+        </div>
+      </motion.div>
+
+      <audio ref={audioRef} loop preload="auto">
+        <source src={`/music/${musicFile}`} type="audio/mpeg" />
+      </audio>
+    </div>,
+    document.body
+  );
+}
+
+// ─── World Map Configuration ──────────────────────────────────────────────────
 const SIZES: Record<string, [number, number]> = { small: [480, 360], medium: [640, 480], large: [800, 600] };
 
 const BIOME_GROUPS: { label: string; keys: BiomeKey[] }[] = [
@@ -724,6 +914,7 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { rank } = useTheme();
   const [randomOffset] = useState(() => Math.floor(Math.random() * 1000000));
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [mapConfig, setMapConfig] = useState<{ 
     name: string; 
     biome: BiomeKey; 
@@ -735,24 +926,26 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
 
   useEffect(() => {
     // 30-day Overall Mood
-    const overallJoy = moodData?.filter(m => m.mood === "good").length || 0;
-    const overallSteady = moodData?.filter(m => m.mood === "neutral").length || 0;
+    const overallJoy = moodData?.filter((m: any) => m.mood === "good").length || 0;
+    const overallSteady = moodData?.filter((m: any) => m.mood === "neutral").length || 0;
     const totalOverall = (moodData?.length || 0) || 1;
     const overallScore = ((overallJoy * 100) + (overallSteady * 50)) / totalOverall;
 
     // 7-day Recent Mood (last 7 entries)
     const recentMoods = moodData?.slice(-7) || [];
-    const recentJoy = recentMoods.filter(m => m.mood === "good").length;
-    const recentSteady = recentMoods.filter(m => m.mood === "neutral").length;
+    const recentJoy = recentMoods.filter((m: any) => m.mood === "good").length;
+    const recentSteady = recentMoods.filter((m: any) => m.mood === "neutral").length;
     const totalRecent = recentMoods.length || 1;
     const recentScore = ((recentJoy * 100) + (recentSteady * 50)) / totalRecent;
 
     // Weighted Mood Score: 70% Recent, 30% Overall
     const moodScore = (recentScore * 0.7) + (overallScore * 0.3);
 
-    // XP Progress score (0 to 100)
-    const progressRatio = profile?.nextLevelXP ? (profile.levelProgress || 0) / profile.nextLevelXP : 0;
-    const xpScore = Math.min(100, Math.max(0, progressRatio * 100));
+    // XP Progress score: Aggregate of 5-level class progression
+    // Within each 5-level class, position determines xp score (0-100)
+    const level = profile?.level || 1;
+    const levelInClass = (level - 1) % 5;
+    const xpScore = (levelInClass / 4) * 100;
 
     // Stat Balance score (0 to 100)
     // Punishes neglecting specific types of tasks
@@ -775,7 +968,6 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
     if (performanceScore >= 60) performance = "peak";
     else if (performanceScore <= 40) performance = "low";
 
-    const level = profile?.level || 1;
     // Prioritize the global rank (which supports manual overrides) over calculated level
     const currentTitle = rank || "Novice";
     
@@ -857,41 +1049,45 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
   const pal = BIOMES[mapConfig.biome];
 
   return (
-    <div className="w-full h-full flex flex-col relative z-10">
-      <div className="relative w-full aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl group/map">
-        <canvas ref={canvasRef} className="w-full h-full object-cover transition-transform duration-1000 group-hover/map:scale-105" style={{ imageRendering: "pixelated" }} />
-        
-        {/* Vignette Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-black/30 pointer-events-none" />
-        
-        {/* Name and Biome label */}
-        <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
-          <div className="space-y-1">
-            <h4 className="text-xl md:text-2xl font-black text-white drop-shadow-md tracking-tighter italic">
-              {mapConfig.name}
-            </h4>
-            <div className="flex items-center gap-2">
-              <span className="text-sm">{pal.icon}</span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/80">{pal.label} Realm</span>
+    <>
+      <div className="w-full h-full flex flex-col relative z-10">
+        <div 
+          onClick={() => setIsFullscreen(true)}
+          className="relative w-full aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl group/map cursor-pointer"
+        >
+          <canvas ref={canvasRef} className="w-full h-full object-cover transition-transform duration-1000 group-hover/map:scale-105" style={{ imageRendering: "pixelated" }} />
+          
+          {/* Vignette Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-black/30 pointer-events-none" />
+          
+          {/* Name and Biome label */}
+          <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
+            <div className="space-y-1">
+              <h4 className="text-xl md:text-2xl font-black text-white drop-shadow-md tracking-tighter italic">
+                {mapConfig.name}
+              </h4>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">{pal.icon}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/80">{pal.label} Realm</span>
+              </div>
+            </div>
+            
+            <div className="hidden sm:block text-right">
+              {/* Labels removed by request */}
             </div>
           </div>
-          
-          <div className="hidden sm:block text-right">
-            {/* Labels removed by request */}
-          </div>
         </div>
-      </div>
-      
-      {/* Possible Next Stops */}
-      <div className="mt-5 space-y-3">
-        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-tm-blue-gray">
-          <span>Adjacent Areas</span>
-          <span className={cn(
-            mapConfig.performanceState === "peak" ? "text-tm-yellow" : 
-            mapConfig.performanceState === "low" ? "text-tm-orange-dark" : "text-tm-blue-gray"
-          )}>
-            Status: {mapConfig.performanceState}
-          </span>
+        
+        {/* Possible Next Stops */}
+        <div className="mt-5 space-y-3">
+          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-tm-blue-gray">
+            <span>Adjacent Areas</span>
+            <span className={cn(
+              mapConfig.performanceState === "peak" ? "text-tm-yellow" : 
+              mapConfig.performanceState === "low" ? "text-tm-orange-dark" : "text-tm-blue-gray"
+            )}>
+              Status: {mapConfig.performanceState}
+            </span>
         </div>
         
         <div className="flex flex-wrap gap-1.5 justify-center">
@@ -903,7 +1099,20 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
           ))}
         </div>
       </div>
-    </div>
+      </div>
+
+      {/* Map Popup Modal */}
+      <AnimatePresence>
+        {isFullscreen && mapConfig && (
+          <MapPopupModal
+            mapConfig={mapConfig}
+            profile={profile}
+            moodData={moodData}
+            onClose={() => setIsFullscreen(false)}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
