@@ -238,7 +238,7 @@ export default function HabitsPage() {
               </button>
               <button
                 onClick={() => setShowAdd(true)}
-                className="flex items-center justify-center gap-2 bg-tm-orange-dark/80 backdrop-blur-xl saturate-150 text-white px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl border border-tm-orange-dark/30 w-full sm:w-auto"
+                className="flex items-center gap-2 bg-tm-yellow backdrop-blur-xl text-tm-purple-dark px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl w-full sm:w-auto"
               >
                 <Plus size={20} /> Add Habit
               </button>

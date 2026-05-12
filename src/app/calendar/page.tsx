@@ -227,7 +227,7 @@ export default function CalendarPage() {
                 resetForm();
                 setShowAdd(true);
               }}
-              className="flex items-center gap-2 bg-tm-yellow backdrop-blur-xl text-tm-purple-dark px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl relative z-10"
+              className="flex items-center gap-2 bg-tm-yellow backdrop-blur-xl text-tm-purple-dark px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl w-full sm:w-auto relative z-10"
             >
               <Plus size={20} /> New Item
             </button>
