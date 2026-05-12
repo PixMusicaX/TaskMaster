@@ -696,7 +696,7 @@ const BIOME_MATRIX: Record<string, Record<"low" | "balanced" | "peak", { name: s
   Champion: {
     low: { name: "The Scorched Arena", biome: "desert", params: { waterLevel: 0.15, volcanos: 1, forestDensity: 0.1, cities: 2 } },
     balanced: { name: "The Victor's Valley", biome: "temperate", params: { waterLevel: 0.3, volcanos: 0, forestDensity: 0.5, cities: 5 } },
-    peak: { name: "The Hall of Fame", biome: "coastal", params: { waterLevel: 0.5, volcanos: 0, forestDensity: 0.4, cities: 7 } },
+    peak: { name: "The Novus Islands", biome: "coastal", params: { waterLevel: 0.5, volcanos: 0, forestDensity: 0.4, cities: 7 } },
   },
   Sentinel: {
     low: { name: "The Shattered Watch", biome: "volcanic", params: { waterLevel: 0.2, volcanos: 3, forestDensity: 0.1, cities: 2 } },
@@ -885,7 +885,7 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
       {/* Possible Next Stops */}
       <div className="mt-5 space-y-3">
         <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-tm-blue-gray">
-          <span>Possible Next Stops</span>
+          <span>Adjacent Areas</span>
           <span className={cn(
             mapConfig.performanceState === "peak" ? "text-tm-yellow" : 
             mapConfig.performanceState === "low" ? "text-tm-orange-dark" : "text-tm-blue-gray"
