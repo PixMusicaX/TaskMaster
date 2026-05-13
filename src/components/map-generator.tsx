@@ -648,14 +648,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number
   });
   ctx.restore();
 
-  // ── Scale ─────────────────────────────────────────────────────────────────
-  ctx.fillStyle = "rgba(240,230,210,0.82)"; ctx.fillRect(20, H - 30, 102, 16);
-  ctx.strokeStyle = "rgba(60,50,35,0.8)"; ctx.lineWidth = 1; ctx.strokeRect(20, H - 30, 102, 16);
-  for (let s = 0; s < 4; s++) {
-    ctx.fillStyle = s % 2 === 0 ? "rgba(60,50,35,0.8)" : "rgba(240,230,210,0.9)"; ctx.fillRect(21 + s * 25, H - 29, 25, 14);
-  }
-  ctx.font = "8px Georgia,serif"; ctx.fillStyle = "rgba(40,30,20,0.9)";
-  ctx.textAlign = "left"; ctx.fillText("0          100 leagues", 24, H - 18);
+  // ── Scale Removed ─────────────────────────────────────────────────────────
 
   // ── Border (Removed to fix extra lines on edges) ──────────────────────────
 }
