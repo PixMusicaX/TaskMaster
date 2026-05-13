@@ -703,21 +703,36 @@ function MapPopupModal({
   }, [mounted]);
 
   const handleClose = () => {
+    if (isClosing) return;
     const audio = audioRef.current;
     setIsClosing(true);
 
+    // Safety fallback: Force close if audio fade logic hangs (e.g., Safari backgrounding)
+    const safetyTimeout = setTimeout(() => {
+      onClose();
+    }, 1200);
+
     if (audio) {
       const fadeInterval = setInterval(() => {
-        if (audio.volume > 0.05) {
-          audio.volume = Math.max(0, audio.volume - 0.05);
-        } else {
-          audio.volume = 0;
-          audio.pause();
+        try {
+          if (audio.volume > 0.05) {
+            audio.volume = Math.max(0, audio.volume - 0.05);
+          } else {
+            audio.volume = 0;
+            audio.pause();
+            clearInterval(fadeInterval);
+            clearTimeout(safetyTimeout);
+            onClose();
+          }
+        } catch (e) {
+          console.error("Audio fade-out failed:", e);
           clearInterval(fadeInterval);
+          clearTimeout(safetyTimeout);
           onClose();
         }
       }, 50);
     } else {
+      clearTimeout(safetyTimeout);
       onClose();
     }
   };
@@ -757,21 +772,11 @@ function MapPopupModal({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-12 overflow-hidden">
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        animate={{ opacity: isClosing ? 0 : 1 }}
         exit={{ opacity: 0 }}
         onClick={handleClose}
-        className="absolute inset-0 bg-black/95 backdrop-blur-3xl"
+        className="absolute inset-0 bg-black/95 backdrop-blur-3xl cursor-pointer"
       />
-      
-      <motion.button 
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.8 }}
-        onClick={handleClose}
-        className="absolute top-8 right-8 z-[10000] p-4 bg-tm-purple-dark hover:bg-tm-orange-dark text-white rounded-full transition-all hover:rotate-90 shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/20"
-      >
-        <X size={32} strokeWidth={3} />
-      </motion.button>
 
       <motion.div
         initial={{ scale: 0.8, opacity: 0, rotate: -2 }}
@@ -832,6 +837,16 @@ function MapPopupModal({
           </div>
         </div>
       </motion.div>
+
+      <motion.button 
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        onClick={handleClose}
+        className="absolute top-6 right-6 sm:top-12 sm:right-12 z-[10001] p-4 bg-tm-purple-dark hover:bg-tm-orange-dark text-white rounded-full transition-all hover:rotate-90 shadow-[0_0_40px_rgba(0,0,0,0.6)] border border-white/20 cursor-pointer pointer-events-auto"
+      >
+        <X size={32} strokeWidth={3} />
+      </motion.button>
 
       <audio ref={audioRef} loop preload="auto">
         <source src={`/music/${musicFile}`} type="audio/mpeg" />
