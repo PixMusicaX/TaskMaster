@@ -11,6 +11,7 @@ export interface Column {
   key: string;
   render?: (value: any, row: any) => React.ReactNode;
   wrap?: boolean;
+  className?: string;
 }
 
 interface TabularViewModalProps {
@@ -104,7 +105,8 @@ export default function TabularViewModal({ title, isOpen, onClose, data, columns
                               key={col.key}
                               className={cn(
                                 "px-3 md:px-6 py-4 md:py-5 text-left text-[10px] font-black text-tm-blue-gray uppercase tracking-widest border-b border-white/10",
-                                col.wrap ? "w-full" : "w-auto"
+                                col.wrap ? "w-full" : "w-auto",
+                                col.className
                               )}
                             >
                               <span className="truncate block">{col.header}</span>
@@ -120,7 +122,7 @@ export default function TabularViewModal({ title, isOpen, onClose, data, columns
                               className="hover:bg-tm-yellow/[0.03] transition-colors group/row"
                             >
                               {columns.map((col) => (
-                                <td key={col.key} className={cn("px-3 md:px-6 py-3 md:py-4", col.wrap ? "whitespace-normal w-full" : "whitespace-nowrap w-auto")}>
+                                <td key={col.key} className={cn("px-3 md:px-6 py-3 md:py-4", col.wrap ? "whitespace-normal w-full" : "whitespace-nowrap w-auto", col.className)}>
                                   <div className="text-sm font-bold text-white/80 group-hover/row:text-white transition-colors">
                                     {col.render ? col.render(row[col.key], row) : String(row[col.key])}
                                   </div>

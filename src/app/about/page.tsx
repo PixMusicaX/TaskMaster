@@ -9,10 +9,11 @@ import { getSmartMissionHistory } from "@/app/actions/smart-missions";
 import { getReliefHistory } from "@/app/actions/relief";
 import { getPreparationTipHistory } from "@/app/actions/preparation";
 import { format, subDays } from "date-fns";
-import { Music, Film, Coffee, Dumbbell, Database, Download, AlertTriangle, Brain } from "lucide-react";
+import { Music, Film, Coffee, Dumbbell, Database, Download, AlertTriangle, Brain, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
 import { generatePruneArchive, deletePrunedData } from "@/app/actions/prune";
+import TabularViewModal from "@/components/TabularViewModal";
 
 export default function AboutPage() {
   const { theme } = useTheme();
@@ -22,8 +23,13 @@ export default function AboutPage() {
   const [preparationHistory, setPreparationHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Modal States
+  const [isSeasonsModalOpen, setIsSeasonsModalOpen] = useState(false);
+  const [isMissionsModalOpen, setIsMissionsModalOpen] = useState(false);
+  const [isPrepsModalOpen, setIsPrepsModalOpen] = useState(false);
+  const [isReliefsModalOpen, setIsReliefsModalOpen] = useState(false);
+
   const [seasonsLimit, setSeasonsLimit] = useState(6);
-  const [missionsLimit, setMissionsLimit] = useState(5);
   const [pruneLoading, setPruneLoading] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<string>("default");
 
@@ -163,7 +169,7 @@ export default function AboutPage() {
         ) : seasonHistory.length > 0 ? (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {seasonHistory.slice(0, seasonsLimit).map((season, idx) => (
+              {seasonHistory.slice(0, 3).map((season, idx) => (
                 <GlassCard key={idx} delay={idx * 0.1} className="p-6 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.04] dark:bg-white/5 hover:bg-tm-purple-dark/[0.06] dark:hover:bg-white/10 transition-all group">
                   <div className="flex justify-between items-start mb-4">
                     <div>
@@ -193,16 +199,15 @@ export default function AboutPage() {
                 </GlassCard>
               ))}
             </div>
-            {seasonHistory.length > seasonsLimit && (
-              <div className="flex justify-center pt-4">
-                <button
-                  onClick={() => setSeasonsLimit(prev => prev + 6)}
-                  className="px-8 py-3 bg-white/5 border border-tm-blue-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-yellow/10 hover:text-tm-yellow transition-all"
-                >
-                  Load More Seasons
-                </button>
-              </div>
-            )}
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => setIsSeasonsModalOpen(true)}
+                className="px-8 py-4 bg-white/5 border border-tm-blue-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-yellow/10 hover:text-tm-yellow transition-all flex items-center gap-3 group"
+              >
+                <Search size={16} className="group-hover:scale-110 transition-transform" />
+                View Full Hall of Fame
+              </button>
+            </div>
           </div>
         ) : (
           <GlassCard className="p-12 text-center border-tm-blue-gray/5">
@@ -228,7 +233,7 @@ export default function AboutPage() {
         ) : missionHistory.length > 0 ? (
           <div className="space-y-6">
             <div className="space-y-4">
-              {missionHistory.slice(0, missionsLimit).map((mission, idx) => (
+              {missionHistory.slice(0, 5).map((mission, idx) => (
                 <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:border-tm-orange-light/40 transition-all">
                   <div className="flex items-center gap-4">
                     <div className={cn(
@@ -253,16 +258,15 @@ export default function AboutPage() {
                 </GlassCard>
               ))}
             </div>
-            {missionHistory.length > missionsLimit && (
-              <div className="flex justify-center pt-4">
-                <button
-                  onClick={() => setMissionsLimit(prev => prev + 5)}
-                  className="px-8 py-3 bg-white/5 border border-tm-blue-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-orange-light/10 hover:text-tm-orange-light transition-all"
-                >
-                  Load More Quests
-                </button>
-              </div>
-            )}
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => setIsMissionsModalOpen(true)}
+                className="px-8 py-4 bg-white/5 border border-tm-blue-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-orange-light/10 hover:text-tm-orange-light transition-all flex items-center gap-3 group"
+              >
+                <Search size={16} className="group-hover:scale-110 transition-transform" />
+                View All Quests
+              </button>
+            </div>
           </div>
         ) : (
           <GlassCard className="p-12 text-center border-tm-blue-gray/5">
@@ -286,31 +290,42 @@ export default function AboutPage() {
             ))}
           </div>
         ) : preparationHistory.length > 0 ? (
-          <div className="space-y-4">
-            {preparationHistory.slice(0, 10).map((p, idx) => (
-              <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:border-tm-yellow/40 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                    p.completed ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-blue-gray/10 text-tm-blue-gray"
-                  )}>
-                    <Brain size={20} />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start gap-2">
-                      <h4 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="font-bold text-sm leading-tight dark:text-white">{p.title}</h4>
-                      <span className="text-[10px] font-black text-tm-blue-gray uppercase shrink-0">{format(new Date(p.date), "MMM d, yyyy")}</span>
+          <div className="space-y-6">
+            <div className="space-y-4">
+              {preparationHistory.slice(0, 5).map((p, idx) => (
+                <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:border-tm-yellow/40 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                      p.completed ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-blue-gray/10 text-tm-blue-gray"
+                    )}>
+                      <Brain size={20} />
                     </div>
-                    <p className="text-xs text-tm-blue-gray/90 line-clamp-1 mt-0.5 italic">{p.description}</p>
-                  </div>
-                  {p.completed && (
-                    <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-1 rounded-lg border border-tm-yellow/20 shrink-0">
-                      +25 XP
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start gap-2">
+                        <h4 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="font-bold text-sm leading-tight dark:text-white">{p.title}</h4>
+                        <span className="text-[10px] font-black text-tm-blue-gray uppercase shrink-0">{format(new Date(p.date), "MMM d, yyyy")}</span>
+                      </div>
+                      <p className="text-xs text-tm-blue-gray/90 line-clamp-1 mt-0.5 italic">{p.description}</p>
                     </div>
-                  )}
-                </div>
-              </GlassCard>
-            ))}
+                    {p.completed && (
+                      <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-1 rounded-lg border border-tm-yellow/20 shrink-0">
+                        +25 XP
+                      </div>
+                    )}
+                  </div>
+                </GlassCard>
+              ))}
+            </div>
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => setIsPrepsModalOpen(true)}
+                className="px-8 py-4 bg-white/5 border border-tm-blue-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-yellow/10 hover:text-tm-yellow transition-all flex items-center gap-3 group"
+              >
+                <Search size={16} className="group-hover:scale-110 transition-transform" />
+                View All Strategies
+              </button>
+            </div>
           </div>
         ) : (
           <GlassCard className="p-12 text-center border-tm-blue-gray/5">
@@ -334,49 +349,60 @@ export default function AboutPage() {
             ))}
           </div>
         ) : reliefHistory.length > 0 ? (
-          <div className="space-y-4">
-            {reliefHistory.slice(0, 10).map((r, idx) => (
-              <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:bg-tm-purple-dark/[0.06] dark:hover:bg-white/10 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                    r.completed || r.alt1Completed || r.alt2Completed ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-blue-gray/10 text-tm-blue-gray"
-                  )}>
-                    {r.type === 'movie' && <Film size={20} />}
-                    {r.type === 'song' && <Music size={20} />}
-                    {r.type === 'food' && <Coffee size={20} />}
-                    {r.type === 'activity' && <Dumbbell size={20} />}
-                    {!r.type && <Heart size={20} />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start gap-2">
-                      <h4 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="font-bold text-sm leading-tight truncate dark:text-white">{r.title}</h4>
-                      <span className="text-[10px] font-black text-tm-blue-gray uppercase shrink-0">{format(new Date(r.date), "MMM d, yyyy")}</span>
+          <div className="space-y-6">
+            <div className="space-y-4">
+              {reliefHistory.slice(0, 5).map((r, idx) => (
+                <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:bg-tm-purple-dark/[0.06] dark:hover:bg-white/10 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                      r.completed || r.alt1Completed || r.alt2Completed ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-blue-gray/10 text-tm-blue-gray"
+                    )}>
+                      {r.type === 'movie' && <Film size={20} />}
+                      {r.type === 'song' && <Music size={20} />}
+                      {r.type === 'food' && <Coffee size={20} />}
+                      {r.type === 'activity' && <Dumbbell size={20} />}
+                      {!r.type && <Heart size={20} />}
                     </div>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      {[
-                        { label: "Main", done: r.completed },
-                        { label: "Alt 1", done: r.alt1Completed },
-                        { label: "Alt 2", done: r.alt2Completed }
-                      ].map((task, i) => (
-                        <div key={i} className="flex items-center gap-1.5">
-                          <div className={cn("w-1.5 h-1.5 rounded-full", task.done ? "bg-tm-yellow" : "bg-tm-blue-gray/20")} />
-                          <span className={cn("text-[8px] font-black uppercase tracking-widest", task.done ? "text-tm-yellow" : "text-tm-blue-gray/50")}>
-                            {task.label}
-                          </span>
-                        </div>
-                      ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start gap-2">
+                        <h4 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="font-bold text-sm leading-tight truncate dark:text-white">{r.title}</h4>
+                        <span className="text-[10px] font-black text-tm-blue-gray uppercase shrink-0">{format(new Date(r.date), "MMM d, yyyy")}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        {[
+                          { label: "Main", done: r.completed },
+                          { label: "Alt 1", done: r.alt1Completed },
+                          { label: "Alt 2", done: r.alt2Completed }
+                        ].map((task, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <div className={cn("w-1.5 h-1.5 rounded-full", task.done ? "bg-tm-yellow" : "bg-tm-blue-gray/20")} />
+                            <span className={cn("text-[8px] font-black uppercase tracking-widest", task.done ? "text-tm-yellow" : "text-tm-blue-gray/50")}>
+                              {task.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className="text-[10px] font-black text-tm-blue-gray/70 uppercase tracking-tighter italic">{r.location || "Global"}</span>
+                      <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">
+                        +{([r.completed, r.alt1Completed, r.alt2Completed].filter(Boolean).length * 10)} XP
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className="text-[10px] font-black text-tm-blue-gray/70 uppercase tracking-tighter italic">{r.location || "Global"}</span>
-                    <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">
-                      +{([r.completed, r.alt1Completed, r.alt2Completed].filter(Boolean).length * 10)} XP
-                    </div>
-                  </div>
-                </div>
-              </GlassCard>
-            ))}
+                </GlassCard>
+              ))}
+            </div>
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => setIsReliefsModalOpen(true)}
+                className="px-8 py-4 bg-white/5 border border-tm-blue-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-orange-dark/10 hover:text-tm-orange-dark transition-all flex items-center gap-3 group"
+              >
+                <Search size={16} className="group-hover:scale-110 transition-transform" />
+                View Full Relief Log
+              </button>
+            </div>
           </div>
         ) : (
           <GlassCard className="p-12 text-center border-tm-blue-gray/5">
@@ -471,9 +497,129 @@ export default function AboutPage() {
       {/* Footer */}
       <div className="pt-12 text-center space-y-4 border-t border-tm-blue-gray/10">
         <p className="text-xs font-black uppercase text-tm-blue-gray tracking-[0.3em]">
-          Version 3.3.5 • TaskMaster • By Pinaki AKA PiX
+          Version 3.4.0 • TaskMaster • By Pinaki AKA PiX
         </p>
       </div>
+
+      {/* Tabular Modals */}
+      <TabularViewModal
+        title="Hall of Fame"
+        isOpen={isSeasonsModalOpen}
+        onClose={() => setIsSeasonsModalOpen(false)}
+        data={seasonHistory}
+        columns={[
+          { header: "Year", key: "year" },
+          { header: "Month", key: "monthName" },
+          { header: "XP", key: "xp" },
+          { header: "Level", key: "level" },
+          { header: "Title", key: "title" }
+        ]}
+      />
+
+      <TabularViewModal
+        title="Smart Quest Log"
+        isOpen={isMissionsModalOpen}
+        onClose={() => setIsMissionsModalOpen(false)}
+        data={missionHistory}
+        columns={[
+          {
+            header: "Date", key: "date", render: (val) => {
+              const d = new Date(val);
+              return (
+                <span className="font-mono text-tm-blue-gray whitespace-nowrap">
+                  <span className="sm:hidden flex flex-col leading-tight">
+                    <span className="text-[10px] opacity-50">{d.getFullYear()}</span>
+                    <span>{format(d, "MMM d")}</span>
+                  </span>
+                  <span className="hidden sm:inline">{format(d, "yyyy-MM-dd")}</span>
+                </span>
+              );
+            }
+          },
+          { header: "Title", key: "title", wrap: true, className: "w-[25%]" },
+          { header: "Description", key: "description", wrap: true, className: "w-[50%]" },
+          {
+            header: "Status", key: "completed", render: (val) => (
+              <span className="flex items-center gap-2">
+                <span>{val ? "✅" : "❌"}</span>
+                <span className="hidden sm:inline">{val ? "Completed" : "Pending"}</span>
+              </span>
+            )
+          }
+        ]}
+      />
+
+      <TabularViewModal
+        title="Strategic Prep Log"
+        isOpen={isPrepsModalOpen}
+        onClose={() => setIsPrepsModalOpen(false)}
+        data={preparationHistory}
+        columns={[
+          {
+            header: "Date", key: "date", render: (val) => {
+              const d = new Date(val);
+              return (
+                <span className="font-mono text-tm-blue-gray whitespace-nowrap">
+                  <span className="sm:hidden flex flex-col leading-tight">
+                    <span className="text-[10px] opacity-50">{d.getFullYear()}</span>
+                    <span>{format(d, "MMM d")}</span>
+                  </span>
+                  <span className="hidden sm:inline">{format(d, "yyyy-MM-dd")}</span>
+                </span>
+              );
+            }
+          },
+          { header: "Strategy", key: "title", wrap: true, className: "w-[25%]" },
+          { header: "Directive", key: "description", wrap: true, className: "w-[50%]" },
+          {
+            header: "Status", key: "completed", render: (val) => (
+              <span className="flex items-center gap-2">
+                <span>{val ? "⚔️" : "🛡️"}</span>
+                <span className="hidden sm:inline">{val ? "Victorious" : "Planned"}</span>
+              </span>
+            )
+          }
+        ]}
+      />
+
+      <TabularViewModal
+        title="Relief Log"
+        isOpen={isReliefsModalOpen}
+        onClose={() => setIsReliefsModalOpen(false)}
+        data={reliefHistory}
+        columns={[
+          {
+            header: "Date", key: "date", render: (val) => {
+              const d = new Date(val);
+              return (
+                <span className="font-mono text-tm-blue-gray whitespace-nowrap">
+                  <span className="sm:hidden flex flex-col leading-tight">
+                    <span className="text-[10px] opacity-50">{d.getFullYear()}</span>
+                    <span>{format(d, "MMM d")}</span>
+                  </span>
+                  <span className="hidden sm:inline">{format(d, "yyyy-MM-dd")}</span>
+                </span>
+              );
+            }
+          },
+          { header: "Title", key: "title", wrap: true, className: "w-[30%]" },
+          { header: "Type", key: "type", render: (val) => val?.toUpperCase() },
+          { header: "Location", key: "location" },
+          {
+            header: "Status",
+            key: "completed",
+            render: (_, r) => {
+              const done = [r.completed, r.alt1Completed, r.alt2Completed].filter(Boolean).length;
+              return (
+                <span className="flex items-center gap-2">
+                  <span>{done === 3 ? "🏆" : done > 0 ? "🏃" : "🛌"}</span>
+                  <span className="hidden sm:inline">{done}/3 Done</span>
+                </span>
+              );
+            }
+          }
+        ]}
+      />
     </div>
   );
 }

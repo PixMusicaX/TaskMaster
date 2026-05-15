@@ -376,14 +376,16 @@ export default function NotesPage() {
                   const isSelected = isSameDay(day, selectedDate);
                   const cardMood = existingNote?.mood || "neutral";
                   const noteContent = (() => {
-                      if (!existingNote) return "No entry yet.";
-                      try {
-                        const parsed = JSON.parse(existingNote.content);
-                        return parsed.map((l: any) => l.text).filter(Boolean).join(" • ");
-                      } catch (e) {
-                        return existingNote.content.replace(/\n/g, " • ");
-                      }
-                    })();
+                    if (!existingNote) return "...but nothing happened.";
+                    try {
+                      const parsed = JSON.parse(existingNote.content);
+                      const joined = parsed.map((l: any) => l.text).filter(Boolean).join(" • ");
+                      return joined || "...but nothing happened.";
+                    } catch (e) {
+                      const joined = existingNote.content.replace(/\n/g, " • ").trim();
+                      return joined || "...but nothing happened.";
+                    }
+                  })();
 
                   return (
                     <button
@@ -445,36 +447,39 @@ export default function NotesPage() {
                 const parsed = JSON.parse(n.content);
                 contentText = parsed.map((l: any) => l.text).filter(Boolean).join(" • ");
               } catch (e) {
-                contentText = n.content;
+                contentText = n.content.replace(/\n/g, " • ").trim();
               }
+              if (!contentText) contentText = "...but nothing happened";
               return {
                 ...n,
                 contentText
               };
             })}
             columns={[
-              { header: "Date", key: "date", render: (val) => {
-                let year = "";
-                let shortDate = val;
-                let full = val;
-                try {
-                  const base = val.replace(/^(\d{4}-\d{2}-\d{2}).*$/, "$1");
-                  const parsed = new Date(base + "T00:00:00");
-                  year = parsed.getFullYear().toString();
-                  shortDate = parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                  full = base;
-                } catch {}
-                return (
-                  <span className="font-mono text-tm-blue-gray whitespace-nowrap">
-                    <span className="sm:hidden flex flex-col leading-tight">
-                      <span className="text-[10px] opacity-50">{year}</span>
-                      <span>{shortDate}</span>
+              {
+                header: "Date", key: "date", render: (val) => {
+                  let year = "";
+                  let shortDate = val;
+                  let full = val;
+                  try {
+                    const base = val.replace(/^(\d{4}-\d{2}-\d{2}).*$/, "$1");
+                    const parsed = new Date(base + "T00:00:00");
+                    year = parsed.getFullYear().toString();
+                    shortDate = parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    full = base;
+                  } catch { }
+                  return (
+                    <span className="font-mono text-tm-blue-gray whitespace-nowrap">
+                      <span className="sm:hidden flex flex-col leading-tight">
+                        <span className="text-[10px] opacity-50">{year}</span>
+                        <span>{shortDate}</span>
+                      </span>
+                      <span className="hidden sm:inline">{full}</span>
                     </span>
-                    <span className="hidden sm:inline">{full}</span>
-                  </span>
-                );
-              }}
-              ,{
+                  );
+                }
+              }
+              , {
                 header: "Mood", key: "mood", render: (val) => (
                   <span className="text-2xl">
                     {val === "good" ? "😇" : val === "bad" ? "😢" : "😐"}

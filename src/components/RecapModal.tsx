@@ -49,9 +49,9 @@ export default function RecapModal({ stats, isOpen, onClose }: RecapModalProps) 
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            className="relative w-full max-w-2xl"
+            className="relative w-full max-w-2xl max-h-[90vh] flex flex-col"
           >
-            <GlassCard className="p-8 border-tm-yellow/30 bg-tm-purple-dark/95 shadow-2xl overflow-hidden">
+            <GlassCard className="p-6 md:p-8 border-tm-yellow/30 bg-tm-purple-dark/95 shadow-2xl overflow-y-auto custom-scrollbar">
               <button 
                 onClick={onClose}
                 className="absolute top-4 right-4 p-2 text-tm-blue-gray hover:text-tm-yellow transition-colors"

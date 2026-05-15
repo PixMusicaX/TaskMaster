@@ -105,6 +105,7 @@ export default function Home() {
   const [prepTip, setPrepTip] = useState<any>(null);
   const [moodData, setMoodData] = useState<any[]>([]);
   const [futureEvents, setFutureEvents] = useState<any[]>([]);
+  const [completionScore, setCompletionScore] = useState(0);
   const [missingInfo, setMissingInfo] = useState<string[]>([]);
   const [habitsLoading, setHabitsLoading] = useState(true);
   const [tasksLoading, setTasksLoading] = useState(true);
@@ -228,6 +229,44 @@ export default function Home() {
             localStorage.setItem(recapKey, "true");
           }
         }
+      });
+
+      // 4. Calculate 7-day Completion Stats
+      const last7DaysStart = subDays(today, 7);
+      const last7DaysEnd = subDays(today, 0); // Include today
+
+      Promise.all([
+        getEventsByDateRange(last7DaysStart, last7DaysEnd),
+        getHabits()
+      ]).then(([recentEvents, allHabits]) => {
+        // Task Completion
+        const eligibleTasks = recentEvents.filter(e => e.type === "task" || e.type === "event");
+        const completedTasks = eligibleTasks.filter(e => e.completed).length;
+        const taskRatio = eligibleTasks.length > 0 ? (completedTasks / eligibleTasks.length) : 1;
+
+        // Habit Completion
+        let totalScheduledHabits = 0;
+        let totalCompletedHabits = 0;
+
+        for (let i = 0; i <= 7; i++) {
+          const d = subDays(today, i);
+          const dStr = format(d, "yyyy-MM-dd");
+          const dDay = d.getDay();
+
+          allHabits.forEach(h => {
+            if (!h.frequency || h.frequency.includes(dDay)) {
+              totalScheduledHabits++;
+              if (h.logs.some((l: any) => l.date === dStr && l.completed)) {
+                totalCompletedHabits++;
+              }
+            }
+          });
+        }
+        const habitRatio = totalScheduledHabits > 0 ? (totalCompletedHabits / totalScheduledHabits) : 1;
+
+        // Combine scores (Average of Task and Habit success)
+        const finalScore = ((taskRatio * 100) + (habitRatio * 100)) / 2;
+        setCompletionScore(finalScore);
       });
 
       // 5. AI Guidance (Parallelized for better performance)
@@ -1258,7 +1297,7 @@ export default function Home() {
             </div>
 
             <div className="flex-1 flex flex-col relative z-10 min-h-[300px]">
-              <WorldMapWidget key={mapRefreshKey} profile={profile} moodData={moodData} />
+              <WorldMapWidget key={mapRefreshKey} profile={profile} moodData={moodData} completionScore={completionScore} />
             </div>
           </GlassCard>
         </div>

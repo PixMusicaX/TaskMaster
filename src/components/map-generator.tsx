@@ -791,7 +791,7 @@ function MapPopupModal({
       >
         <div 
           style={{ clipPath: tornEdge }}
-          className="relative w-full aspect-[4/3] max-h-full bg-[#e6d5b8] shadow-[0_0_120px_rgba(0,0,0,1)] overflow-hidden"
+          className="relative w-full aspect-[4/3] max-h-full bg-[#e6d5b8] shadow-[0_0_120px_rgba(0,0,0,1)] overflow-hidden [container-type:inline-size]"
         >
           {/* Parchment Overlays */}
           <div className="absolute inset-0 pointer-events-none z-10 opacity-60 mix-blend-multiply bg-[radial-gradient(circle_at_center,transparent_0%,rgba(139,69,19,0.3)_100%)]" />
@@ -827,10 +827,10 @@ function MapPopupModal({
           />
 
           {/* Archaic Location Title at Bottom */}
-          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-50 pointer-events-none text-center w-full">
+          <div className="absolute bottom-8 md:bottom-12 left-1/2 -translate-x-1/2 z-50 pointer-events-none text-center w-full">
             <h2 
               style={{ fontFamily: "'Georgia', serif" }}
-              className="text-4xl md:text-5xl font-bold text-[#4b3621]/60 italic tracking-[0.2em] uppercase drop-shadow-[0_2px_2px_rgba(255,255,255,0.3)]"
+              className="text-xl md:text-5xl font-bold text-[#4b3621]/60 italic tracking-[0.2em] uppercase drop-shadow-[0_2px_2px_rgba(255,255,255,0.3)] px-4"
             >
               {mapConfig.name}
             </h2>
@@ -918,7 +918,7 @@ const BIOME_MATRIX: Record<string, Record<"low" | "balanced" | "peak", { name: s
   }
 };
 
-export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: any[] }) {
+export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { profile: any; moodData: any[]; completionScore?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { rank } = useTheme();
   const [randomOffset] = useState(() => Math.floor(Math.random() * 1000000));
@@ -949,11 +949,8 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
     // Weighted Mood Score: 70% Recent, 30% Overall
     const moodScore = (recentScore * 0.7) + (overallScore * 0.3);
 
-    // XP Progress score: Aggregate of 5-level class progression
-    // Within each 5-level class, position determines xp score (0-100)
     const level = profile?.level || 1;
-    const levelInClass = (level - 1) % 5;
-    const xpScore = (levelInClass / 4) * 100;
+
 
     // Stat Balance score (0 to 100)
     // Punishes neglecting specific types of tasks
@@ -969,12 +966,12 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
     const statBalanceScore = (minStat / maxStat) * 100;
 
     // Weighted performance score
-    // 35% Mood, 45% XP Progress, 20% Stat Balance
-    const performanceScore = (moodScore * 0.35) + (xpScore * 0.45) + (statBalanceScore * 0.20);
+    // 35% Mood, 45% Task/Habit Completion, 20% Stat Balance
+    const performanceScore = (moodScore * 0.35) + (completionScore * 0.45) + (statBalanceScore * 0.20);
 
     let performance: "low" | "balanced" | "peak" = "balanced";
-    if (performanceScore >= 60) performance = "peak";
-    else if (performanceScore <= 40) performance = "low";
+    if (performanceScore > 66) performance = "peak";
+    else if (performanceScore < 33) performance = "low";
 
     // Prioritize the global rank (which supports manual overrides) over calculated level
     const currentTitle = rank || "Novice";
@@ -1094,7 +1091,7 @@ export function WorldMapWidget({ profile, moodData }: { profile: any; moodData: 
               mapConfig.performanceState === "peak" ? "text-tm-yellow" : 
               mapConfig.performanceState === "low" ? "text-tm-orange-dark" : "text-tm-blue-gray"
             )}>
-              Status: {mapConfig.performanceState}
+              Status: {mapConfig.performanceState}{process.env.NODE_ENV === 'development' && ` / ${Math.round(mapConfig.performanceScore)}`}
             </span>
         </div>
         
