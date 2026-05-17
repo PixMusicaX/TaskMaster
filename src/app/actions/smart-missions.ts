@@ -24,13 +24,14 @@ export async function getSmartMission(clientDateStr?: string) {
     if (!mission) {
       if (GEMINI_API_KEY) {
         try {
-          const twoWeeksAgo = subDays(new Date(), 14);
+          const clientNow = new Date(today);
+          const twoWeeksAgo = subDays(clientNow, 14);
           const twoWeeksAgoStr = format(twoWeeksAgo, "yyyy-MM-dd");
 
           const [profile, habitData, taskData, notesData, history] = await Promise.all([
-            getProfile(),
+            getProfile(today),
             getHabits(),
-            getEventsByDateRange(twoWeeksAgo, new Date()),
+            getEventsByDateRange(twoWeeksAgo, clientNow),
             db.select().from(note).where(gte(note.date, twoWeeksAgoStr)),
             getSmartMissionHistory(twoWeeksAgoStr)
           ]);

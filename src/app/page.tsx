@@ -209,13 +209,13 @@ export default function Home() {
       }
 
       // 3. Profile Stats
-      getProfile().then(setProfile);
+      getProfile(todayStr).then(setProfile);
       getRecentNotes(30).then(setMoodData);
       getEventsByDateRange(addDays(today, 1), addDays(today, 14)).then(data => {
         setFutureEvents(data.filter(e => e.type !== "task"));
       });
 
-      getSeasonHistory(6).then(historyData => {
+      getSeasonHistory(6, todayStr).then(historyData => {
         setHistory(historyData);
         const lastMonth = subMonths(today, 1);
         const recapKey = `recap_${format(lastMonth, "yyyy_MM")}`;
@@ -305,7 +305,7 @@ export default function Home() {
     setUpdatingHabits(prev => new Set(prev).add(habitId));
     try {
       await toggleHabitLog(habitId, todayStr, !currentStatus);
-      const [data, prof] = await Promise.all([getHabits(), getProfile()]);
+      const [data, prof] = await Promise.all([getHabits(), getProfile(todayStr)]);
       setHabits(data);
       setProfile(prof);
       window.dispatchEvent(new CustomEvent("profile-updated"));
@@ -337,7 +337,7 @@ export default function Home() {
       await toggleEventCompletion(id, !current);
       const [taskData, prof] = await Promise.all([
         getDashboardTasks(todayStr),
-        getProfile()
+        getProfile(todayStr)
       ]);
       setTasks(taskData);
       setProfile(prof);
@@ -357,7 +357,7 @@ export default function Home() {
     try {
       const newStatus = !smartMission.completed;
       await toggleSmartMission(smartMission.id, newStatus);
-      const [data, prof] = await Promise.all([getSmartMission(todayStr), getProfile()]);
+      const [data, prof] = await Promise.all([getSmartMission(todayStr), getProfile(todayStr)]);
       setSmartMission(data);
       setProfile(prof);
       if (newStatus) {
@@ -375,7 +375,7 @@ export default function Home() {
       const newStatus = !prepTip.completed;
       setPrepTip({ ...prepTip, completed: newStatus });
       await togglePreparationTip(prepTip.id, newStatus);
-      const prof = await getProfile();
+      const prof = await getProfile(todayStr);
       setProfile(prof);
       window.dispatchEvent(new CustomEvent("profile-updated"));
     } finally {
@@ -405,7 +405,7 @@ export default function Home() {
       else if (index === 2) updatedRelief.alt2Completed = newStatus;
       setRelief(updatedRelief);
 
-      const prof = await getProfile();
+      const prof = await getProfile(todayStr);
       setProfile(prof);
       window.dispatchEvent(new CustomEvent("profile-updated"));
     } finally {

@@ -7,7 +7,7 @@ import { XP_VALUES, RPG_TITLES } from "@/lib/constants";
 import { startOfMonth, endOfMonth, format, subMonths, isSameMonth } from "date-fns";
 import { and, or, gte, lte, eq, inArray } from "drizzle-orm";
 
-export async function getStatsForPeriod(startDate: Date, endDate: Date) {
+export async function getStatsForPeriod(startDate: Date, endDate: Date, referenceDate: Date = new Date()) {
   try {
     const startStr = format(startDate, "yyyy-MM-dd");
     const endStr = format(endDate, "yyyy-MM-dd");
@@ -78,7 +78,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
         stats.strength += xp;
       } else if (e.type === "event") {
         const eventTime = e.startTime ? new Date(e.startTime) : null;
-        if (eventTime && eventTime < new Date()) {
+        if (eventTime && eventTime < referenceDate) {
           xp = reward;
           totalXP += xp;
           stats.wealth += xp;
@@ -189,9 +189,9 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date) {
   }
 }
 
-export async function getProfile() {
-  const now = new Date();
-  return getStatsForPeriod(startOfMonth(now), endOfMonth(now));
+export async function getProfile(clientDateStr?: string) {
+  const now = clientDateStr ? new Date(clientDateStr) : new Date();
+  return getStatsForPeriod(startOfMonth(now), endOfMonth(now), now);
 }
 
 let seasonSnapshotTableInitialized = false;
@@ -267,12 +267,12 @@ async function getSnapshotForPeriod(startDate: Date, endDate: Date) {
   return stats;
 }
 
-export async function getSeasonHistory(monthsCount: number = 6) {
-  const now = new Date();
+export async function getSeasonHistory(monthsCount: number = 6, clientDateStr?: string) {
+  const now = clientDateStr ? new Date(clientDateStr) : new Date();
   const periods = Array.from({ length: monthsCount }).map((_, i) => subMonths(now, i));
 
   const promises = periods.map(async (date) => {
-    return getStatsForPeriod(startOfMonth(date), endOfMonth(date));
+    return getStatsForPeriod(startOfMonth(date), endOfMonth(date), now);
   });
 
   return await Promise.all(promises);

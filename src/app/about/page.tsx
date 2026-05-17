@@ -497,7 +497,7 @@ export default function AboutPage() {
       {/* Footer */}
       <div className="pt-12 text-center space-y-4 border-t border-tm-blue-gray/10">
         <p className="text-xs font-black uppercase text-tm-blue-gray tracking-[0.3em]">
-          Version 3.4.0 • TaskMaster • By Pinaki AKA PiX
+          Version 3.4.1 • TaskMaster • By Pinaki AKA PiX
         </p>
       </div>
 
@@ -542,7 +542,7 @@ export default function AboutPage() {
             header: "Status", key: "completed", render: (val) => (
               <span className="flex items-center gap-2">
                 <span>{val ? "✅" : "❌"}</span>
-                <span className="hidden sm:inline">{val ? "Completed" : "Pending"}</span>
+                <span className="hidden sm:inline">{val ? "Completed" : "Incomplete"}</span>
               </span>
             )
           }

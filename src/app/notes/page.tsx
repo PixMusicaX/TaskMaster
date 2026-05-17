@@ -48,16 +48,21 @@ export default function NotesPage() {
     try {
       const [data, profileData] = await Promise.all([
         getNoteByDate(dateStr),
-        getProfile()
+        getProfile(dateStr)
       ]);
       setProfile(profileData);
       setMood(data?.mood || "neutral");
       if (data?.content) {
         try {
-          setLines(JSON.parse(data.content));
+          const parsed = JSON.parse(data.content);
+          if (Array.isArray(parsed)) {
+            setLines(parsed);
+          } else {
+            throw new Error("Not an array");
+          }
         } catch (e) {
           setLines(data.content.split("\n").map((text: string) => ({
-            id: Math.random().toString(36).substr(2, 9),
+            id: Math.random().toString(36).substring(2, 11),
             bullet: "○",
             text
           })));
@@ -80,7 +85,8 @@ export default function NotesPage() {
   }, []);
 
   const fetchProfile = useCallback(async () => {
-    const profileData = await getProfile();
+    const dateStr = format(selectedDateRef.current, "yyyy-MM-dd");
+    const profileData = await getProfile(dateStr);
     setProfile(profileData);
   }, []);
 

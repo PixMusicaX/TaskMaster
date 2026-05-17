@@ -22,7 +22,7 @@ import { getProfile } from "@/app/actions/gamification";
 import { Swords, Brain, Coins, HeartPulse, Users } from "lucide-react";
 import { RPG_TITLES } from "@/lib/constants";
 
-import { differenceInDays, endOfMonth } from "date-fns";
+import { differenceInDays, endOfMonth, format } from "date-fns";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -46,7 +46,8 @@ export default function Navbar() {
   }, [pathname]); // Refresh when navigating
 
   async function fetchProfile(manualOverride: boolean) {
-    const data = await getProfile();
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const data = await getProfile(todayStr);
     setProfile(data);
 
     if (data) {

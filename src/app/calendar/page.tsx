@@ -46,8 +46,8 @@ export default function CalendarPage() {
   const { startDate, endDate, days, monthStart } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    const startDate = startOfWeek(monthStart, { weekStartsOn: 0 });
+    const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 });
     const days = eachDayOfInterval({ start: startDate, end: endDate });
     return { startDate, endDate, days, monthStart };
   }, [currentDate]);
@@ -57,7 +57,7 @@ export default function CalendarPage() {
     try {
       const [eventsData, profileData, notesData, reliefData] = await Promise.all([
         getEventsByDateRange(startDate, endDate),
-        getProfile(),
+        getProfile(format(currentDate, "yyyy-MM-dd")),
         getRecentNotes(60),
         getReliefHistory(format(startDate, "yyyy-MM-dd"))
       ]);
@@ -495,7 +495,7 @@ export default function CalendarPage() {
                 </div>
 
                 <div className="grid grid-cols-7 border-b border-tm-blue-gray/10 bg-tm-blue-gray/5">
-                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
                     <div key={day} className="py-3 text-center text-[10px] font-black uppercase tracking-widest text-tm-blue-gray/60">
                       {day}
                     </div>
@@ -644,7 +644,7 @@ export default function CalendarPage() {
               </div>
 
               <div className="grid grid-cols-7 gap-1">
-                {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+                {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
                   <div key={i} className="text-center text-[10px] font-black text-tm-blue-gray/40 pb-2">{d}</div>
                 ))}
                 {days.map((day) => {

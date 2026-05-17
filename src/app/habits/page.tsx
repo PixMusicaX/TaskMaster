@@ -82,10 +82,11 @@ export default function HabitsPage() {
 
   async function fetchHabits() {
     try {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
       const [data, archivedData, profileData, logsData] = await Promise.all([
         getHabits(),
         getArchivedHabits(),
-        getProfile(),
+        getProfile(todayStr),
         getHabitLogs()
       ]);
       setHabits(data);
@@ -182,7 +183,7 @@ export default function HabitsPage() {
       await toggleHabitLog(habitId, dateStr, newStatus);
 
       // 3. Refresh profile stats in parallel with habits
-      const [data, prof] = await Promise.all([getHabits(), getProfile()]);
+      const [data, prof] = await Promise.all([getHabits(), getProfile(format(new Date(), "yyyy-MM-dd"))]);
       setHabits(data);
       setProfile(prof);
       window.dispatchEvent(new CustomEvent("profile-updated"));

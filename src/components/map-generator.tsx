@@ -1091,7 +1091,7 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
               mapConfig.performanceState === "peak" ? "text-tm-yellow" : 
               mapConfig.performanceState === "low" ? "text-tm-orange-dark" : "text-tm-blue-gray"
             )}>
-              Status: {mapConfig.performanceState}{process.env.NODE_ENV === 'development' && ` / ${Math.round(mapConfig.performanceScore)}`}
+              Status: {mapConfig.performanceState} / {Math.round(mapConfig.performanceScore)}
             </span>
         </div>
         

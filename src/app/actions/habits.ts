@@ -35,7 +35,7 @@ export async function addHabit(name: string, icon?: string, color?: string, freq
     frequency,
     stat,
   }).returning();
-  
+
   revalidatePath("/habits");
   return newHabit;
 }
@@ -45,7 +45,7 @@ export async function updateHabit(id: string, data: { name?: string; icon?: stri
     .set(data)
     .where(eq(habit.id, id))
     .returning();
-    
+
   revalidatePath("/habits");
   return updatedHabit;
 }
@@ -54,7 +54,7 @@ export async function archiveHabit(id: string) {
   await db.update(habit)
     .set({ archived: true })
     .where(eq(habit.id, id));
-    
+
   revalidatePath("/habits");
 }
 
@@ -62,7 +62,7 @@ export async function restoreHabit(id: string) {
   await db.update(habit)
     .set({ archived: false })
     .where(eq(habit.id, id));
-    
+
   revalidatePath("/habits");
 }
 
@@ -95,7 +95,7 @@ export async function toggleHabitLog(habitId: string, date: string, completed: b
     })
     .onConflictDoUpdate({
       target: [habitLog.habitId, habitLog.date],
-      set: { 
+      set: {
         completed,
         habitName: h?.name,
         habitIcon: h?.icon,

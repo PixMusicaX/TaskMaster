@@ -54,7 +54,7 @@ export async function askTaskmaster(question: string, clientDateStr?: string) {
     }
 
     // Step 2: Answer Formulator
-    const profile = await getProfile();
+    const profile = await getProfile(today);
     const answerPrompt = getTaskmasterAnswerPrompt({
       level: profile.level,
       xp: profile.xp,
