@@ -544,6 +544,8 @@ function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number
       px = Math.pow(1 - t, 2) * midP.x + 2 * (1 - t) * t * cp2.x + Math.pow(t, 2) * endP.x;
       py = Math.pow(1 - t, 2) * midP.y + 2 * (1 - t) * t * cp2.y + Math.pow(t, 2) * endP.y;
     }
+    px = Math.max(10, Math.min(W - 10, px));
+    py = Math.max(10, Math.min(H - 10, py));
     
     // Pulse glow
     ctx.beginPath();
@@ -766,6 +768,7 @@ function MapPopupModal({
   if (!mounted) return null;
 
   const musicFile = mapConfig.name.toLowerCase().replace(/\s+/g, "-") + ".mp3";
+  const musicUrl = `/music/${encodeURIComponent(musicFile)}`;
   const tornEdge = "polygon(0% 1.5%, 1% 0.5%, 2% 1.2%, 3% 0.2%, 4% 1.8%, 5% 0.4%, 6% 1.1%, 7% 0.1%, 8% 1.6%, 9% 0.3%, 10% 1.3%, 11% 0.5%, 12% 1.7%, 13% 0.2%, 14% 1.4%, 15% 0.6%, 16% 1.9%, 17% 0.3%, 18% 1.2%, 19% 0.4%, 20% 1.5%, 21% 0.1%, 22% 1.8%, 23% 0.4%, 24% 1.3%, 25% 0.6%, 26% 1.6%, 27% 0.2%, 28% 1.4%, 29% 0.5%, 30% 1.7%, 31% 0.3%, 32% 1.1%, 33% 0.6%, 34% 1.8%, 35% 0.4%, 36% 1.3%, 37% 0.1%, 38% 1.6%, 39% 0.5%, 40% 1.4%, 41% 0.2%, 42% 1.9%, 43% 0.4%, 44% 1.1%, 45% 0.6%, 46% 1.7%, 47% 0.3%, 48% 1.5%, 49% 0.1%, 50% 1.8%, 51% 0.4%, 52% 1.3%, 53% 0.6%, 54% 1.6%, 55% 0.2%, 56% 1.4%, 57% 0.5%, 58% 1.7%, 59% 0.3%, 60% 1.1%, 61% 0.6%, 62% 1.8%, 63% 0.4%, 64% 1.3%, 65% 0.1%, 66% 1.6%, 67% 0.5%, 68% 1.4%, 69% 0.2%, 70% 1.9%, 71% 0.4%, 72% 1.1%, 73% 0.6%, 74% 1.7%, 75% 0.3%, 76% 1.5%, 77% 0.1%, 78% 1.8%, 79% 0.4%, 80% 1.3%, 81% 0.6%, 82% 1.6%, 83% 0.2%, 84% 1.4%, 85% 0.5%, 86% 1.7%, 87% 0.3%, 88% 1.1%, 89% 0.6%, 90% 1.8%, 91% 0.4%, 92% 1.3%, 93% 0.1%, 94% 1.6%, 95% 0.5%, 96% 1.4%, 97% 0.2%, 98% 1.9%, 99% 0.4%, 100% 1.5%, 100% 98.5%, 99% 99.6%, 98% 98.1%, 97% 99.8%, 96% 98.2%, 95% 99.6%, 94% 98.9%, 93% 99.9%, 92% 98.4%, 91% 99.7%, 90% 98.7%, 89% 99.5%, 88% 98.3%, 87% 99.8%, 86% 98.6%, 85% 99.4%, 84% 98.1%, 83% 99.7%, 82% 98.8%, 81% 99.6%, 80% 98.5%, 79% 99.9%, 78% 98.2%, 77% 99.6%, 76% 98.7%, 75% 99.4%, 74% 98.3%, 73% 99.8%, 72% 98.9%, 71% 99.6%, 70% 98.1%, 69% 99.8%, 68% 98.6%, 67% 99.5%, 66% 98.4%, 65% 99.9%, 64% 98.7%, 63% 99.6%, 62% 98.2%, 61% 99.4%, 60% 98.9%, 59% 99.7%, 58% 98.3%, 57% 99.8%, 56% 98.6%, 55% 99.8%, 54% 98.4%, 53% 99.4%, 52% 98.7%, 51% 99.6%, 50% 98.2%, 49% 99.9%, 48% 98.5%, 47% 99.7%, 46% 98.4%, 45% 99.4%, 44% 98.7%, 43% 99.9%, 42% 98.1%, 41% 99.8%, 40% 98.5%, 39% 99.5%, 38% 98.4%, 37% 99.9%, 36% 98.7%, 35% 99.6%, 34% 98.2%, 33% 99.4%, 32% 98.9%, 31% 99.7%, 30% 98.3%, 29% 99.8%, 28% 98.6%, 27% 99.8%, 26% 98.4%, 25% 99.4%, 24% 98.7%, 23% 99.6%, 22% 98.2%, 21% 99.9%, 20% 98.5%, 19% 99.7%, 18% 98.4%, 17% 99.4%, 16% 98.7%, 15% 99.9%, 14% 98.1%, 13% 99.8%, 12% 98.5%, 11% 99.5%, 10% 98.4%, 9% 99.9%, 8% 98.7%, 7% 99.6%, 6% 98.2%, 5% 99.4%, 4% 98.9%, 3% 99.7%, 2% 98.3%, 1% 99.8%, 0% 98.5%)";
 
   return createPortal(
@@ -849,7 +852,7 @@ function MapPopupModal({
       </motion.button>
 
       <audio ref={audioRef} loop preload="auto">
-        <source src={`/music/${musicFile}`} type="audio/mpeg" />
+        <source src={musicUrl} type="audio/mpeg" />
       </audio>
     </div>,
     document.body
@@ -939,8 +942,8 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
     const totalOverall = (moodData?.length || 0) || 1;
     const overallScore = ((overallJoy * 100) + (overallSteady * 50)) / totalOverall;
 
-    // 7-day Recent Mood (last 7 entries)
-    const recentMoods = moodData?.slice(-7) || [];
+    // 7-day Recent Mood (most recent 7 entries)
+    const recentMoods = moodData?.slice(0, 7) || [];
     const recentJoy = recentMoods.filter((m: any) => m.mood === "good").length;
     const recentSteady = recentMoods.filter((m: any) => m.mood === "neutral").length;
     const totalRecent = recentMoods.length || 1;
@@ -962,7 +965,7 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
       profile?.charisma || 0
     ];
     const maxStat = Math.max(...stats, 1);
-    const minStat = Math.min(...stats, 0);
+    const minStat = Math.min(...stats);
     const statBalanceScore = (minStat / maxStat) * 100;
 
     // Weighted performance score
@@ -970,8 +973,8 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
     const performanceScore = (moodScore * 0.35) + (completionScore * 0.45) + (statBalanceScore * 0.20);
 
     let performance: "low" | "balanced" | "peak" = "balanced";
-    if (performanceScore > 66) performance = "peak";
-    else if (performanceScore < 33) performance = "low";
+    if (performanceScore > 60) performance = "peak";
+    else if (performanceScore < 40) performance = "low";
 
     // Prioritize the global rank (which supports manual overrides) over calculated level
     const currentTitle = rank || "Novice";

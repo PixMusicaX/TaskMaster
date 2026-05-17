@@ -232,8 +232,8 @@ export default function Home() {
       });
 
       // 4. Calculate 7-day Completion Stats
-      const last7DaysStart = subDays(today, 7);
-      const last7DaysEnd = subDays(today, 0); // Include today
+      const last7DaysStart = subDays(today, 6);
+      const last7DaysEnd = today;
 
       Promise.all([
         getEventsByDateRange(last7DaysStart, last7DaysEnd),
@@ -248,7 +248,7 @@ export default function Home() {
         let totalScheduledHabits = 0;
         let totalCompletedHabits = 0;
 
-        for (let i = 0; i <= 7; i++) {
+        for (let i = 0; i < 7; i++) {
           const d = subDays(today, i);
           const dStr = format(d, "yyyy-MM-dd");
           const dDay = d.getDay();
