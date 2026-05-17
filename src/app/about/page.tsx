@@ -497,7 +497,7 @@ export default function AboutPage() {
       {/* Footer */}
       <div className="pt-12 text-center space-y-4 border-t border-tm-blue-gray/10">
         <p className="text-xs font-black uppercase text-tm-blue-gray tracking-[0.3em]">
-          Version 3.4.3 • TaskMaster • By Pinaki AKA PiX
+          Version 3.4.5 • TaskMaster • By Pinaki AKA PiX
         </p>
       </div>
 

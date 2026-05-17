@@ -3,7 +3,7 @@
 import { db, client } from "@/db";
 import { habit, habitLog, event, note, smartMission, reliefRecommendation, seasonSnapshot, preparationTip } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { XP_VALUES, RPG_TITLES } from "@/lib/constants";
+import { XP_VALUES, RPG_TITLES, LEVEL_UP_XP } from "@/lib/constants";
 import { startOfMonth, endOfMonth, format, subMonths, isSameMonth } from "date-fns";
 import { and, or, gte, lte, eq, inArray } from "drizzle-orm";
 
@@ -142,11 +142,11 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date, referenc
       awardXP(rr.alt2Completed);
     });
 
-    // Calculate Level (Flat 70 XP per level for frequent progression)
+    // Calculate Level (Flat XP per level for frequent progression)
     let currentLevel = 1;
     let remainingXP = totalXP;
-    while (remainingXP >= 70) {
-      remainingXP -= 70;
+    while (remainingXP >= LEVEL_UP_XP) {
+      remainingXP -= LEVEL_UP_XP;
       currentLevel++;
     }
 
@@ -163,7 +163,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date, referenc
       level: currentLevel,
       title,
       levelProgress: remainingXP,
-      nextLevelXP: 70,
+      nextLevelXP: LEVEL_UP_XP,
       topStat,
       weakStat,
       ...stats,
@@ -178,7 +178,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date, referenc
       level: 1,
       title: "Novice",
       levelProgress: 0,
-      nextLevelXP: 70,
+      nextLevelXP: LEVEL_UP_XP,
       topStat: "none",
       weakStat: "none",
       stats: { strength: 0, intelligence: 0, wealth: 0, vitality: 0, charisma: 0 },

@@ -7,6 +7,8 @@ export const XP_VALUES = {
   TASK: 30,
 };
 
+export const LEVEL_UP_XP = 90;
+
 export const RPG_TITLES = [
   { minLevel: 1, title: "Novice" },
   { minLevel: 5, title: "Squire" },
