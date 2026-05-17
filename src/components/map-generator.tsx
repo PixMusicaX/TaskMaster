@@ -975,14 +975,14 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
 
     // Prioritize the global rank (which supports manual overrides) over calculated level
     const currentTitle = rank || "Novice";
-    
-    const titles = [...RPG_TITLES].reverse();
-    const currentTitleIndex = titles.findIndex(t => currentTitle === t.title);
+
+    const titles = RPG_TITLES.map(t => t.title);
+    const currentTitleIndex = Math.max(0, titles.indexOf(currentTitle));
 
     const matrixEntry = BIOME_MATRIX[currentTitle] || BIOME_MATRIX["Novice"];
-    const perfConfig = matrixEntry[performance];
+    const perfConfig = matrixEntry?.[performance] || BIOME_MATRIX["Novice"].balanced;
 
-    const nextTitle = titles[(currentTitleIndex - 1 + titles.length) % titles.length].title;
+    const nextTitle = titles[(currentTitleIndex + 1) % titles.length];
     const nextEntry = BIOME_MATRIX[nextTitle] || BIOME_MATRIX["Hero"];
     
     const allStops = [
@@ -1022,7 +1022,7 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
       performanceState: performance,
       nextStops
     });
-  }, [profile, moodData]);
+  }, [profile, moodData, rank, completionScore]);
 
   useEffect(() => {
     if (!mapConfig || !canvasRef.current) return;
