@@ -1034,23 +1034,23 @@ export default function Home() {
                   {futureEvents.slice(0, 5).map((e, idx) => {
                     const eventDate = new Date(e.date);
                     return (
-                      <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all group/event">
-                        <div className="flex items-center gap-4">
+                      <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all group/event gap-3">
+                        <div className="flex items-center gap-4 min-w-0">
                           <div className={cn(
-                            "w-10 h-10 rounded-xl flex flex-col items-center justify-center border transition-all",
+                            "w-10 h-10 shrink-0 rounded-xl flex flex-col items-center justify-center border transition-all",
                             e.type === "special_day" ? "bg-tm-orange-dark/10 border-tm-orange-dark/20 text-tm-orange-dark" : "bg-tm-yellow/10 border-tm-yellow/20 text-tm-yellow"
                           )}>
                             <span className="text-[8px] font-black uppercase leading-none">{format(eventDate, "MMM")}</span>
                             <span className="text-lg font-black leading-none mt-0.5">{format(eventDate, "dd")}</span>
                           </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-foreground/90">{e.title}</h4>
-                            <p className="text-[10px] font-black uppercase text-tm-blue-gray/60 tracking-widest">
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-sm text-foreground/90 truncate">{e.title}</h4>
+                            <p className="text-[10px] font-black uppercase text-tm-blue-gray/60 tracking-widest truncate">
                               {e.type === "special_day" ? "Special Day" : `${e.tier} Quest`}
                             </p>
                           </div>
                         </div>
-                        <div className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-widest">
+                        <div className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-widest shrink-0 text-right">
                           {isSameDay(eventDate, addDays(new Date(), 1)) ? "Tomorrow" : format(eventDate, "EEEE")}
                         </div>
                       </div>
