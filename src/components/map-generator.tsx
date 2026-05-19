@@ -532,43 +532,42 @@ function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number
   ctx.quadraticCurveTo(cp2.x, cp2.y, endP.x, endP.y);
   ctx.stroke();
 
-  if (playerProgress !== undefined) {
-    const p = Math.max(0, Math.min(1, playerProgress));
-    let px, py;
-    if (p <= 0.5) {
-      const t = p * 2;
-      px = Math.pow(1 - t, 2) * startP.x + 2 * (1 - t) * t * cp1.x + Math.pow(t, 2) * midP.x;
-      py = Math.pow(1 - t, 2) * startP.y + 2 * (1 - t) * t * cp1.y + Math.pow(t, 2) * midP.y;
-    } else {
-      const t = (p - 0.5) * 2;
-      px = Math.pow(1 - t, 2) * midP.x + 2 * (1 - t) * t * cp2.x + Math.pow(t, 2) * endP.x;
-      py = Math.pow(1 - t, 2) * midP.y + 2 * (1 - t) * t * cp2.y + Math.pow(t, 2) * endP.y;
-    }
-    px = Math.max(10, Math.min(W - 10, px));
-    py = Math.max(10, Math.min(H - 10, py));
-    
-    // Pulse glow
-    ctx.beginPath();
-    ctx.arc(px, py, 14, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(242, 194, 48, 0.15)";
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(px, py, 8, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(242, 194, 48, 0.3)";
-    ctx.fill();
-
-    // Triangle marker
-    ctx.beginPath();
-    ctx.moveTo(px, py - 6);
-    ctx.lineTo(px + 4, py + 4);
-    ctx.lineTo(px - 4, py + 4);
-    ctx.closePath();
-    ctx.fillStyle = "rgba(242, 194, 48, 1)";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(40, 30, 20, 0.9)";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+  // Always draw the golden pointer randomly near the center of the road
+  const pointerP = 0.4 + rng() * 0.2;
+  let px, py;
+  if (pointerP <= 0.5) {
+    const t = pointerP * 2;
+    px = Math.pow(1 - t, 2) * startP.x + 2 * (1 - t) * t * cp1.x + Math.pow(t, 2) * midP.x;
+    py = Math.pow(1 - t, 2) * startP.y + 2 * (1 - t) * t * cp1.y + Math.pow(t, 2) * midP.y;
+  } else {
+    const t = (pointerP - 0.5) * 2;
+    px = Math.pow(1 - t, 2) * midP.x + 2 * (1 - t) * t * cp2.x + Math.pow(t, 2) * endP.x;
+    py = Math.pow(1 - t, 2) * midP.y + 2 * (1 - t) * t * cp2.y + Math.pow(t, 2) * endP.y;
   }
+  px = Math.max(10, Math.min(W - 10, px));
+  py = Math.max(10, Math.min(H - 10, py));
+  
+  // Pulse glow
+  ctx.beginPath();
+  ctx.arc(px, py, 14, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(242, 194, 48, 0.15)";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(px, py, 8, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(242, 194, 48, 0.3)";
+  ctx.fill();
+
+  // Triangle marker
+  ctx.beginPath();
+  ctx.moveTo(px, py - 6);
+  ctx.lineTo(px + 4, py + 4);
+  ctx.lineTo(px - 4, py + 4);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(242, 194, 48, 1)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(40, 30, 20, 0.9)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
 
   // ── Local City Roads ──────────────────────────────────────────────────────
   ctx.lineWidth = 1.2;
@@ -634,7 +633,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number
   }
 
   // ── Compass ───────────────────────────────────────────────────────────────
-  ctx.save(); ctx.translate(W - 50, 50);
+  ctx.save(); ctx.translate(W - 50, 65);
   [0, Math.PI / 2, Math.PI, Math.PI * 1.5].forEach((ang, i) => {
     ctx.save(); ctx.rotate(ang);
     ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(4, -5); ctx.lineTo(0, -8); ctx.lineTo(-4, -5); ctx.closePath();
@@ -745,10 +744,12 @@ function MapPopupModal({
     
     const canvas = canvasRef.current;
     const p = mapConfig.params;
-    const [W, H] = [1280, 960];
+    const [W, H] = SIZES[p.mapSize];
+
     canvas.width = W;
     canvas.height = H;
     const ctx = canvas.getContext("2d")!;
+
     const rng = makePRNG(p.seed);
     const h = fbm(rng, W, H, 7);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -760,7 +761,9 @@ function MapPopupModal({
       const bump = valueNoise(makePRNG(p.seed + 1234), W, H, W / 6);
       for (let i = 0; i < h.length; i++) h[i] = Math.min(1, h[i] * 0.85 + bump[i] * 0.25);
     }
+
     const playerProgress = (profile?.levelProgress || 0) / (profile?.nextLevelXP || 100);
+    
     ctx.putImageData(generateMap(p, W, H, h), 0, 0);
     drawOverlay(ctx, p, W, H, h, playerProgress);
   }, [mounted, mapConfig, profile]);
@@ -860,7 +863,7 @@ function MapPopupModal({
 }
 
 // ─── World Map Configuration ──────────────────────────────────────────────────
-const SIZES: Record<string, [number, number]> = { small: [480, 360], medium: [640, 480], large: [800, 600] };
+const SIZES: Record<string, [number, number]> = { small: [960, 720], medium: [1280, 960], large: [1600, 1200] };
 
 const BIOME_GROUPS: { label: string; keys: BiomeKey[] }[] = [
   { label: "Verdant", keys: ["temperate", "tropical", "swamp", "mushroom"] },
@@ -1281,7 +1284,7 @@ export default function FantasyMapGenerator() {
             borderRadius: "var(--border-radius-lg)",
             overflow: "auto", padding: 8,
           }}>
-            <canvas ref={canvasRef} style={{ display: "block", borderRadius: 4, imageRendering: "pixelated" }} />
+            <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "auto", borderRadius: 4, imageRendering: "pixelated" }} />
           </div>
           <p style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 5, fontFamily: "Georgia,serif" }}>
             {BIOMES[params.biome].icon} <strong>{BIOMES[params.biome].label}</strong> · seed {params.seed} · {SIZES[params.mapSize][0]}×{SIZES[params.mapSize][1]}px

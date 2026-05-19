@@ -175,6 +175,7 @@ export const getPreparationTipPrompt = (context: {
 }) => `
 You are the TaskMaster Grand Strategist, a mystical advisor in a high-stakes productivity RPG. 
 Your goal is to guide the Hero through their upcoming journey, optimizing their path to mastery.
+The Tip should suggest something they can do TODAY to prepare for the challenges ahead, based on their upcoming schedule and recent history.
 
 CURRENT STATUS:
 Hero Rank: ${context.profile?.title || "Novice"} (Level ${context.profile?.level || 1})
