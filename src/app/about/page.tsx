@@ -32,6 +32,7 @@ export default function AboutPage() {
   const [seasonsLimit, setSeasonsLimit] = useState(6);
   const [pruneLoading, setPruneLoading] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<string>("default");
+  const [locationPermission, setLocationPermission] = useState<string>("default");
 
   async function handlePrune() {
     if (!confirm("Are you sure? This will download your data older than 5 years as a CSV and permanently delete it from the cloud database.")) return;
@@ -82,6 +83,17 @@ export default function AboutPage() {
     if ("Notification" in window) {
       setNotificationPermission(Notification.permission);
     }
+
+    if ("permissions" in navigator) {
+      navigator.permissions.query({ name: 'geolocation' as PermissionName }).then((result) => {
+        setLocationPermission(result.state);
+        result.onchange = () => {
+          setLocationPermission(result.state);
+        };
+      }).catch(() => {
+        // Fallback for browsers that don't support geolocation permission querying
+      });
+    }
   }, []);
 
   async function handleEnableNotifications() {
@@ -96,6 +108,32 @@ export default function AboutPage() {
         body: "You'll now receive updates from TaskMaster.",
         icon: "/favicon.ico"
       });
+    }
+  }
+
+  function handleEnableLocation() {
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if ("permissions" in navigator) {
+             navigator.permissions.query({ name: 'geolocation' as PermissionName }).then(res => setLocationPermission(res.state)).catch(() => setLocationPermission("granted"));
+          } else {
+             setLocationPermission("granted");
+          }
+        },
+        (err) => {
+          console.error(err);
+          if (err.code === err.PERMISSION_DENIED) {
+             alert("Location permission is blocked in your browser settings. Please enable it manually by clicking the lock icon next to the URL.");
+             setLocationPermission("denied");
+          } else {
+             alert("Failed to access location. Please check your browser or device settings.");
+          }
+        },
+        { timeout: 5000 }
+      );
+    } else {
+      alert("Geolocation is not supported by this browser.");
     }
   }
 
@@ -472,7 +510,7 @@ export default function AboutPage() {
           <h2 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-3xl font-black dark:text-tm-yellow italic tracking-tighter uppercase">App Settings</h2>
         </div>
 
-        <GlassCard className="p-6 md:p-8 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 relative overflow-hidden">
+        <GlassCard className="p-6 md:p-8 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 relative overflow-hidden flex flex-col gap-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
               <h3 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-xl font-black dark:text-white leading-tight">Browser Notifications</h3>
@@ -491,13 +529,36 @@ export default function AboutPage() {
               {notificationPermission === "granted" ? "Notifications Enabled" : "Enable Notifications"}
             </button>
           </div>
+
+          <div className="w-full h-[1px] bg-tm-blue-gray/10" />
+
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <h3 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-xl font-black dark:text-white leading-tight">Location Services</h3>
+              <p className="text-sm text-tm-blue-gray mt-1 max-w-2xl font-medium">Allow access to your location to enable weather-based relief recommendations in the Tavern widget.</p>
+            </div>
+            <button
+              onClick={handleEnableLocation}
+              disabled={locationPermission === "granted"}
+              className={cn(
+                "px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all whitespace-nowrap",
+                locationPermission === "granted"
+                  ? "bg-tm-yellow/5 text-tm-yellow/50 border border-tm-yellow/10 cursor-default"
+                  : locationPermission === "denied"
+                  ? "bg-tm-red/10 text-tm-red border border-tm-red/20 cursor-not-allowed"
+                  : "bg-tm-yellow/10 hover:bg-tm-yellow/20 text-tm-yellow border border-tm-yellow/20 hover:scale-105"
+              )}
+            >
+              {locationPermission === "granted" ? "Location Enabled" : locationPermission === "denied" ? "Location Blocked" : "Enable Location"}
+            </button>
+          </div>
         </GlassCard>
       </div>
 
       {/* Footer */}
       <div className="pt-12 text-center space-y-4 border-t border-tm-blue-gray/10">
         <p className="text-xs font-black uppercase text-tm-blue-gray tracking-[0.3em]">
-          Version 3.4.7 • TaskMaster • By Pinaki AKA PiX
+          Version 3.5.0 • TaskMaster • By Pinaki AKA PiX
         </p>
       </div>
 

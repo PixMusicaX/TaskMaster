@@ -288,7 +288,8 @@ export default function Home() {
         if (typeof window !== "undefined" && navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (pos) => finishRelief(pos.coords.latitude, pos.coords.longitude),
-            () => finishRelief()
+            () => finishRelief(),
+            { timeout: 5000 }
           );
         } else {
           await finishRelief();
@@ -427,9 +428,21 @@ export default function Home() {
 
   async function handleRegenerateRelief() {
     setReliefLoading(true);
-    const newRelief = await regenerateReliefRecommendation(undefined, undefined, todayStr);
-    setRelief(newRelief);
-    setReliefLoading(false);
+    const finishRegenerate = async (lat?: number, lon?: number) => {
+      const newRelief = await regenerateReliefRecommendation(lat, lon, todayStr);
+      setRelief(newRelief);
+      setReliefLoading(false);
+    };
+
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => finishRegenerate(pos.coords.latitude, pos.coords.longitude),
+        () => finishRegenerate(),
+        { timeout: 5000 }
+      );
+    } else {
+      await finishRegenerate();
+    }
   }
 
   return (

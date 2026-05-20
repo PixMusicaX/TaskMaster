@@ -22,12 +22,12 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
     });
 
     if (!recommendation) {
-      let weatherInfo = { weather: "Clear", temp: "22", location: "No location found" };
+      let weatherInfo: { weather: string; temp: string; location: string; precipitation?: number; windSpeed?: number } = { weather: "Clear", temp: "22", location: "No location found" };
 
       if (lat && lon) {
         try {
           const [weatherRes, geoRes] = await Promise.all([
-            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max&timezone=auto&forecast_days=3`),
+            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,precipitation_probability_max,wind_speed_10m_max&timezone=auto&forecast_days=3`),
             fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`, {
               headers: { "User-Agent": "TaskMaster/1.0" }
             })
@@ -45,6 +45,8 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
             const minTemp = Math.round(weatherData.daily.temperature_2m_min[idx]);
             const feelsLike = Math.round(weatherData.daily.apparent_temperature_max[idx]);
             weatherInfo.temp = `${maxTemp}° (${minTemp}–${maxTemp}, feels ${feelsLike})`;
+            weatherInfo.precipitation = weatherData.daily.precipitation_probability_max[idx];
+            weatherInfo.windSpeed = Math.round(weatherData.daily.wind_speed_10m_max[idx]);
 
             const code = weatherData.daily.weathercode[idx];
             if (code === 0) weatherInfo.weather = "Clear";

@@ -75,6 +75,8 @@ export const getReliefRecommendationPrompt = (context: {
   location?: string;
   weather?: string;
   temp?: string;
+  precipitation?: number;
+  windSpeed?: number;
   recentNotes: string[];
   recentTasks: any[];
   history: any[];
@@ -89,6 +91,8 @@ ENVIRONMENTAL CONTEXT
 ═══════════════════════════════
 Location: ${context.location || "Unknown"}
 Weather : ${context.weather || "Unknown"} (${context.temp || "???"}°C)
+Precipitation Chance: ${context.precipitation !== undefined ? context.precipitation + '%' : "Unknown"}
+Wind Speed: ${context.windSpeed !== undefined ? context.windSpeed + ' km/h' : "Unknown"}
 
 ═══════════════════════════════
 USER CONTEXT (LAST 7 DAYS)
