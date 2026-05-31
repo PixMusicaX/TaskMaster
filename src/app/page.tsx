@@ -658,36 +658,37 @@ export default function Home() {
                 <span className="text-[8px] font-black text-tm-yellow/40 uppercase tracking-widest">Active Focus</span>
               </div>
             </div>
-
             <div className={cn("flex-1 space-y-4", aiLoading && "flex items-center justify-center min-h-[250px]")}>
               {aiLoading ? (
                 <div className="flex flex-col items-center gap-4">
                   <PremiumLoader />
                   <p className="text-[10px] font-black uppercase text-tm-yellow animate-pulse tracking-[0.2em]">Syncing Intelligence...</p>
                 </div>
-              ) : missingInfo.length > 0 ? (
-                <div className="p-5 rounded-[1.5rem] bg-tm-orange-dark/10 border border-tm-orange-dark/30 space-y-4 relative overflow-hidden group/missing">
-                  <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <AlertCircle size={40} className="text-tm-orange-dark" />
-                  </div>
-                  <p className="text-sm font-bold text-foreground/90">Temporal Anomaly Detected</p>
-                  <p className="text-xs text-tm-blue-gray leading-relaxed">You left some gaps in your journey <span className="text-tm-yellow">yesterday</span>. Mend them to restore flow:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {missingInfo.map(item => (
-                      <span key={item} className="px-3 py-1 bg-tm-orange-dark/80 text-white text-[9px] font-black uppercase rounded-lg shadow-lg">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                  <Link
-                    href={missingInfo[0] === "Note" ? "/notes" : "/habits"}
-                    className="flex items-center justify-center gap-2 w-full py-3 bg-foreground/10 hover:bg-tm-yellow text-foreground hover:text-tm-purple-dark text-[10px] font-black uppercase rounded-xl transition-all border border-foreground/10"
-                  >
-                    Mend History <Plus size={14} />
-                  </Link>
-                </div>
               ) : (
                 <div className="space-y-3">
+                  {missingInfo.length > 0 && (
+                    <div className="p-5 rounded-[1.5rem] bg-tm-orange-dark/10 border border-tm-orange-dark/30 space-y-4 relative overflow-hidden group/missing">
+                      <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <AlertCircle size={40} className="text-tm-orange-dark" />
+                      </div>
+                      <p className="text-sm font-bold text-foreground/90">Temporal Anomaly Detected</p>
+                      <p className="text-xs text-tm-blue-gray leading-relaxed">You left some gaps in your journey <span className="text-tm-yellow">yesterday</span>. Mend them to restore flow:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {missingInfo.map(item => (
+                          <span key={item} className="px-3 py-1 bg-tm-orange-dark/80 text-white text-[9px] font-black uppercase rounded-lg shadow-lg">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                      <Link
+                        href={missingInfo[0] === "Note" ? "/notes" : "/habits"}
+                        className="flex items-center justify-center gap-2 w-full py-3 bg-foreground/10 hover:bg-tm-yellow text-foreground hover:text-tm-purple-dark text-[10px] font-black uppercase rounded-xl transition-all border border-foreground/10"
+                      >
+                        Mend History <Plus size={14} />
+                      </Link>
+                    </div>
+                  )}
+
                   {/* Preparation Tip Card */}
                   {prepLoading ? (
                     <div className="p-8 rounded-[1.25rem] bg-tm-purple-dark/5 border border-tm-purple-dark/10 flex flex-col items-center gap-3">
@@ -872,7 +873,6 @@ export default function Home() {
                       </div>
                     </div>
                   )}
-
                 </div>
               )}
             </div>

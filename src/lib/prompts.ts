@@ -2,6 +2,7 @@ export const getSmartMissionPrompt = (context: {
   level: number;
   xp: number;
   stats: any;
+  title: string;
   habits: string[];
   recentTasks: any[];
   recentNotes: string[];
@@ -16,6 +17,7 @@ Current Date : ${context.today}
 HERO PROFILE
 ═══════════════════════════════
 Level        : ${context.level}
+Title        : ${context.title}
 All Stats    : ${JSON.stringify(context.stats)}
 Active Habits: ${context.habits.join(", ") || "None"}
 

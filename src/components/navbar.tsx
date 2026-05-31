@@ -102,7 +102,7 @@ export default function Navbar() {
             <div className="hidden md:flex items-center gap-1.5 leading-none mt-1">
               <span className="text-tm-orange-dark text-[10px] font-black uppercase tracking-widest">[{currentClass}]</span>
               <span className="text-[9px] text-tm-blue-gray font-bold uppercase tracking-tighter border-l border-white/10 pl-1.5 ml-0.5">
-                {daysLeft} DAYS LEFT
+                {daysLeft === 1 ? "1 DAY LEFT" : `${daysLeft} DAYS LEFT`}
               </span>
             </div>
           </div>

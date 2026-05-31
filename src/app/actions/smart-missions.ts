@@ -40,6 +40,7 @@ export async function getSmartMission(clientDateStr?: string) {
             level: profile.level,
             xp: profile.xp,
             stats: profile.stats,
+            title: profile.title,
             habits: habitData.map((h: any) => h.name),
             recentTasks: taskData.map((t: any) => ({
               title: t.title,
