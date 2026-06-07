@@ -848,14 +848,14 @@ export default function CalendarPage() {
                 )
               },
               {
-                header: "Type", key: "type", render: (val) => (
+                header: "Type", key: "type", render: (val, row) => (
                   <div className="flex items-center justify-center">
                     <span className={cn(
                       "px-2 py-0.5 rounded text-[10px] font-black uppercase whitespace-nowrap",
                       val === "task" ? "bg-tm-yellow/10 text-tm-yellow" : "bg-tm-orange-light/10 text-tm-orange-light"
                     )}>
                       <span className="sm:inline hidden">{val?.replace("_", " ")}</span>
-                      <span className="sm:hidden inline">{val === "task" ? "T" : "E"}</span>
+                      <span className="sm:hidden inline">{row.type === "task" ? "T" : row.type === "special_day" ? "S" : "E"}</span>
                     </span>
                   </div>
                 )
