@@ -94,6 +94,13 @@ export const smartMission = pgTable("SmartMission", {
   createdAt: timestamp("createdAt", { precision: 3, mode: 'date' }).defaultNow().notNull(),
 });
 
+export const dailyQuote = pgTable("DailyQuote", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  date: text("date").unique().notNull(), // Format: YYYY-MM-DD
+  quote: text("quote").notNull(),
+  createdAt: timestamp("createdAt", { precision: 3, mode: 'date' }).defaultNow().notNull(),
+});
+
 export const reliefRecommendation = pgTable("ReliefRecommendation", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
   title: text("title").notNull(),
