@@ -68,8 +68,7 @@ Return ONLY a valid JSON object. No preamble, no markdown, no extra keys.
 
 {
   "title": "Short quest name (max 6 words, dramatic & specific)",
-  "description": "1-2 sentences. Nearly 20 words. What to do, how to do it, why it matters for their growth.",
-  "quote": "A short (max 12 words) motivating RPG-flavored daily wisdom from the Game Master."
+  "description": "1-2 sentences. Nearly 20 words. What to do, how to do it, why it matters for their growth."
 }
 `;
 

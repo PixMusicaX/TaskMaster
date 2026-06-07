@@ -8,6 +8,7 @@ import { getSmartMissionPrompt } from "@/lib/prompts";
 import { getProfile } from "./gamification";
 import { getHabits } from "./habits";
 import { getEventsByDateRange } from "./events";
+import { getDailyQuote } from "./daily-quote";
 import { safeGenerateContent } from "@/lib/ai-utils";
 import { eq, desc, gte } from "drizzle-orm";
 
@@ -61,11 +62,12 @@ export async function getSmartMission(clientDateStr?: string) {
 
           if (content) {
             const data = JSON.parse(content);
+            const zenQuote = await getDailyQuote();
             const [newMission] = await db.insert(smartMission).values({
               date: today,
               title: data.title,
               description: data.description,
-              quote: data.quote,
+              quote: zenQuote,
               xpReward: 50,
               stat: "charisma"
             }).returning();
@@ -76,6 +78,7 @@ export async function getSmartMission(clientDateStr?: string) {
         }
       }
 
+      const zenQuoteFallback = await getDailyQuote();
       // Fallback if Gemini fails or no key
       if (!mission) {
         const missions = [
@@ -96,7 +99,7 @@ export async function getSmartMission(clientDateStr?: string) {
           date: today,
           title: selected.title,
           description: selected.description,
-          quote: "Every grand legend begins with a single modest step.",
+          quote: zenQuoteFallback,
           xpReward: 50,
           stat: "charisma"
         }).returning();

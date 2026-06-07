@@ -11,6 +11,7 @@ import { getEventsByDateRange, toggleEventCompletion, getDashboardTasks, syncMon
 import { getProfile, getSeasonHistory } from "@/app/actions/gamification";
 import { getNoteByDate, getRecentNotes } from "@/app/actions/notes";
 import { getSmartMission, toggleSmartMission, regenerateSmartMission } from "@/app/actions/smart-missions";
+import { getDailyQuote } from "@/app/actions/daily-quote";
 import { getReliefRecommendation, toggleReliefRecommendation, regenerateReliefRecommendation } from "@/app/actions/relief";
 import { getPreparationTip, togglePreparationTip, regeneratePreparationTip } from "@/app/actions/preparation";
 import Link from "next/link";
@@ -101,6 +102,7 @@ export default function Home() {
   const [showRecap, setShowRecap] = useState(false);
   const [showTaskmaster, setShowTaskmaster] = useState(false);
   const [smartMission, setSmartMission] = useState<any>(null);
+  const [dailyQuote, setDailyQuote] = useState<string>("");
   const [relief, setRelief] = useState<any>(null);
   const [prepTip, setPrepTip] = useState<any>(null);
   const [moodData, setMoodData] = useState<any[]>([]);
@@ -130,6 +132,11 @@ export default function Home() {
 
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
+
+  const rawQuote = profile?.quote || dailyQuote || smartMission?.quote || "Master your day, master your life.";
+  const quoteParts = rawQuote.split(/\s*[—-]\s*/).filter(Boolean);
+  const quoteText = quoteParts[0];
+  const quoteAuthor = quoteParts.length > 1 ? quoteParts.slice(1).join(" - ") : "";
 
   const DAYS = [
     { label: "M", value: 1 },
@@ -272,12 +279,14 @@ export default function Home() {
       // 5. AI Guidance (Parallelized for better performance)
       setAiLoading(true);
       try {
-        const [smartData, prepData] = await Promise.all([
+        const [smartData, prepData, quoteData] = await Promise.all([
           getSmartMission(todayStr),
-          getPreparationTip(todayStr)
+          getPreparationTip(todayStr),
+          getDailyQuote(todayStr)
         ]);
         setSmartMission(smartData);
         setPrepTip(prepData);
+        setDailyQuote(quoteData);
 
         const finishRelief = async (lat?: number, lon?: number) => {
           const reliefData = await getReliefRecommendation(lat, lon, todayStr);
@@ -421,8 +430,9 @@ export default function Home() {
   async function handleRegenerate() {
     setAiLoading(true);
     await regenerateSmartMission(todayStr);
-    const data = await getSmartMission(todayStr);
+    const [data, quoteData] = await Promise.all([getSmartMission(todayStr), getDailyQuote(todayStr)]);
     setSmartMission(data);
+    setDailyQuote(quoteData);
     setAiLoading(false);
   }
 
@@ -450,7 +460,7 @@ export default function Home() {
       <section
         className="relative min-h-screen flex flex-col items-center pt-28 pb-32 px-6 gap-12"
       >
-        {/* Central Hero: Clock & Quote */}
+        {/* Central Hero: Clock */}
         <div className="flex flex-col items-center text-center gap-2 z-10">
           <Clock />
 
@@ -481,11 +491,11 @@ export default function Home() {
                 })}
               </div>
             )}
-
-          <p className="text-sm md:text-base font-medium text-tm-blue-gray italic opacity-80 max-w-xl">
-            "{profile?.quote || smartMission?.quote || "Master your day, master your life."}"
-          </p>
         </div>
+
+        <p className="text-sm text-center md:text-base font-medium text-tm-blue-gray italic opacity-80 max-w-xl mx-auto -mt-8 mb-12">
+          "{quoteText}"{quoteAuthor ? ` - ${quoteAuthor}` : ""}
+        </p>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-6xl">
           {/* Daily Missions Widget */}
