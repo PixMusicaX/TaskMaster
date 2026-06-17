@@ -63,6 +63,12 @@
   /* Silver Shine */
 }
 
+/* Fix for black-on-black buttons in Knight light mode */
+:root[data-rank="Knight"]:not(.dark) .bg-tm-yellow.text-tm-purple-dark,
+:root[data-rank="Knight"]:not(.dark) .bg-tm-yellow .text-tm-purple-dark {
+  color: #ffffff !important;
+}
+
 :root[data-rank="Champion"] {
   --tm-yellow: #FBBF24;
   /* Amber Gold */
@@ -161,10 +167,10 @@
   /* Platinum */
   --tm-purple-dark: #000000;
   /* Absolute Black */
-  --tm-orange-light: #CBD5E1;
-  /* Silver */
-  --tm-orange-dark: #F8FAFC;
-  /* White Chrome */
+  --tm-orange-light: #52525B;
+  /* Iron Grey */
+  --tm-orange-dark: #3F3F46;
+  /* Dark Zinc */
 }
 
 .dark[data-rank="Champion"] {

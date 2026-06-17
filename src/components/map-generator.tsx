@@ -958,22 +958,9 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
     const level = profile?.level || 1;
 
 
-    // Stat Balance score (0 to 100)
-    // Punishes neglecting specific types of tasks
-    const stats = [
-      profile?.strength || 0,
-      profile?.intelligence || 0,
-      profile?.wealth || 0,
-      profile?.vitality || 0,
-      profile?.charisma || 0
-    ];
-    const maxStat = Math.max(...stats, 1);
-    const minStat = Math.min(...stats);
-    const statBalanceScore = (minStat / maxStat) * 100;
-
     // Weighted performance score
-    // 35% Mood, 45% Task/Habit Completion, 20% Stat Balance
-    const performanceScore = (moodScore * 0.35) + (completionScore * 0.45) + (statBalanceScore * 0.20);
+    // 44% Mood, 56% Task/Habit Completion (Stat Balance removed)
+    const performanceScore = (moodScore * 0.44) + (completionScore * 0.56);
 
     let performance: "low" | "balanced" | "peak" = "balanced";
     if (performanceScore > 60) performance = "peak";

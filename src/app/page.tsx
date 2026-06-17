@@ -151,6 +151,7 @@ export default function Home() {
   function getFrequencyLabel(freq: number[]) {
     if (!freq || freq.length === 0) return "Daily";
     if (freq.length === 7) return "Daily";
+    if (freq.length === 6 && !freq.includes(0)) return "Weekdays + Sat";
     if (freq.length === 5 && !freq.includes(0) && !freq.includes(6)) return "Weekdays";
     if (freq.length === 2 && freq.includes(0) && freq.includes(6)) return "Weekends";
     const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -457,6 +458,12 @@ export default function Home() {
 
   return (
     <div className="min-h-full bg-transparent text-foreground selection:bg-tm-yellow selection:text-tm-purple-dark">
+      <style>{`
+        :root[data-rank="Knight"]:not(.dark) .bg-tm-yellow.text-tm-purple-dark,
+        :root[data-rank="Knight"]:not(.dark) .bg-tm-yellow .text-tm-purple-dark {
+          color: #ffffff !important;
+        }
+      `}</style>
       <section
         className="relative min-h-screen flex flex-col items-center pt-28 pb-32 px-6 gap-12"
       >

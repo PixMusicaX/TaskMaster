@@ -224,6 +224,12 @@ export default function CalendarPage() {
 
   return (
     <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-7xl mx-auto space-y-8">
+      <style>{`
+        :root[data-rank="Knight"]:not(.dark) .bg-tm-yellow.text-tm-purple-dark,
+        :root[data-rank="Knight"]:not(.dark) .bg-tm-yellow .text-tm-purple-dark {
+          color: #ffffff !important;
+        }
+      `}</style>
       {isLoading ? (
         <PremiumLoader />
       ) : (

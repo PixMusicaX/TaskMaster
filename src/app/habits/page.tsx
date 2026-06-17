@@ -199,6 +199,7 @@ export default function HabitsPage() {
   function getFrequencyLabel(freq: number[]) {
     if (!freq || freq.length === 0) return "Daily";
     if (freq.length === 7) return "Daily";
+    if (freq.length === 6 && !freq.includes(0)) return "Weekdays + Sat";
     if (freq.length === 5 && !freq.includes(0) && !freq.includes(6)) return "Weekdays";
     if (freq.length === 2 && freq.includes(0) && freq.includes(6)) return "Weekends";
     const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -206,7 +207,13 @@ export default function HabitsPage() {
   }
 
   return (
-    <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-6xl mx-auto space-y-8 md:space-y-12">
+    <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-7xl mx-auto space-y-8">
+      <style>{`
+        :root[data-rank="Knight"]:not(.dark) .bg-tm-yellow.text-tm-purple-dark,
+        :root[data-rank="Knight"]:not(.dark) .bg-tm-yellow .text-tm-purple-dark {
+          color: #ffffff !important;
+        }
+      `}</style>
       {isLoading ? (
         <PremiumLoader />
       ) : (
