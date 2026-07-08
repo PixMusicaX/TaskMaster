@@ -14,6 +14,10 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
 import { generatePruneArchive, deletePrunedData } from "@/app/actions/prune";
 import TabularViewModal from "@/components/TabularViewModal";
+import { toggleSmartMission } from "@/app/actions/smart-missions";
+import { toggleReliefRecommendation } from "@/app/actions/relief";
+import { togglePreparationTip } from "@/app/actions/preparation";
+import { addXP } from "@/app/actions/gamification";
 
 export default function AboutPage() {
   const { theme } = useTheme();
@@ -62,6 +66,45 @@ export default function AboutPage() {
     }
     setPruneLoading(false);
   }
+
+  const handleToggleMission = async (mission: any, idx: number) => {
+    const newVal = !mission.completed;
+    const newHistory = [...missionHistory];
+    newHistory[idx].completed = newVal;
+    setMissionHistory(newHistory);
+    
+    await toggleSmartMission(mission.id, newVal);
+    if (newVal) {
+      await addXP(50, "charisma");
+      window.dispatchEvent(new Event("profile-updated"));
+    }
+  };
+
+  const handleTogglePrep = async (p: any, idx: number) => {
+    const newVal = !p.completed;
+    const newHistory = [...preparationHistory];
+    newHistory[idx].completed = newVal;
+    setPreparationHistory(newHistory);
+    
+    await togglePreparationTip(p.id, newVal);
+    if (newVal) {
+      await addXP(25, "charisma");
+      window.dispatchEvent(new Event("profile-updated"));
+    }
+  };
+
+  const handleToggleRelief = async (r: any, idx: number) => {
+    const newVal = !r.completed;
+    const newHistory = [...reliefHistory];
+    newHistory[idx].completed = newVal;
+    setReliefHistory(newHistory);
+    
+    await toggleReliefRecommendation(r.id, newVal, 0);
+    if (newVal) {
+      await addXP(10, "charisma");
+      window.dispatchEvent(new Event("profile-updated"));
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -272,7 +315,12 @@ export default function AboutPage() {
           <div className="space-y-6">
             <div className="space-y-4">
               {missionHistory.slice(0, 5).map((mission, idx) => (
-                <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:border-tm-orange-light/40 transition-all">
+                <GlassCard 
+                  key={idx} 
+                  delay={idx * 0.05} 
+                  onClick={() => handleToggleMission(mission, idx)}
+                  className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:border-tm-orange-light/40 transition-all cursor-pointer text-left"
+                >
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
@@ -331,7 +379,12 @@ export default function AboutPage() {
           <div className="space-y-6">
             <div className="space-y-4">
               {preparationHistory.slice(0, 5).map((p, idx) => (
-                <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:border-tm-yellow/40 transition-all">
+                <GlassCard 
+                  key={idx} 
+                  delay={idx * 0.05} 
+                  onClick={() => handleTogglePrep(p, idx)}
+                  className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:border-tm-yellow/40 transition-all cursor-pointer text-left"
+                >
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
@@ -390,7 +443,12 @@ export default function AboutPage() {
           <div className="space-y-6">
             <div className="space-y-4">
               {reliefHistory.slice(0, 5).map((r, idx) => (
-                <GlassCard key={idx} delay={idx * 0.05} className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:bg-tm-purple-dark/[0.06] dark:hover:bg-white/10 transition-all">
+                <GlassCard 
+                  key={idx} 
+                  delay={idx * 0.05} 
+                  onClick={() => handleToggleRelief(r, idx)}
+                  className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:bg-tm-purple-dark/[0.06] dark:hover:bg-white/10 transition-all cursor-pointer text-left"
+                >
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
@@ -558,7 +616,7 @@ export default function AboutPage() {
       {/* Footer */}
       <div className="pt-12 text-center space-y-4 border-t border-tm-blue-gray/10">
         <p className="text-xs font-black uppercase text-tm-blue-gray tracking-[0.3em]">
-          Version 4.1.2 • TaskMaster • By Pinaki AKA PiX
+          Version 5.0.0 • TaskMaster • By Pinaki AKA PiX
         </p>
       </div>
 

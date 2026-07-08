@@ -958,9 +958,8 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
     const level = profile?.level || 1;
 
 
-    // Weighted performance score
-    // 44% Mood, 56% Task/Habit Completion (Stat Balance removed)
-    const performanceScore = (moodScore * 0.44) + (completionScore * 0.56);
+    // Custom weights: 37% Task/Habit, 45% Mood, 18% Random (Total: 90%)
+    const performanceScore = (completionScore * 0.37) + (moodScore * 0.45) + (Math.random() * 100 * 0.18);
 
     let performance: "low" | "balanced" | "peak" = "balanced";
     if (performanceScore > 60) performance = "peak";

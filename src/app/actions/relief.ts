@@ -9,11 +9,18 @@ import { getProfile } from "./gamification";
 import { getHabits } from "./habits";
 import { getEventsByDateRange } from "./events";
 import { safeGenerateContent } from "@/lib/ai-utils";
-import { eq, desc, gte } from "drizzle-orm";
+import { eq, desc, gte, ne, asc } from "drizzle-orm";
 
 const GEMINI_API_KEY = process.env.gemini_key;
 
-export async function getReliefRecommendation(lat?: number, lon?: number, clientDateStr?: string) {
+export async function getReliefRecommendation(
+  lat?: number, 
+  lon?: number, 
+  clientDateStr?: string,
+  cachedLocation?: string,
+  cachedWeather?: string,
+  cachedTemp?: string
+) {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
 
   try {
@@ -22,7 +29,23 @@ export async function getReliefRecommendation(lat?: number, lon?: number, client
     });
 
     if (!recommendation) {
-      let weatherInfo: { weather: string; temp: string; location: string; precipitation?: number; windSpeed?: number } = { weather: "Clear", temp: "22", location: "No location found" };
+      let weatherInfo: { weather: string; temp: string; location: string; precipitation?: number; windSpeed?: number } = { 
+        weather: cachedWeather || "Clear", 
+        temp: cachedTemp || "22", 
+        location: cachedLocation || "No location found" 
+      };
+
+      if (!cachedLocation || cachedLocation === "No location found") {
+        const lastValid = await db.query.reliefRecommendation.findFirst({
+           where: ne(reliefRecommendation.location, "No location found"),
+           orderBy: [desc(reliefRecommendation.date)]
+        });
+        if (lastValid) {
+           weatherInfo.location = lastValid.location || "No location found";
+           if (!cachedWeather || cachedWeather === "Clear") weatherInfo.weather = lastValid.weather || "Clear";
+           if (!cachedTemp || cachedTemp === "22") weatherInfo.temp = lastValid.temp || "22";
+        }
+      }
 
       if (lat && lon) {
         try {
@@ -171,19 +194,45 @@ export async function toggleReliefRecommendation(id: string, completed: boolean,
 export async function getReliefHistory(sinceDate?: string) {
   try {
     const since = sinceDate || format(subDays(new Date(), 14), "yyyy-MM-dd");
-    return await db.select().from(reliefRecommendation)
-      .where(gte(reliefRecommendation.date, since))
-      .orderBy(desc(reliefRecommendation.date));
+    const allRecords = await db.select().from(reliefRecommendation).orderBy(asc(reliefRecommendation.date));
+    
+    let lastValidLocation = "No location found";
+    let lastValidWeather = "Clear";
+    let lastValidTemp = "22";
+
+    const processed = allRecords.map(r => {
+      if (r.location && r.location !== "No location found") {
+         lastValidLocation = r.location;
+         lastValidWeather = r.weather || "Clear";
+         lastValidTemp = r.temp || "22";
+      } else {
+         r.location = lastValidLocation;
+         r.weather = lastValidWeather;
+         r.temp = lastValidTemp;
+      }
+      return r;
+    });
+
+    return processed
+      .filter(r => r.date >= since)
+      .sort((a, b) => b.date.localeCompare(a.date));
   } catch (e) {
     return [];
   }
 }
 
-export async function regenerateReliefRecommendation(lat?: number, lon?: number, clientDateStr?: string) {
+export async function regenerateReliefRecommendation(
+  lat?: number, 
+  lon?: number, 
+  clientDateStr?: string,
+  cachedLocation?: string,
+  cachedWeather?: string,
+  cachedTemp?: string
+) {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   try {
     await db.delete(reliefRecommendation).where(eq(reliefRecommendation.date, today));
-    return await getReliefRecommendation(lat, lon, clientDateStr);
+    return await getReliefRecommendation(lat, lon, clientDateStr, cachedLocation, cachedWeather, cachedTemp);
   } catch (e) {
     return null;
   }

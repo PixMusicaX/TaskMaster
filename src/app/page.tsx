@@ -16,8 +16,10 @@ import { getReliefRecommendation, toggleReliefRecommendation, regenerateReliefRe
 import { getPreparationTip, togglePreparationTip, regeneratePreparationTip } from "@/app/actions/preparation";
 import Link from "next/link";
 import { cn, getSpecialDayColors } from "@/lib/utils";
+import { formatReliefTemp } from "@/lib/weather";
 import { RPG_TITLES, XP_VALUES } from "@/lib/constants";
 import { PremiumLoader } from "@/components/loader";
+import HabitIconRender from "@/components/HabitIconRender";
 import RecapModal from "@/components/RecapModal";
 import TaskmasterDialog from "@/components/taskmaster-dialog";
 import MoodRadar from "@/components/mood-radar";
@@ -70,26 +72,6 @@ function TaskIcon({ title, className, size = 14 }: { title: string, className?: 
   if (t.includes("mail") || t.includes("email") || t.includes("message") || t.includes("text") || t.includes("msg") || t.includes("talk") || t.includes("chat")) return <MessageSquare className={className} size={size} />;
 
   return <Target className={className} size={size} />;
-}
-
-const LUCIDE_ICONS: Record<string, any> = {
-  Brain, Music, Code, Gamepad2, Book, Dumbbell, HeartPulse, Laptop, Target, Zap, Coffee, Sparkles, Mic, Phone, Mail, MessageSquare, GraduationCap, Terminal
-};
-
-function HabitIconRender({ icon, className, size = 20 }: { icon: string, className?: string, size?: number }) {
-  if (!icon) return <Sparkles className={className} size={size} />;
-
-  // Check if it's a Lucide icon name
-  const IconComponent = LUCIDE_ICONS[icon];
-  if (IconComponent) return <IconComponent className={className} size={size} />;
-
-  // Fallback to rendering as emoji/text
-  return <span className={cn("inline-flex items-center justify-center", className)} style={{ fontSize: size }}>{icon}</span>;
-}
-
-function formatReliefTemp(temp?: string) {
-  if (!temp) return "";
-  return temp.split("°")[0].split(" ")[0];
 }
 
 export default function Home() {
@@ -290,8 +272,21 @@ export default function Home() {
         setDailyQuote(quoteData);
 
         const finishRelief = async (lat?: number, lon?: number) => {
-          const reliefData = await getReliefRecommendation(lat, lon, todayStr);
-          setRelief(reliefData);
+          let cachedLocation = localStorage.getItem('tm_lastLocation') || undefined;
+          let cachedWeather = localStorage.getItem('tm_lastWeather') || undefined;
+          let cachedTemp = localStorage.getItem('tm_lastTemp') || undefined;
+          
+          let isCached = (!lat || !lon) && !!cachedLocation;
+
+          const reliefData = await getReliefRecommendation(lat, lon, todayStr, cachedLocation, cachedWeather, cachedTemp);
+          
+          if (lat && lon && reliefData && reliefData.location !== "No location found") {
+            localStorage.setItem('tm_lastLocation', reliefData.location || "");
+            localStorage.setItem('tm_lastWeather', reliefData.weather || "");
+            localStorage.setItem('tm_lastTemp', reliefData.temp || "");
+          }
+          
+          setRelief(reliefData ? { ...reliefData, isCached } : null);
           setAiLoading(false);
         };
 
@@ -440,8 +435,21 @@ export default function Home() {
   async function handleRegenerateRelief() {
     setReliefLoading(true);
     const finishRegenerate = async (lat?: number, lon?: number) => {
-      const newRelief = await regenerateReliefRecommendation(lat, lon, todayStr);
-      setRelief(newRelief);
+      let cachedLocation = localStorage.getItem('tm_lastLocation') || undefined;
+      let cachedWeather = localStorage.getItem('tm_lastWeather') || undefined;
+      let cachedTemp = localStorage.getItem('tm_lastTemp') || undefined;
+
+      let isCached = (!lat || !lon) && !!cachedLocation;
+
+      const newRelief = await regenerateReliefRecommendation(lat, lon, todayStr, cachedLocation, cachedWeather, cachedTemp);
+      
+      if (lat && lon && newRelief && newRelief.location !== "No location found") {
+        localStorage.setItem('tm_lastLocation', newRelief.location || "");
+        localStorage.setItem('tm_lastWeather', newRelief.weather || "");
+        localStorage.setItem('tm_lastTemp', newRelief.temp || "");
+      }
+
+      setRelief(newRelief ? { ...newRelief, isCached } : null);
       setReliefLoading(false);
     };
 
@@ -1161,7 +1169,7 @@ export default function Home() {
                 </h3>
                 {relief && (
                   <div className="flex items-center gap-3 text-[10px] font-black uppercase text-tm-blue-gray/60 tracking-[0.2em]">
-                    <span className="flex items-center gap-1.5"><MapPin size={12} className="text-tm-yellow/40" /> {relief.location}</span>
+                    <span className={cn("flex items-center gap-1.5", relief.isCached ? "text-tm-orange-light/80" : "")}><MapPin size={12} className={relief.isCached ? "text-tm-orange-light" : "text-tm-yellow/40"} /> {relief.location}</span>
                     <span className="w-1 h-1 rounded-full bg-white/10" />
                     <span className="flex items-center gap-1.5"><CloudSun size={12} className="text-tm-yellow/40" /> {formatReliefTemp(relief.temp)}°C {relief.weather}</span>
                   </div>

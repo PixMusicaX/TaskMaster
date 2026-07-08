@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, CheckSquare, FileText, Calendar, Moon, Sun, Info, Shield } from "lucide-react";
+import { Home, CheckSquare, FileText, Calendar, Moon, Sun, Info, Shield, History } from "lucide-react";
 import { useTheme } from "./theme-provider";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ const navItems = [
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/notes", label: "Notes", icon: FileText },
   { href: "/habits", label: "Habits", icon: CheckSquare },
+  { href: "/history", label: "History", icon: History },
   { href: "/about", label: "About", icon: Info },
 ];
 
