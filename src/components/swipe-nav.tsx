@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
-const ROUTES = ["/", "/calendar", "/history", "/notes", "/habits", "/about"];
+const ROUTES = ["/", "/calendar", "/notes", "/habits", "/history", "/about"];
 
 export default function SwipeNav() {
   const router = useRouter();

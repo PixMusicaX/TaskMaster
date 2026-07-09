@@ -21,14 +21,21 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
   let habitsResult: typeof habitLog.$inferSelect[] = [];
 
   if (query.trim() !== "") {
-    // Search mode: Ignore limitDays, search all time up to today
+    // Search mode: Ignore limitDays, search all time up to yesterday
     const searchPattern = `%${query.trim()}%`;
-    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const yesterdayStr = format(subDays(new Date(), 1), "yyyy-MM-dd");
+    
+    let parsedDateStr: string | null = null;
+    const yearSuffix = /\d{4}/.test(query) ? "" : " " + new Date().getFullYear();
+    const parsed = new Date(query.trim() + yearSuffix);
+    if (!isNaN(parsed.getTime())) {
+      parsedDateStr = format(parsed, "yyyy-MM-dd");
+    }
 
     const matchedNotes = await db.select({ date: note.date }).from(note).where(
       and(
         ilike(note.content, searchPattern),
-        lte(note.date, todayStr)
+        lte(note.date, yesterdayStr)
       )
     );
 
@@ -46,7 +53,7 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
             eq(event.completed, true)
           )
         ),
-        lte(event.date, todayStr)
+        lte(event.date, yesterdayStr)
       )
     );
 
@@ -54,15 +61,21 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
       and(
         ilike(habitLog.habitName, searchPattern),
         eq(habitLog.completed, true),
-        lte(habitLog.date, todayStr)
+        lte(habitLog.date, yesterdayStr)
       )
     );
 
-    const uniqueDates = Array.from(new Set([
+    const uniqueDatesArray = [
       ...matchedNotes.map(n => n.date),
       ...matchedEvents.map(e => e.date),
       ...matchedHabits.map(h => h.date)
-    ]));
+    ];
+    
+    if (parsedDateStr && parsedDateStr <= yesterdayStr) {
+      uniqueDatesArray.push(parsedDateStr);
+    }
+    
+    const uniqueDates = Array.from(new Set(uniqueDatesArray));
 
     if (uniqueDates.length > 0) {
       notesResult = await db.select().from(note).where(inArray(note.date, uniqueDates)).orderBy(desc(note.createdAt));

@@ -200,7 +200,8 @@ export default function HistoryList({ initialData, initialEndDateStr }: { initia
                         <ul className="space-y-2">
                           {day.events.map((e) => (
                             <li key={e.id} className="text-sm bg-black/5 dark:bg-white/5 p-2 rounded-lg border border-black/5 dark:border-white/5">
-                              <span className="font-medium">{e.title}</span>
+                              <span className={cn(e.tier === "side" ? "italic" : e.tier === "epic" ? "font-bold" : "font-normal")}>{e.title}</span>
+                              {e.startTime && <span className="text-xs text-tm-yellow/80 ml-2 font-medium bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded">{format(new Date(e.startTime), "h:mm a")}</span>}
                               {e.description && <span className="text-tm-blue-gray ml-2">- {e.description}</span>}
                             </li>
                           ))}
@@ -216,7 +217,7 @@ export default function HistoryList({ initialData, initialEndDateStr }: { initia
                         <ul className="space-y-2">
                           {day.specialDays.map((e) => (
                             <li key={e.id} className="text-sm bg-black/5 dark:bg-white/5 p-2 rounded-lg border border-black/5 dark:border-white/5">
-                              <span className="font-medium">{e.title}</span>
+                              <span className={cn(e.tier === "side" ? "italic" : e.tier === "epic" ? "font-bold" : "font-normal")}>{e.title}</span>
                               {e.description && <span className="text-tm-blue-gray ml-2">- {e.description}</span>}
                             </li>
                           ))}
