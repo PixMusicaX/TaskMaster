@@ -111,8 +111,19 @@ export async function updateEvent(id: string, data: any) {
 }
 
 export async function toggleEventCompletion(id: string, completed: boolean) {
+  const [existing] = await db.select().from(event).where(eq(event.id, id));
+  if (!existing) return null;
+
+  const updateData: any = { completed };
+  
+  // If a task is being marked complete, update its date to today
+  // so it correctly shows up in the history for the day it was actually completed.
+  if (completed && existing.type === "task") {
+    updateData.date = format(new Date(), "yyyy-MM-dd");
+  }
+
   const [updatedEvent] = await db.update(event)
-    .set({ completed })
+    .set(updateData)
     .where(eq(event.id, id))
     .returning();
 
