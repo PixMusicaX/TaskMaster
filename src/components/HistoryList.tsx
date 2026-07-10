@@ -10,10 +10,13 @@ import { cn } from "@/lib/utils";
 import HabitIconRender from "@/components/HabitIconRender";
 import { formatReliefTemp } from "@/lib/weather";
 
-export default function HistoryList({ initialData, initialEndDateStr }: { initialData: HistoryDay[], initialEndDateStr: string }) {
-  const [data, setData] = useState<HistoryDay[]>(initialData);
-  const [currentEndDateStr, setCurrentEndDateStr] = useState(initialEndDateStr);
-  const [loading, setLoading] = useState(false);
+export default function HistoryList() {
+  const [data, setData] = useState<HistoryDay[]>([]);
+  const [defaultData, setDefaultData] = useState<HistoryDay[]>([]);
+  const [currentEndDateStr, setCurrentEndDateStr] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [clientDateStr, setClientDateStr] = useState("");
   
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -28,13 +31,30 @@ export default function HistoryList({ initialData, initialEndDateStr }: { initia
   }, [isSearchVisible]);
 
   useEffect(() => {
+    if (!initialLoadComplete) {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const yesterdayStr = format(subDays(new Date(), 1), "yyyy-MM-dd");
+      setClientDateStr(todayStr);
+      setCurrentEndDateStr(yesterdayStr);
+      
+      getHistory(yesterdayStr, 28, "", todayStr).then(res => {
+        setData(res);
+        setDefaultData(res);
+        setInitialLoadComplete(true);
+        setLoading(false);
+      });
+    }
+  }, [initialLoadComplete]);
+
+  useEffect(() => {
+    if (!initialLoadComplete) return;
+
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     
     if (query.trim() === "") {
       // Revert to initial paginated data
       if (isSearching) {
-         setData(initialData);
-         setCurrentEndDateStr(initialEndDateStr);
+         setData(defaultData);
          setIsSearching(false);
       }
       return;
@@ -44,7 +64,7 @@ export default function HistoryList({ initialData, initialEndDateStr }: { initia
     searchTimeoutRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const searchResults = await getHistory("", 28, query);
+        const searchResults = await getHistory("", 28, query, clientDateStr);
         setData(searchResults);
       } catch (e) {
         console.error(e);
@@ -56,7 +76,7 @@ export default function HistoryList({ initialData, initialEndDateStr }: { initia
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     }
-  }, [query, initialData, initialEndDateStr]);
+  }, [query, initialLoadComplete, defaultData, clientDateStr]);
 
   const loadMore = async () => {
     setLoading(true);
@@ -65,9 +85,10 @@ export default function HistoryList({ initialData, initialEndDateStr }: { initia
       const nextEndDate = subDays(parseISO(currentEndDateStr), 28);
       const nextEndDateStr = format(nextEndDate, "yyyy-MM-dd");
       
-      const moreData = await getHistory(nextEndDateStr, 28, "");
+      const moreData = await getHistory(nextEndDateStr, 28, "", clientDateStr);
       
       setData((prev) => [...prev, ...moreData]);
+      setDefaultData((prev) => [...prev, ...moreData]);
       setCurrentEndDateStr(nextEndDateStr);
     } catch (e) {
       console.error(e);
@@ -128,7 +149,9 @@ export default function HistoryList({ initialData, initialEndDateStr }: { initia
         </AnimatePresence>
       </div>
 
-      {loading && isSearching ? (
+      {loading && data.length === 0 ? (
+        <div className="text-center py-12 text-tm-blue-gray animate-pulse">Loading history...</div>
+      ) : loading && isSearching ? (
         <div className="text-center py-12 text-tm-blue-gray animate-pulse">Searching...</div>
       ) : data.length === 0 ? (
         <div className="text-center py-12 text-tm-blue-gray">No history found for this period.</div>

@@ -15,7 +15,7 @@ export type HistoryDay = {
   relief: typeof reliefRecommendation.$inferSelect | null;
 };
 
-export async function getHistory(endDateStr: string, limitDays: number = 28, query: string = ""): Promise<HistoryDay[]> {
+export async function getHistory(endDateStr: string, limitDays: number = 28, query: string = "", clientDateStr?: string): Promise<HistoryDay[]> {
   let notesResult: typeof note.$inferSelect[] = [];
   let eventsAndTasksResult: typeof event.$inferSelect[] = [];
   let habitsResult: typeof habitLog.$inferSelect[] = [];
@@ -23,10 +23,11 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
   if (query.trim() !== "") {
     // Search mode: Ignore limitDays, search all time up to yesterday
     const searchPattern = `%${query.trim()}%`;
-    const yesterdayStr = format(subDays(new Date(), 1), "yyyy-MM-dd");
+    const now = clientDateStr ? new Date(clientDateStr) : new Date();
+    const yesterdayStr = format(subDays(now, 1), "yyyy-MM-dd");
     
     let parsedDateStr: string | null = null;
-    const yearSuffix = /\d{4}/.test(query) ? "" : " " + new Date().getFullYear();
+    const yearSuffix = /\d{4}/.test(query) ? "" : " " + now.getFullYear();
     const parsed = new Date(query.trim() + yearSuffix);
     if (!isNaN(parsed.getTime())) {
       parsedDateStr = format(parsed, "yyyy-MM-dd");
