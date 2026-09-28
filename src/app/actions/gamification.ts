@@ -91,13 +91,15 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date, referenc
       try {
         const parsed = JSON.parse(n.content);
         if (Array.isArray(parsed)) {
-          const xp = parsed.length * XP_VALUES.NOTE_ENTRY;
+          const xp = parsed.filter((line: { text?: string }) => line?.text?.trim()).length * XP_VALUES.NOTE_ENTRY;
           totalXP += xp;
           stats.intelligence += xp;
         }
       } catch (e) {
-        totalXP += XP_VALUES.NOTE_ENTRY;
-        stats.intelligence += XP_VALUES.NOTE_ENTRY;
+        if (n.content.trim()) {
+          totalXP += XP_VALUES.NOTE_ENTRY;
+          stats.intelligence += XP_VALUES.NOTE_ENTRY;
+        }
       }
     });
 
@@ -245,6 +247,13 @@ async function getSnapshotForPeriod(startDate: Date, endDate: Date) {
       charisma: existing.charisma,
       monthName: existing.monthName,
       year: existing.year,
+      stats: {
+        strength: existing.strength,
+        intelligence: existing.intelligence,
+        wealth: existing.wealth,
+        vitality: existing.vitality,
+        charisma: existing.charisma,
+      },
     };
   }
 
@@ -263,22 +272,34 @@ async function getSnapshotForPeriod(startDate: Date, endDate: Date) {
     wealth: stats.wealth,
     vitality: stats.vitality,
     charisma: stats.charisma,
-  });
+  }).onConflictDoNothing();
   return stats;
 }
 
 export async function getSeasonHistory(monthsCount: number = 6, clientDateStr?: string) {
   const now = clientDateStr ? new Date(clientDateStr) : new Date();
+  const currentMonthStart = startOfMonth(now);
   const periods = Array.from({ length: monthsCount }).map((_, i) => subMonths(now, i));
 
+  // Past months are frozen in SeasonSnapshot; only the current month is computed live
   const promises = periods.map(async (date) => {
-    return getStatsForPeriod(startOfMonth(date), endOfMonth(date), now);
+    const start = startOfMonth(date);
+    return start < currentMonthStart
+      ? getSnapshotForPeriod(start, endOfMonth(date))
+      : getStatsForPeriod(start, endOfMonth(date), now);
   });
 
   return await Promise.all(promises);
 }
 
-export async function addXP(amount: number, stat?: string) {
-  return { xp: 0, level: 1 };
+// Drop cached snapshots for the months containing these dates (YYYY-MM-DD) so they are recomputed
+export async function invalidateSeasonSnapshots(...dates: (string | null | undefined)[]) {
+  const periods = Array.from(new Set(dates.filter((d): d is string => !!d).map(d => d.slice(0, 7))));
+  if (periods.length === 0) return;
+  try {
+    await ensureSeasonSnapshotTable();
+    await db.delete(seasonSnapshot).where(inArray(seasonSnapshot.period, periods));
+  } catch (e) {
+    console.error("Failed to invalidate season snapshot:", e);
+  }
 }
-

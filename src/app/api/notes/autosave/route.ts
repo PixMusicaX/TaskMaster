@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { note } from "@/db/schema";
+import { invalidateSeasonSnapshots } from "@/app/actions/gamification";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
         target: [note.date],
         set: { content, mood, updatedAt: new Date() },
       });
+    await invalidateSeasonSnapshots(date);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

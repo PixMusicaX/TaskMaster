@@ -17,7 +17,6 @@ import TabularViewModal from "@/components/TabularViewModal";
 import { toggleSmartMission } from "@/app/actions/smart-missions";
 import { toggleReliefRecommendation } from "@/app/actions/relief";
 import { togglePreparationTip } from "@/app/actions/preparation";
-import { addXP } from "@/app/actions/gamification";
 
 export default function AboutPage() {
   const { theme } = useTheme();
@@ -74,10 +73,7 @@ export default function AboutPage() {
     setMissionHistory(newHistory);
     
     await toggleSmartMission(mission.id, newVal);
-    if (newVal) {
-      await addXP(50, "charisma");
-      window.dispatchEvent(new Event("profile-updated"));
-    }
+    window.dispatchEvent(new Event("profile-updated"));
   };
 
   const handleTogglePrep = async (p: any, idx: number) => {
@@ -87,10 +83,7 @@ export default function AboutPage() {
     setPreparationHistory(newHistory);
     
     await togglePreparationTip(p.id, newVal);
-    if (newVal) {
-      await addXP(25, "charisma");
-      window.dispatchEvent(new Event("profile-updated"));
-    }
+    window.dispatchEvent(new Event("profile-updated"));
   };
 
   const handleToggleRelief = async (r: any, idx: number) => {
@@ -100,10 +93,7 @@ export default function AboutPage() {
     setReliefHistory(newHistory);
     
     await toggleReliefRecommendation(r.id, newVal, 0);
-    if (newVal) {
-      await addXP(10, "charisma");
-      window.dispatchEvent(new Event("profile-updated"));
-    }
+    window.dispatchEvent(new Event("profile-updated"));
   };
 
   useEffect(() => {

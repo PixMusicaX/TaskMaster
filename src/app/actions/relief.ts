@@ -5,11 +5,10 @@ import { reliefRecommendation, note } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { format, subDays } from "date-fns";
 import { getReliefRecommendationPrompt } from "@/lib/prompts";
-import { getProfile } from "./gamification";
-import { getHabits } from "./habits";
+import { invalidateSeasonSnapshots } from "./gamification";
 import { getEventsByDateRange } from "./events";
 import { safeGenerateContent } from "@/lib/ai-utils";
-import { eq, desc, gte, ne, asc } from "drizzle-orm";
+import { eq, desc, gte, lte, lt, ne, asc, and, isNotNull } from "drizzle-orm";
 
 const GEMINI_API_KEY = process.env.gemini_key;
 
@@ -93,8 +92,7 @@ export async function getReliefRecommendation(
           const clientNow = new Date(today);
           const twoWeeksAgo = subDays(clientNow, 14);
           const twoWeeksAgoStr = format(twoWeeksAgo, "yyyy-MM-dd");
-          const [habitData, taskData, notesData, history] = await Promise.all([
-            getHabits(),
+          const [taskData, notesData, history] = await Promise.all([
             getEventsByDateRange(twoWeeksAgo, clientNow),
             db.select().from(note).where(gte(note.date, twoWeeksAgoStr)),
             getReliefHistory(twoWeeksAgoStr)
@@ -180,9 +178,11 @@ export async function toggleReliefRecommendation(id: string, completed: boolean,
     else if (index === 1) updateData.alt1Completed = completed;
     else if (index === 2) updateData.alt2Completed = completed;
 
-    await db.update(reliefRecommendation)
+    const [updated] = await db.update(reliefRecommendation)
       .set(updateData)
-      .where(eq(reliefRecommendation.id, id));
+      .where(eq(reliefRecommendation.id, id))
+      .returning({ date: reliefRecommendation.date });
+    await invalidateSeasonSnapshots(updated?.date);
     revalidatePath("/");
     return { success: true };
   } catch (e) {
@@ -191,31 +191,49 @@ export async function toggleReliefRecommendation(id: string, completed: boolean,
   }
 }
 
+// Relief rows in [fromDate, toDate] (ascending), with missing locations/weather carried
+// forward from the most recent earlier row that had a real location.
+export async function getReliefsWithCarriedLocation(fromDate: string, toDate?: string) {
+  const [rows, [seed]] = await Promise.all([
+    db.select().from(reliefRecommendation)
+      .where(toDate
+        ? and(gte(reliefRecommendation.date, fromDate), lte(reliefRecommendation.date, toDate))
+        : gte(reliefRecommendation.date, fromDate))
+      .orderBy(asc(reliefRecommendation.date)),
+    db.select().from(reliefRecommendation)
+      .where(and(
+        lt(reliefRecommendation.date, fromDate),
+        isNotNull(reliefRecommendation.location),
+        ne(reliefRecommendation.location, ""),
+        ne(reliefRecommendation.location, "No location found")
+      ))
+      .orderBy(desc(reliefRecommendation.date))
+      .limit(1)
+  ]);
+
+  let lastValidLocation = seed?.location || "No location found";
+  let lastValidWeather = seed?.weather || "Clear";
+  let lastValidTemp = seed?.temp || "22";
+
+  return rows.map(r => {
+    if (r.location && r.location !== "No location found") {
+      lastValidLocation = r.location;
+      lastValidWeather = r.weather || "Clear";
+      lastValidTemp = r.temp || "22";
+    } else {
+      r.location = lastValidLocation;
+      r.weather = lastValidWeather;
+      r.temp = lastValidTemp;
+    }
+    return r;
+  });
+}
+
 export async function getReliefHistory(sinceDate?: string) {
   try {
     const since = sinceDate || format(subDays(new Date(), 14), "yyyy-MM-dd");
-    const allRecords = await db.select().from(reliefRecommendation).orderBy(asc(reliefRecommendation.date));
-    
-    let lastValidLocation = "No location found";
-    let lastValidWeather = "Clear";
-    let lastValidTemp = "22";
-
-    const processed = allRecords.map(r => {
-      if (r.location && r.location !== "No location found") {
-         lastValidLocation = r.location;
-         lastValidWeather = r.weather || "Clear";
-         lastValidTemp = r.temp || "22";
-      } else {
-         r.location = lastValidLocation;
-         r.weather = lastValidWeather;
-         r.temp = lastValidTemp;
-      }
-      return r;
-    });
-
-    return processed
-      .filter(r => r.date >= since)
-      .sort((a, b) => b.date.localeCompare(a.date));
+    const processed = await getReliefsWithCarriedLocation(since);
+    return processed.sort((a, b) => b.date.localeCompare(a.date));
   } catch (e) {
     return [];
   }

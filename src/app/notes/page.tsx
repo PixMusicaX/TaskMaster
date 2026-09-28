@@ -77,11 +77,12 @@ export default function NotesPage() {
     }
   }, []);
 
-  // Save the current note silently (no loading state flip, used for auto-save)
-  const fetchRecent = useCallback(async () => {
-    const data = await getRecentNotes(1000);
-    setRecentNotes(data.slice(0, 10));
-    setAllNotesForTable(data);
+  // Merge a freshly saved note into the lists we already hold instead of refetching them
+  const mergeSavedNote = useCallback((saved: Awaited<ReturnType<typeof saveNote>>) => {
+    const merge = (list: typeof recentNotes) =>
+      [saved, ...list.filter(n => n.date !== saved.date)].sort((a, b) => b.date.localeCompare(a.date));
+    setRecentNotes(prev => merge(prev).slice(0, 10));
+    setAllNotesForTable(prev => (prev.length > 0 ? merge(prev) : prev));
   }, []);
 
   const fetchProfile = useCallback(async () => {
@@ -94,15 +95,15 @@ export default function NotesPage() {
     setIsSaving(true);
     const dateStr = format(date, "yyyy-MM-dd");
     try {
-      await saveNote(dateStr, JSON.stringify(currentLines), currentMood);
+      const saved = await saveNote(dateStr, JSON.stringify(currentLines), currentMood);
       setLastSaved(new Date());
       setIsDirty(false);
-      fetchRecent();
+      mergeSavedNote(saved);
       fetchProfile(); // Update intelligence stat
     } finally {
       setIsSaving(false);
     }
-  }, [fetchRecent, fetchProfile]);
+  }, [mergeSavedNote, fetchProfile]);
 
   useEffect(() => {
     if (!isDirty) {
@@ -123,8 +124,17 @@ export default function NotesPage() {
 
   useEffect(() => {
     fetchNote(selectedDate);
-    fetchRecent();
-  }, [selectedDate, fetchNote, fetchRecent]);
+  }, [selectedDate, fetchNote]);
+
+  useEffect(() => {
+    getRecentNotes(10).then(setRecentNotes);
+  }, []);
+
+  // The full archive is only needed for the table view, so load it when that opens
+  useEffect(() => {
+    if (!isTabularOpen) return;
+    getRecentNotes(1000).then(setAllNotesForTable);
+  }, [isTabularOpen]);
 
   // Auto-save on page unload / browser navigation away
   useEffect(() => {

@@ -3,9 +3,8 @@
 import { db } from "@/db";
 import { event } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { eq, and, or, gte, lte, asc, like, isNotNull } from "drizzle-orm";
-import { addXP } from "./gamification";
-import { XP_VALUES } from "@/lib/constants";
+import { eq, and, or, gte, lte, asc, like, isNotNull, inArray } from "drizzle-orm";
+import { invalidateSeasonSnapshots } from "./gamification";
 import { format } from "date-fns";
 
 export async function getEventsByDateRange(start: Date, end: Date) {
@@ -34,43 +33,50 @@ export async function getDashboardTasks(targetDateStr: string) {
 
 export async function syncRecurringEvents() {
   const recurringEvents = await db.select().from(event).where(eq(event.repeatsYearly, true));
+  if (recurringEvents.length === 0) return 0;
+
   const currentYear = new Date().getFullYear();
   const years = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3];
-  
-  let totalInserted = 0;
 
-  for (const sourceEvent of recurringEvents) {
+  // Build every target instance up front, then check existence with a single query
+  const candidates = recurringEvents.flatMap((sourceEvent) => {
     const [_, month, day] = sourceEvent.date.split("-");
-    for (const year of years) {
-      const targetDate = `${year}-${month}-${day}`;
-      
+    return years
+      .map((year) => ({ sourceEvent, year, targetDate: `${year}-${month}-${day}` }))
       // Don't overwrite the source event itself if it's in this year
-      if (targetDate === sourceEvent.date) continue;
+      .filter(({ targetDate }) => targetDate !== sourceEvent.date);
+  });
 
-      const [existing] = await db.select().from(event).where(
-        and(
-          eq(event.title, sourceEvent.title),
-          eq(event.date, targetDate),
-          eq(event.type, sourceEvent.type)
-        )
-      );
+  const existing = await db.select({ title: event.title, date: event.date, type: event.type }).from(event).where(
+    and(
+      inArray(event.title, Array.from(new Set(recurringEvents.map(e => e.title)))),
+      inArray(event.date, Array.from(new Set(candidates.map(c => c.targetDate))))
+    )
+  );
+  const existingKeys = new Set(existing.map(e => `${e.title}|${e.date}|${e.type}`));
 
-      if (!existing) {
-        // Create a copy for the future year
-        const { id, createdAt, ...eventData } = sourceEvent;
-        await db.insert(event).values({
-          ...eventData,
-          date: targetDate,
-          completed: false,
-          isApi: true, // Mark instances as system-managed
-          startTime: sourceEvent.startTime ? new Date(new Date(sourceEvent.startTime).setFullYear(year)) : null,
-          endTime: sourceEvent.endTime ? new Date(new Date(sourceEvent.endTime).setFullYear(year)) : null,
-        });
-        totalInserted++;
-      }
-    }
+  const seen = new Set<string>();
+  const toInsert = candidates.flatMap(({ sourceEvent, year, targetDate }) => {
+    const key = `${sourceEvent.title}|${targetDate}|${sourceEvent.type}`;
+    if (existingKeys.has(key) || seen.has(key)) return [];
+    seen.add(key);
+    // Create a copy for the future year
+    const { id, createdAt, ...eventData } = sourceEvent;
+    return [{
+      ...eventData,
+      date: targetDate,
+      completed: false,
+      isApi: true, // Mark instances as system-managed
+      startTime: sourceEvent.startTime ? new Date(new Date(sourceEvent.startTime).setFullYear(year)) : null,
+      endTime: sourceEvent.endTime ? new Date(new Date(sourceEvent.endTime).setFullYear(year)) : null,
+    }];
+  });
+
+  if (toInsert.length > 0) {
+    await db.insert(event).values(toInsert);
+    await invalidateSeasonSnapshots(...toInsert.map(e => e.date));
   }
-  return totalInserted;
+  return toInsert.length;
 }
 
 export async function addEvent(data: {
@@ -85,6 +91,7 @@ export async function addEvent(data: {
   repeatsYearly?: boolean;
 }) {
   const [newEvent] = await db.insert(event).values(data).returning();
+  await invalidateSeasonSnapshots(newEvent.date);
   if (data.repeatsYearly) {
     await syncRecurringEvents();
   }
@@ -100,6 +107,7 @@ export async function updateEvent(id: string, data: any) {
     .set(data)
     .where(eq(event.id, id))
     .returning();
+  await invalidateSeasonSnapshots(existing?.date, updatedEvent?.date);
     
   if (data.repeatsYearly || existing?.repeatsYearly) {
     await syncRecurringEvents();
@@ -127,17 +135,7 @@ export async function toggleEventCompletion(id: string, completed: boolean) {
     .where(eq(event.id, id))
     .returning();
 
-  if (completed) {
-    let xp = updatedEvent.type === "task"
-      ? XP_VALUES.TASK
-      : updatedEvent.tier === "epic"
-        ? XP_VALUES.QUEST_EPIC
-        : updatedEvent.tier === "main"
-          ? XP_VALUES.QUEST_MAIN
-          : XP_VALUES.QUEST_SIDE;
-    
-    await addXP(xp, updatedEvent.stat || undefined);
-  }
+  await invalidateSeasonSnapshots(existing.date, updatedEvent.date);
 
   revalidatePath("/calendar");
   revalidatePath("/");
@@ -153,16 +151,18 @@ export async function deleteEvent(id: string) {
   if (existing.repeatsYearly) {
     // If it's a recurring event, delete all instances across years
     const [_, month, day] = existing.date.split("-");
-    await db.delete(event).where(
+    const deleted = await db.delete(event).where(
       and(
         eq(event.title, existing.title),
         eq(event.type, existing.type),
         like(event.date, `%-${month}-${day}`)
       )
-    );
+    ).returning({ date: event.date });
+    await invalidateSeasonSnapshots(...deleted.map(e => e.date));
   } else {
     // Otherwise just delete the single instance
     await db.delete(event).where(eq(event.id, id));
+    await invalidateSeasonSnapshots(existing.date);
   }
 
   revalidatePath("/calendar");
@@ -189,6 +189,9 @@ export async function syncMonthlyHolidays(testDateStr?: string) {
     return { success: false, message: "Not the first of the month" };
   }
 
+  // Monthly housekeeping for special days, run alongside the holiday sync
+  await cleanupDuplicateSpecialDays();
+
   const currentYear = runDate.getFullYear();
   // Up to next 3 years
   const years = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3];
@@ -211,13 +214,15 @@ export async function syncMonthlyHolidays(testDateStr?: string) {
       );
       
       const existingKeys = new Set(existingDays.map(e => `${e.title}_${e.date}`));
+      const toInsert: (typeof event.$inferInsert)[] = [];
 
       for (const holiday of holidays) {
         const dateIso = holiday.date.iso.split('T')[0]; // Format: YYYY-MM-DD
         const key = `${holiday.name}_${dateIso}`;
         
         if (!existingKeys.has(key)) {
-          await db.insert(event).values({
+          existingKeys.add(key);
+          toInsert.push({
             title: holiday.name,
             description: holiday.description,
             date: dateIso,
@@ -225,8 +230,12 @@ export async function syncMonthlyHolidays(testDateStr?: string) {
             tier: "main",
             isApi: true,
           });
-          totalInserted++;
         }
+      }
+
+      if (toInsert.length > 0) {
+        await db.insert(event).values(toInsert);
+        totalInserted += toInsert.length;
       }
     } catch (err) {
       console.error(`Error processing year ${year}:`, err);

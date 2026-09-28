@@ -2,8 +2,9 @@
 
 import { db } from "@/db";
 import { event, note, habitLog, reliefRecommendation } from "@/db/schema";
-import { and, gte, lte, or, eq, desc, ilike, inArray, asc } from "drizzle-orm";
+import { and, gte, lte, or, eq, desc, ilike, inArray } from "drizzle-orm";
 import { format, subDays } from "date-fns";
+import { getReliefsWithCarriedLocation } from "./relief";
 
 export type HistoryDay = {
   date: string;
@@ -15,10 +16,22 @@ export type HistoryDay = {
   relief: typeof reliefRecommendation.$inferSelect | null;
 };
 
+// Events, special days, and completed tasks are what the history shows
+const historyEventFilter = or(
+  eq(event.type, "event"),
+  eq(event.type, "special_day"),
+  and(
+    eq(event.type, "task"),
+    eq(event.completed, true)
+  )
+);
+
 export async function getHistory(endDateStr: string, limitDays: number = 28, query: string = "", clientDateStr?: string): Promise<HistoryDay[]> {
   let notesResult: typeof note.$inferSelect[] = [];
   let eventsAndTasksResult: typeof event.$inferSelect[] = [];
   let habitsResult: typeof habitLog.$inferSelect[] = [];
+  let reliefFrom: string | null = null;
+  let reliefTo: string | null = null;
 
   if (query.trim() !== "") {
     // Search mode: Ignore limitDays, search all time up to yesterday
@@ -33,38 +46,31 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
       parsedDateStr = format(parsed, "yyyy-MM-dd");
     }
 
-    const matchedNotes = await db.select({ date: note.date }).from(note).where(
-      and(
-        ilike(note.content, searchPattern),
-        lte(note.date, yesterdayStr)
+    const [matchedNotes, matchedEvents, matchedHabits] = await Promise.all([
+      db.select({ date: note.date }).from(note).where(
+        and(
+          ilike(note.content, searchPattern),
+          lte(note.date, yesterdayStr)
+        )
+      ),
+      db.select({ date: event.date }).from(event).where(
+        and(
+          or(
+            ilike(event.title, searchPattern),
+            ilike(event.description, searchPattern)
+          ),
+          historyEventFilter,
+          lte(event.date, yesterdayStr)
+        )
+      ),
+      db.select({ date: habitLog.date }).from(habitLog).where(
+        and(
+          ilike(habitLog.habitName, searchPattern),
+          eq(habitLog.completed, true),
+          lte(habitLog.date, yesterdayStr)
+        )
       )
-    );
-
-    const matchedEvents = await db.select({ date: event.date }).from(event).where(
-      and(
-        or(
-          ilike(event.title, searchPattern),
-          ilike(event.description, searchPattern)
-        ),
-        or(
-          eq(event.type, "event"),
-          eq(event.type, "special_day"),
-          and(
-            eq(event.type, "task"),
-            eq(event.completed, true)
-          )
-        ),
-        lte(event.date, yesterdayStr)
-      )
-    );
-
-    const matchedHabits = await db.select({ date: habitLog.date }).from(habitLog).where(
-      and(
-        ilike(habitLog.habitName, searchPattern),
-        eq(habitLog.completed, true),
-        lte(habitLog.date, yesterdayStr)
-      )
-    );
+    ]);
 
     const uniqueDatesArray = [
       ...matchedNotes.map(n => n.date),
@@ -76,28 +82,24 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
       uniqueDatesArray.push(parsedDateStr);
     }
     
-    const uniqueDates = Array.from(new Set(uniqueDatesArray));
+    const uniqueDates = Array.from(new Set(uniqueDatesArray)).sort();
 
     if (uniqueDates.length > 0) {
-      notesResult = await db.select().from(note).where(inArray(note.date, uniqueDates)).orderBy(desc(note.createdAt));
-      
-      eventsAndTasksResult = await db.select().from(event).where(
-        and(
-          inArray(event.date, uniqueDates),
-          or(
-            eq(event.type, "event"),
-            eq(event.type, "special_day"),
-            and(
-              eq(event.type, "task"),
-              eq(event.completed, true)
-            )
-          )
-        )
-      ).orderBy(desc(event.startTime));
+      reliefFrom = uniqueDates[0];
+      reliefTo = uniqueDates[uniqueDates.length - 1];
 
-      habitsResult = await db.select().from(habitLog).where(
-        and(inArray(habitLog.date, uniqueDates), eq(habitLog.completed, true))
-      ).orderBy(desc(habitLog.date));
+      [notesResult, eventsAndTasksResult, habitsResult] = await Promise.all([
+        db.select().from(note).where(inArray(note.date, uniqueDates)).orderBy(desc(note.createdAt)),
+        db.select().from(event).where(
+          and(
+            inArray(event.date, uniqueDates),
+            historyEventFilter
+          )
+        ).orderBy(desc(event.startTime)),
+        db.select().from(habitLog).where(
+          and(inArray(habitLog.date, uniqueDates), eq(habitLog.completed, true))
+        ).orderBy(desc(habitLog.date))
+      ]);
     }
   } else {
     const endDate = new Date(endDateStr);
@@ -105,60 +107,41 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
     
     const startStr = format(startDate, "yyyy-MM-dd");
     const endStr = format(endDate, "yyyy-MM-dd");
+    reliefFrom = startStr;
+    reliefTo = endStr;
 
-    // Fetch Notes in range
-    notesResult = await db.select().from(note).where(
-      and(
-        gte(note.date, startStr),
-        lte(note.date, endStr)
-      )
-    ).orderBy(desc(note.createdAt));
-
-    // Fetch Events and Tasks in range
-    eventsAndTasksResult = await db.select().from(event).where(
-      and(
-        gte(event.date, startStr),
-        lte(event.date, endStr),
-        or(
-          eq(event.type, "event"),
-          eq(event.type, "special_day"),
-          and(
-            eq(event.type, "task"),
-            eq(event.completed, true)
-          )
+    [notesResult, eventsAndTasksResult, habitsResult] = await Promise.all([
+      // Notes in range
+      db.select().from(note).where(
+        and(
+          gte(note.date, startStr),
+          lte(note.date, endStr)
         )
-      )
-    ).orderBy(desc(event.startTime));
+      ).orderBy(desc(note.createdAt)),
 
-    // Fetch completed habits in range
-    habitsResult = await db.select().from(habitLog).where(
-      and(
-        gte(habitLog.date, startStr),
-        lte(habitLog.date, endStr),
-        eq(habitLog.completed, true)
-      )
-    ).orderBy(desc(habitLog.date));
+      // Events and Tasks in range
+      db.select().from(event).where(
+        and(
+          gte(event.date, startStr),
+          lte(event.date, endStr),
+          historyEventFilter
+        )
+      ).orderBy(desc(event.startTime)),
+
+      // Completed habits in range
+      db.select().from(habitLog).where(
+        and(
+          gte(habitLog.date, startStr),
+          lte(habitLog.date, endStr),
+          eq(habitLog.completed, true)
+        )
+      ).orderBy(desc(habitLog.date))
+    ]);
   }
 
-  // Fetch and process all relief recommendations to carry forward valid locations
-  const allReliefs = await db.select().from(reliefRecommendation).orderBy(asc(reliefRecommendation.date));
-  const reliefMap = new Map();
-  let lastLoc = "No location found";
-  let lastWea = "Clear";
-  let lastTem = "22";
-
-  for (const r of allReliefs) {
-    if (r.location && r.location !== "No location found") {
-      lastLoc = r.location;
-      lastWea = r.weather || "Clear";
-      lastTem = r.temp || "22";
-    } else {
-      r.location = lastLoc;
-      r.weather = lastWea;
-      r.temp = lastTem;
-    }
-    reliefMap.set(r.date, r);
-  }
+  // Relief recommendations for the covered dates, with valid locations carried forward
+  const reliefs = reliefFrom && reliefTo ? await getReliefsWithCarriedLocation(reliefFrom, reliefTo) : [];
+  const reliefMap = new Map(reliefs.map(r => [r.date, r]));
 
   // Group by date
   const historyMap = new Map<string, HistoryDay>();

@@ -5,7 +5,7 @@ import GlassCard from "@/components/glass-card";
 import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Brain, Coins, HeartPulse, Users, Lock, RotateCw, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent, getAllEvents, cleanupDuplicateSpecialDays } from "@/app/actions/events";
+import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent, getAllEvents } from "@/app/actions/events";
 import { getProfile } from "@/app/actions/gamification";
 import { getRecentNotes } from "@/app/actions/notes";
 import { getReliefHistory } from "@/app/actions/relief";
@@ -71,27 +71,17 @@ export default function CalendarPage() {
   }, [startDate, endDate]);
 
   const initialLoad = useRef(true);
-  const cleanupStarted = useRef(false);
-
-  useEffect(() => {
-    if (!cleanupStarted.current) {
-      cleanupStarted.current = true;
-      cleanupDuplicateSpecialDays().then(() => fetchEvents(false));
-    }
-  }, [fetchEvents]);
 
   useEffect(() => {
     fetchEvents(initialLoad.current);
     initialLoad.current = false;
   }, [fetchEvents]);
 
+  // The full archive is only needed for the table view, so load it (fresh) when that opens
   useEffect(() => {
-    async function fetchArchive() {
-      const data = await getAllEvents();
-      setAllEventsForTable(data);
-    }
-    fetchArchive();
-  }, []);
+    if (!isTabularOpen) return;
+    getAllEvents().then(setAllEventsForTable);
+  }, [isTabularOpen]);
 
   useEffect(() => {
     const interval = setInterval(() => {

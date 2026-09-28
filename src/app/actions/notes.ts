@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { note } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { eq, desc } from "drizzle-orm";
+import { invalidateSeasonSnapshots } from "./gamification";
 
 export async function getNoteByDate(date: string) {
   return await db.query.note.findFirst({
@@ -24,6 +25,7 @@ export async function saveNote(date: string, content: string, mood: string = "ne
       set: { content, mood, updatedAt: new Date() },
     })
     .returning();
+  await invalidateSeasonSnapshots(date);
     
   revalidatePath("/notes");
   revalidatePath("/");

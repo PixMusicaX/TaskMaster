@@ -5,7 +5,7 @@ import { smartMission, note } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { format, subDays } from "date-fns";
 import { getSmartMissionPrompt } from "@/lib/prompts";
-import { getProfile } from "./gamification";
+import { getProfile, invalidateSeasonSnapshots } from "./gamification";
 import { getHabits } from "./habits";
 import { getEventsByDateRange } from "./events";
 import { getDailyQuote } from "./daily-quote";
@@ -31,7 +31,7 @@ export async function getSmartMission(clientDateStr?: string) {
 
           const [profile, habitData, taskData, notesData, history] = await Promise.all([
             getProfile(today),
-            getHabits(),
+            getHabits(today), // only names are needed, so skip log history
             getEventsByDateRange(twoWeeksAgo, clientNow),
             db.select().from(note).where(gte(note.date, twoWeeksAgoStr)),
             getSmartMissionHistory(twoWeeksAgoStr)
@@ -62,7 +62,7 @@ export async function getSmartMission(clientDateStr?: string) {
 
           if (content) {
             const data = JSON.parse(content);
-            const zenQuote = await getDailyQuote();
+            const zenQuote = await getDailyQuote(today);
             const [newMission] = await db.insert(smartMission).values({
               date: today,
               title: data.title,
@@ -78,9 +78,9 @@ export async function getSmartMission(clientDateStr?: string) {
         }
       }
 
-      const zenQuoteFallback = await getDailyQuote();
       // Fallback if Gemini fails or no key
       if (!mission) {
+        const zenQuoteFallback = await getDailyQuote(today);
         const missions = [
           { title: "Compliment a Stranger [OFF]", description: "Brighten someone's day with a sincere compliment. (AI Offline)" },
           { title: "Network with a Peer [OFF]", description: "Reach out to a colleague or peer for a 5-minute chat. (AI Offline)" },
@@ -116,9 +116,11 @@ export async function getSmartMission(clientDateStr?: string) {
 
 export async function toggleSmartMission(id: string, completed: boolean) {
   try {
-    await db.update(smartMission)
+    const [updated] = await db.update(smartMission)
       .set({ completed })
-      .where(eq(smartMission.id, id));
+      .where(eq(smartMission.id, id))
+      .returning({ date: smartMission.date });
+    await invalidateSeasonSnapshots(updated?.date);
     revalidatePath("/");
     return { success: true };
   } catch (e) {

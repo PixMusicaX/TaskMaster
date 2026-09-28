@@ -3,15 +3,15 @@
 import { db } from "@/db";
 import { habit, habitLog } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { eq, and, asc } from "drizzle-orm";
-import { addXP } from "./gamification";
-import { XP_VALUES } from "@/lib/constants";
+import { eq, and, asc, gte } from "drizzle-orm";
+import { invalidateSeasonSnapshots } from "./gamification";
 
-export async function getHabits() {
+// Pass `logsSince` (YYYY-MM-DD) to load only recent logs instead of each habit's full history
+export async function getHabits(logsSince?: string) {
   return await db.query.habit.findMany({
     where: eq(habit.archived, false),
     with: {
-      logs: true,
+      logs: logsSince ? { where: gte(habitLog.date, logsSince) } : true,
     },
     orderBy: [asc(habit.createdAt)],
   });
@@ -80,6 +80,7 @@ export async function toggleHabitLog(habitId: string, date: string, completed: b
   if (!completed) {
     await db.delete(habitLog)
       .where(and(eq(habitLog.habitId, habitId), eq(habitLog.date, date)));
+    await invalidateSeasonSnapshots(date);
     revalidatePath("/habits");
     revalidatePath("/");
     return null;
@@ -103,9 +104,7 @@ export async function toggleHabitLog(habitId: string, date: string, completed: b
     })
     .returning();
 
-  if (completed && h) {
-    await addXP(XP_VALUES.HABIT_CHECK, h.stat || undefined);
-  }
+  await invalidateSeasonSnapshots(date);
 
   revalidatePath("/habits");
   revalidatePath("/");

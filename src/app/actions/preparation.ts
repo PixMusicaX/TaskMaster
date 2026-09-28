@@ -8,7 +8,7 @@ import { getPreparationTipPrompt } from "@/lib/prompts";
 import { safeGenerateContent } from "@/lib/ai-utils";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { subDays } from "date-fns";
-import { addXP, getProfile } from "./gamification";
+import { getProfile, invalidateSeasonSnapshots } from "./gamification";
 
 const GEMINI_API_KEY = process.env.gemini_key;
 
@@ -84,18 +84,11 @@ export async function getPreparationTip(clientDateStr?: string) {
 
 export async function togglePreparationTip(id: string, completed: boolean) {
   try {
-    const tip = await db.query.preparationTip.findFirst({
-      where: eq(preparationTip.id, id)
-    });
-
-    await db.update(preparationTip)
+    const [tip] = await db.update(preparationTip)
       .set({ completed })
-      .where(eq(preparationTip.id, id));
-
-    if (completed && tip) {
-      const xp = tip.xpReward;
-      await addXP(xp, tip.stat || undefined);
-    }
+      .where(eq(preparationTip.id, id))
+      .returning({ date: preparationTip.date });
+    await invalidateSeasonSnapshots(tip?.date);
 
     revalidatePath("/");
     return { success: true };

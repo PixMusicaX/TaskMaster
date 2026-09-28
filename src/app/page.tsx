@@ -114,6 +114,8 @@ export default function Home() {
 
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
+  // The dashboard only looks at the last 7 days of habit logs
+  const habitLogsSince = format(subDays(today, 6), "yyyy-MM-dd");
 
   const rawQuote = profile?.quote || dailyQuote || smartMission?.quote || "Master your day, master your life.";
   const quoteParts = rawQuote.split(/\s*[—-]\s*/).filter(Boolean);
@@ -152,8 +154,9 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchData() {
-      // 1. Habits & Missing Info Check
-      getHabits().then(async (habitData) => {
+      // 1. Habits, Missing Info Check & 7-day Completion Stats
+      const habitsPromise = getHabits(habitLogsSince);
+      habitsPromise.then(async (habitData) => {
         setHabits(habitData);
         setHabitsLoading(false);
 
@@ -227,7 +230,7 @@ export default function Home() {
 
       Promise.all([
         getEventsByDateRange(last7DaysStart, last7DaysEnd),
-        getHabits()
+        habitsPromise
       ]).then(([recentEvents, allHabits]) => {
         // Task Completion
         const eligibleTasks = recentEvents.filter(e => e.type === "task" || e.type === "event");
@@ -311,7 +314,7 @@ export default function Home() {
     setUpdatingHabits(prev => new Set(prev).add(habitId));
     try {
       await toggleHabitLog(habitId, todayStr, !currentStatus);
-      const [data, prof] = await Promise.all([getHabits(), getProfile(todayStr)]);
+      const [data, prof] = await Promise.all([getHabits(habitLogsSince), getProfile(todayStr)]);
       setHabits(data);
       setProfile(prof);
       window.dispatchEvent(new CustomEvent("profile-updated"));

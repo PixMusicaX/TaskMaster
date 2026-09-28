@@ -1,9 +1,9 @@
 "use server";
 
-import { db } from "@/db";
+import { db, client } from "@/db";
 import { taskmasterQueryCount } from "@/db/schema";
 import { format } from "date-fns";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getTaskmasterQueryBuilderPrompt, getTaskmasterAnswerPrompt } from "@/lib/prompts";
 import { getProfile } from "./gamification";
 import { safeGenerateContent } from "@/lib/ai-utils";
@@ -31,18 +31,23 @@ export async function askTaskmaster(question: string, clientDateStr?: string) {
       return { success: false, message: "The Taskmaster's inner mind is silent. (Failed to build query)" };
     }
 
-    // Clean up SQL (remove markdown blocks if AI included them)
-    generatedSql = generatedSql.replace(/```sql/gi, "").replace(/```/g, "").trim();
+    // Clean up SQL (remove markdown blocks and trailing semicolons if AI included them)
+    generatedSql = generatedSql.replace(/```sql/gi, "").replace(/```/g, "").trim().replace(/;+\s*$/, "");
 
     // Security & Reliability Validation
-    if (!generatedSql.toUpperCase().startsWith("SELECT")) {
+    if (!/^(SELECT|WITH)\b/i.test(generatedSql)) {
       return { success: false, message: "The Taskmaster attempted a forbidden spell. Only SELECT queries are allowed." };
     }
 
     // Execute the query
     let queryData = "[]";
     try {
-      const result = await db.execute(sql.raw(generatedSql));
+      // Read-only transaction blocks writes (incl. data-modifying CTEs); the extended
+      // protocol (simple: false) rejects multiple statements, so "SELECT 1; COMMIT; DELETE ..." can't escape it.
+      const result = await client.begin("read only", async (tx) => {
+        await tx`SET LOCAL statement_timeout = 5000`;
+        return tx.unsafe(generatedSql, [], { simple: false } as any);
+      });
       queryData = JSON.stringify(result, null, 2);
       // Optional: limit string size to avoid token limit errors
       if (queryData.length > 5000) {
