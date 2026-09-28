@@ -1,8 +1,9 @@
 // Shared data shapes, derived from the schema and server actions so they can't drift.
 import type { event, note, smartMission, reliefRecommendation, preparationTip } from "@/db/schema";
 import type { getHabits } from "@/app/actions/habits";
-import type { getProfile, getSeasonHistory } from "@/app/actions/gamification";
+import type { getProfile, getSeasonHistory, getSeasonPace } from "@/app/actions/gamification";
 import type { getMoodsByDateRange } from "@/app/actions/notes";
+import type { getSeasonRecap } from "@/app/actions/recap";
 
 export type EventRow = typeof event.$inferSelect;
 export type NoteRow = typeof note.$inferSelect;
@@ -14,6 +15,8 @@ export type HabitWithLogs = Awaited<ReturnType<typeof getHabits>>[number];
 export type HabitLog = HabitWithLogs["logs"][number];
 export type Profile = Awaited<ReturnType<typeof getProfile>>;
 export type Season = Awaited<ReturnType<typeof getSeasonHistory>>[number];
+export type SeasonPace = Awaited<ReturnType<typeof getSeasonPace>>;
+export type SeasonRecap = Awaited<ReturnType<typeof getSeasonRecap>>;
 export type MoodEntry = Awaited<ReturnType<typeof getMoodsByDateRange>>[number];
 
 export type StatName = "strength" | "intelligence" | "wealth" | "vitality" | "charisma";
@@ -36,4 +39,10 @@ export function parseNoteLines(content: string): NoteLine[] | null {
   } catch {
     return null;
   }
+}
+
+// The non-empty text lines of a note, whether it's bullet JSON or legacy plain text
+export function noteTextLines(content: string): string[] {
+  const lines = parseNoteLines(content);
+  return (lines ? lines.map(l => l?.text ?? "") : content.split("\n")).map(t => t.trim()).filter(Boolean);
 }

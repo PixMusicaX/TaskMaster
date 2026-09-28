@@ -4,7 +4,7 @@ import { db, client } from "@/db";
 import { habitLog, event, note, smartMission, reliefRecommendation, seasonSnapshot, preparationTip } from "@/db/schema";
 import type { StatName, Stats } from "@/lib/types";
 import { XP_VALUES, RPG_TITLES, LEVEL_UP_XP } from "@/lib/constants";
-import { startOfMonth, endOfMonth, format, subMonths } from "date-fns";
+import { startOfMonth, endOfMonth, endOfDay, format, subMonths, addDays, min, getDaysInMonth } from "date-fns";
 import { and, or, gte, lte, eq, inArray } from "drizzle-orm";
 
 export async function getStatsForPeriod(startDate: Date, endDate: Date, referenceDate: Date = new Date()) {
@@ -268,6 +268,30 @@ export async function getSeasonHistory(monthsCount: number = 6, clientDateStr?: 
   });
 
   return await Promise.all(promises);
+}
+
+// Last month's XP as of the same day-of-month (its "pace"), plus its final total, so the
+// dashboard can race the current season against it
+export async function getSeasonPace(clientDateStr?: string) {
+  const now = clientDateStr ? new Date(clientDateStr) : new Date();
+  const dayOfMonth = clientDateStr ? Number(clientDateStr.slice(8, 10)) : now.getDate();
+  const lastMonthStart = startOfMonth(subMonths(now, 1));
+  const lastMonthEnd = endOfMonth(lastMonthStart);
+  // Day 31 against a 30-day month compares with that month's last day
+  const paceEnd = endOfDay(min([addDays(lastMonthStart, dayOfMonth - 1), lastMonthEnd]));
+
+  const [pace, final] = await Promise.all([
+    getStatsForPeriod(lastMonthStart, paceEnd, paceEnd),
+    getSnapshotForPeriod(lastMonthStart, lastMonthEnd),
+  ]);
+
+  return {
+    dayOfMonth,
+    daysInMonth: getDaysInMonth(now),
+    lastMonthName: format(lastMonthStart, "MMMM"),
+    lastMonthPaceXP: pace.xp,
+    lastMonthTotalXP: final.xp,
+  };
 }
 
 // Drop cached snapshots for the months containing these dates (YYYY-MM-DD) so they are recomputed

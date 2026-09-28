@@ -3,19 +3,20 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { MessageSquare } from "lucide-react";
-import { format, subDays, addDays, subMonths } from "date-fns";
+import { format, subDays, addDays } from "date-fns";
 import Clock from "@/components/clock";
 import { getHabits, toggleHabitLog } from "@/app/actions/habits";
 import { getEventsByDateRange, toggleEventCompletion, getDashboardTasks, syncMonthlyHolidays } from "@/app/actions/events";
-import { getProfile, getSeasonHistory } from "@/app/actions/gamification";
+import { getProfile, getSeasonPace } from "@/app/actions/gamification";
+import { DEV_XP_EVENT, withDevXp } from "@/lib/dev-xp";
+import { getOnThisDay, type HistoryDay } from "@/app/actions/history";
 import { getNoteByDate, getRecentNotes } from "@/app/actions/notes";
 import { getSmartMission, toggleSmartMission, regenerateSmartMission } from "@/app/actions/smart-missions";
 import { getDailyQuote } from "@/app/actions/daily-quote";
 import { getReliefRecommendation, toggleReliefRecommendation, regenerateReliefRecommendation } from "@/app/actions/relief";
 import { getPreparationTip, togglePreparationTip, regeneratePreparationTip } from "@/app/actions/preparation";
 import { getSpecialDayColors } from "@/lib/utils";
-import type { EventRow, HabitWithLogs, NoteRow, PrepTipRow, Profile, Relief, Season, SmartMissionRow } from "@/lib/types";
-import RecapModal from "@/components/RecapModal";
+import type { EventRow, HabitWithLogs, NoteRow, PrepTipRow, Profile, Relief, SeasonPace, SmartMissionRow } from "@/lib/types";
 import TaskmasterDialog from "@/components/taskmaster-dialog";
 import DailyMissionsCard from "@/components/home/daily-missions-card";
 import ActiveQuestsCard from "@/components/home/active-quests-card";
@@ -26,6 +27,8 @@ import FutureSightCard from "@/components/home/future-sight-card";
 import StressMetricsCard from "@/components/home/stress-metrics-card";
 import TavernCard from "@/components/home/tavern-card";
 import MapCard from "@/components/home/map-card";
+import SeasonPaceCard from "@/components/home/season-pace-card";
+import ChronicleCard from "@/components/home/chronicle-card";
 
 type ReliefFetcher = typeof getReliefRecommendation;
 
@@ -81,9 +84,7 @@ export default function Home() {
   const [habits, setHabits] = useState<HabitWithLogs[]>([]);
   const [tasks, setTasks] = useState<EventRow[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [recapData, setRecapData] = useState<Season | null>(null);
 
-  const [showRecap, setShowRecap] = useState(false);
   const [showTaskmaster, setShowTaskmaster] = useState(false);
   const [smartMission, setSmartMission] = useState<SmartMissionRow | null>(null);
   const [dailyQuote, setDailyQuote] = useState<string>("");
@@ -91,6 +92,8 @@ export default function Home() {
   const [prepTip, setPrepTip] = useState<PrepTipRow | null>(null);
   const [moodData, setMoodData] = useState<NoteRow[]>([]);
   const [futureEvents, setFutureEvents] = useState<EventRow[]>([]);
+  const [seasonPace, setSeasonPace] = useState<SeasonPace | null>(null);
+  const [onThisDay, setOnThisDay] = useState<HistoryDay[]>([]);
   const [completionScore, setCompletionScore] = useState(0);
   const [missingInfo, setMissingInfo] = useState<string[]>([]);
   const [habitsLoading, setHabitsLoading] = useState(true);
@@ -119,7 +122,7 @@ export default function Home() {
   const specialDays = tasks.filter(isTimedSpecialDay);
 
   const refreshProfile = useCallback(async () => {
-    setProfile(await getProfile(todayStr));
+    setProfile(withDevXp(await getProfile(todayStr)));
     window.dispatchEvent(new CustomEvent("profile-updated"));
   }, [todayStr]);
 
@@ -172,25 +175,14 @@ export default function Home() {
       }
 
       // 3. Profile Stats
-      getProfile(todayStr).then(setProfile);
+      getProfile(todayStr).then(p => setProfile(withDevXp(p)));
       getRecentNotes(30).then(setMoodData);
       getEventsByDateRange(addDays(today, 1), addDays(today, 14)).then(data => {
         setFutureEvents(data.filter(e => e.type !== "task"));
       });
 
-      getSeasonHistory(6, todayStr).then(historyData => {
-        const lastMonth = subMonths(today, 1);
-        const recapKey = `recap_${format(lastMonth, "yyyy_MM")}`;
-
-        if (!localStorage.getItem(recapKey)) {
-          const lastMonthStats = historyData.find(h => h.monthName === format(lastMonth, "MMMM"));
-          if (lastMonthStats && lastMonthStats.xp > 0) {
-            setRecapData(lastMonthStats);
-            setShowRecap(true);
-            localStorage.setItem(recapKey, "true");
-          }
-        }
-      });
+      getSeasonPace(todayStr).then(setSeasonPace);
+      getOnThisDay(todayStr).then(setOnThisDay);
 
       // 4. Calculate 7-day Completion Stats
       Promise.all([
@@ -247,6 +239,13 @@ export default function Home() {
     }
     fetchData();
   }, [today, todayStr, habitLogsSince]);
+
+  // Dev tools: re-read the profile when the spoofed XP changes (never fires in production)
+  useEffect(() => {
+    const onDevXp = () => { getProfile(todayStr).then(p => setProfile(withDevXp(p))); };
+    window.addEventListener(DEV_XP_EVENT, onDevXp);
+    return () => window.removeEventListener(DEV_XP_EVENT, onDevXp);
+  }, [todayStr]);
 
   // Midnight Reload Logic
   useEffect(() => {
@@ -443,6 +442,12 @@ export default function Home() {
           <ClassStatusCard profile={profile} />
         </div>
 
+        {/* Chronicle only appears when past years have something on today's date */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
+          <SeasonPaceCard profile={profile} pace={seasonPace} className={onThisDay.length === 0 ? "lg:col-span-2" : undefined} />
+          {onThisDay.length > 0 && <ChronicleCard days={onThisDay} todayStr={todayStr} />}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
           <FutureSightCard events={futureEvents} />
           <StressMetricsCard moodData={moodData} />
@@ -476,14 +481,6 @@ export default function Home() {
           </button>
         </div>
       </section>
-
-      {recapData && (
-        <RecapModal
-          stats={recapData}
-          isOpen={showRecap}
-          onClose={() => setShowRecap(false)}
-        />
-      )}
 
       <TaskmasterDialog
         isOpen={showTaskmaster}

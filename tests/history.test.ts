@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { getHistory } from "@/app/actions/history";
+import { getHistory, getOnThisDay } from "@/app/actions/history";
 import { setToday, noteLines, insertNote, insertEvent, insertHabit, insertHabitLog, insertRelief } from "./helpers/fixtures";
 
 beforeEach(() => setToday("2026-09-28"));
@@ -67,5 +67,42 @@ describe("getHistory (search)", () => {
   it("returns nothing when nothing matches", async () => {
     await insertNote("2026-07-22", noteLines("some day"));
     expect(await getHistory("", 28, "zzz-no-match", "2026-09-28")).toEqual([]);
+  });
+});
+
+describe("getOnThisDay", () => {
+  it("returns today's date in earlier years, newest first", async () => {
+    await insertNote("2025-09-28", noteLines("last year"), "good");
+    await insertNote("2023-09-28", noteLines("three years ago"));
+    await insertNote("2025-09-27", noteLines("wrong day"));
+    await insertNote("2026-09-28", noteLines("today itself"));
+
+    const days = await getOnThisDay("2026-09-28");
+    expect(days.map(d => d.date)).toEqual(["2025-09-28", "2023-09-28"]);
+    expect(days[0].notes[0].mood).toBe("good");
+  });
+
+  it("ignores years that only have holidays or other system entries", async () => {
+    await insertEvent({ title: "Holiday", type: "special_day", date: "2025-09-28", isApi: true });
+    await insertEvent({ title: "Birthday copy", type: "event", date: "2024-09-28", isApi: true });
+    await insertEvent({ title: "My concert", type: "event", date: "2023-09-28" });
+
+    const days = await getOnThisDay("2026-09-28");
+    expect(days.map(d => d.date)).toEqual(["2023-09-28"]);
+    expect(days[0].specialDays).toEqual([]);
+  });
+
+  it("counts completed tasks and habits, not open tasks", async () => {
+    const h = await insertHabit({ name: "Gym" });
+    await insertHabitLog(h.id, "2025-09-28", "Gym");
+    await insertEvent({ title: "Done", date: "2024-09-28", completed: true });
+    await insertEvent({ title: "Never done", date: "2023-09-28" });
+
+    const days = await getOnThisDay("2026-09-28");
+    expect(days.map(d => d.date)).toEqual(["2025-09-28", "2024-09-28"]);
+  });
+
+  it("returns nothing on a date with no past", async () => {
+    expect(await getOnThisDay("2026-09-28")).toEqual([]);
   });
 });

@@ -27,12 +27,6 @@ const historyEventFilter = or(
 );
 
 export async function getHistory(endDateStr: string, limitDays: number = 28, query: string = "", clientDateStr?: string): Promise<HistoryDay[]> {
-  let notesResult: typeof note.$inferSelect[] = [];
-  let eventsAndTasksResult: typeof event.$inferSelect[] = [];
-  let habitsResult: typeof habitLog.$inferSelect[] = [];
-  let reliefFrom: string | null = null;
-  let reliefTo: string | null = null;
-
   if (query.trim() !== "") {
     // Search mode: Ignore limitDays, search all time up to yesterday
     const searchPattern = `%${query.trim()}%`;
@@ -82,35 +76,15 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
       uniqueDatesArray.push(parsedDateStr);
     }
     
-    const uniqueDates = Array.from(new Set(uniqueDatesArray)).sort();
-
-    if (uniqueDates.length > 0) {
-      reliefFrom = uniqueDates[0];
-      reliefTo = uniqueDates[uniqueDates.length - 1];
-
-      [notesResult, eventsAndTasksResult, habitsResult] = await Promise.all([
-        db.select().from(note).where(inArray(note.date, uniqueDates)).orderBy(desc(note.createdAt)),
-        db.select().from(event).where(
-          and(
-            inArray(event.date, uniqueDates),
-            historyEventFilter
-          )
-        ).orderBy(desc(event.startTime)),
-        db.select().from(habitLog).where(
-          and(inArray(habitLog.date, uniqueDates), eq(habitLog.completed, true))
-        ).orderBy(desc(habitLog.date))
-      ]);
-    }
+    return getHistoryForDates(uniqueDatesArray);
   } else {
     const endDate = new Date(endDateStr);
     const startDate = subDays(endDate, limitDays - 1);
     
     const startStr = format(startDate, "yyyy-MM-dd");
     const endStr = format(endDate, "yyyy-MM-dd");
-    reliefFrom = startStr;
-    reliefTo = endStr;
 
-    [notesResult, eventsAndTasksResult, habitsResult] = await Promise.all([
+    const [notesResult, eventsAndTasksResult, habitsResult, reliefs] = await Promise.all([
       // Notes in range
       db.select().from(note).where(
         and(
@@ -135,12 +109,54 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
           lte(habitLog.date, endStr),
           eq(habitLog.completed, true)
         )
-      ).orderBy(desc(habitLog.date))
-    ]);
-  }
+      ).orderBy(desc(habitLog.date)),
 
-  // Relief recommendations for the covered dates, with valid locations carried forward
-  const reliefs = reliefFrom && reliefTo ? await getReliefsWithCarriedLocation(reliefFrom, reliefTo) : [];
+      // Relief recommendations for the covered dates, with valid locations carried forward
+      getReliefsWithCarriedLocation(startStr, endStr)
+    ]);
+    return groupHistory(notesResult, eventsAndTasksResult, habitsResult, reliefs);
+  }
+}
+
+// Everything recorded on a specific set of dates (YYYY-MM-DD), grouped like getHistory
+async function getHistoryForDates(dates: string[]): Promise<HistoryDay[]> {
+  const uniqueDates = Array.from(new Set(dates)).sort();
+  if (uniqueDates.length === 0) return [];
+
+  const [notesResult, eventsAndTasksResult, habitsResult, reliefs] = await Promise.all([
+    db.select().from(note).where(inArray(note.date, uniqueDates)).orderBy(desc(note.createdAt)),
+    db.select().from(event).where(
+      and(
+        inArray(event.date, uniqueDates),
+        historyEventFilter
+      )
+    ).orderBy(desc(event.startTime)),
+    db.select().from(habitLog).where(
+      and(inArray(habitLog.date, uniqueDates), eq(habitLog.completed, true))
+    ).orderBy(desc(habitLog.date)),
+    getReliefsWithCarriedLocation(uniqueDates[0], uniqueDates[uniqueDates.length - 1])
+  ]);
+  return groupHistory(notesResult, eventsAndTasksResult, habitsResult, reliefs);
+}
+
+// Today's date in earlier years, for the dashboard's "On This Day" card. Holidays and other
+// system-generated entries recur every year, so only days with something the user did are kept.
+export async function getOnThisDay(clientDateStr: string, yearsBack: number = 15): Promise<HistoryDay[]> {
+  const [year, month, day] = clientDateStr.split("-");
+  const dates = Array.from({ length: yearsBack }, (_, i) => `${Number(year) - 1 - i}-${month}-${day}`);
+
+  const days = await getHistoryForDates(dates);
+  return days
+    .map(d => ({ ...d, specialDays: [], events: d.events.filter(e => !e.isApi) }))
+    .filter(d => d.notes.length > 0 || d.tasks.length > 0 || d.events.length > 0 || d.habits.length > 0);
+}
+
+function groupHistory(
+  notesResult: typeof note.$inferSelect[],
+  eventsAndTasksResult: typeof event.$inferSelect[],
+  habitsResult: typeof habitLog.$inferSelect[],
+  reliefs: Awaited<ReturnType<typeof getReliefsWithCarriedLocation>>
+): HistoryDay[] {
   const reliefMap = new Map(reliefs.map(r => [r.date, r]));
 
   // Group by date

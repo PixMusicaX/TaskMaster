@@ -6,17 +6,11 @@ import GlassCard from "@/components/glass-card";
 import { format, parseISO, subDays } from "date-fns";
 import { Calendar, CheckSquare, FileText, Search, Star, MapPin, CloudSun, X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, moodEmoji } from "@/lib/utils";
 import HabitIconRender from "@/components/HabitIconRender";
 import { SkeletonRows } from "@/components/loader";
 import { formatReliefTemp } from "@/lib/weather";
 import { parseNoteLines } from "@/lib/types";
-
-const getMoodEmoji = (mood: string) => {
-  if (mood === "good") return "😇";
-  if (mood === "bad") return "😢";
-  return "😐";
-};
 
 // Note rows with at least one non-empty line (JSON bullet notes or legacy plain text)
 function visibleNotesFor(day: HistoryDay) {
@@ -184,6 +178,14 @@ export default function HistoryList() {
       setDefaultData(res);
       setInitialLoadComplete(true);
       setLoading(false);
+
+      // Deep links (e.g. from the dashboard's Chronicle card) open with a search: /history?q=...
+      const initialQuery = new URLSearchParams(window.location.search).get("q");
+      if (initialQuery) {
+        setIsSearchVisible(true);
+        setQuery(initialQuery);
+        setIsSearching(true);
+      }
     });
     return () => { cancelled = true; };
   }, [initialEndDateStr, clientDateStr]);
@@ -336,7 +338,7 @@ export default function HistoryList() {
                       <div className="absolute left-0 top-4 w-8 sm:w-10 flex justify-center">
                         {mood ? (
                           <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-background border border-tm-blue-gray/15 flex items-center justify-center text-lg leading-none select-none shadow-sm">
-                            {getMoodEmoji(mood)}
+                            {moodEmoji(mood)}
                           </span>
                         ) : (
                           <span className="mt-2.5 w-3 h-3 rounded-full bg-background border-2 border-tm-yellow/60" />

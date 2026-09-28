@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
-import { getProfile, getSeasonHistory, invalidateSeasonSnapshots } from "@/app/actions/gamification";
+import { getProfile, getSeasonHistory, getSeasonPace, invalidateSeasonSnapshots } from "@/app/actions/gamification";
 import { saveNote } from "@/app/actions/notes";
 import { toggleHabitLog } from "@/app/actions/habits";
 import { seasonSnapshot } from "@/db/schema";
@@ -115,5 +115,34 @@ describe("getSeasonHistory (cached past months)", () => {
     const periods = (await db.select().from(seasonSnapshot)).map(s => s.period);
     expect(periods).toEqual(["2026-07"]);
     expect(await db.select().from(seasonSnapshot).where(eq(seasonSnapshot.period, "2026-08"))).toHaveLength(0);
+  });
+});
+
+describe("getSeasonPace", () => {
+  it("compares with last month's XP up to the same day, plus its final total", async () => {
+    setToday("2026-09-28");
+    await insertNote("2026-08-10", noteLines("early"));     // counts toward the pace
+    await insertNote("2026-08-28", noteLines("same day"));  // counts (inclusive)
+    await insertNote("2026-08-30", noteLines("late"));      // only in the final total
+
+    expect(await getSeasonPace("2026-09-28")).toEqual({
+      dayOfMonth: 28,
+      daysInMonth: 30,
+      lastMonthName: "August",
+      lastMonthPaceXP: 20,
+      lastMonthTotalXP: 30,
+    });
+  });
+
+  it("uses the whole of a shorter last month on the 31st", async () => {
+    setToday("2026-10-31");
+    await insertNote("2026-09-30", noteLines("last day of September"));
+    const pace = await getSeasonPace("2026-10-31");
+    expect(pace).toMatchObject({ dayOfMonth: 31, lastMonthName: "September", lastMonthPaceXP: 10, lastMonthTotalXP: 10 });
+  });
+
+  it("reports zero when last month has no activity", async () => {
+    setToday("2026-09-05");
+    expect(await getSeasonPace("2026-09-05")).toMatchObject({ lastMonthPaceXP: 0, lastMonthTotalXP: 0 });
   });
 });
