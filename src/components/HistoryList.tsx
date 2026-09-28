@@ -159,7 +159,19 @@ export default function HistoryList() {
         data.map((day, idx) => {
           const hasNote = day.notes.length > 0;
           const firstNoteMood = hasNote ? day.notes[0].mood : null;
-          
+          const visibleNotes = day.notes
+            .map((n) => {
+              let items: any[] | null = null;
+              try {
+                if (n.content.trim().startsWith("[")) {
+                  const parsed = JSON.parse(n.content);
+                  if (Array.isArray(parsed)) items = parsed.filter((item: any) => item?.text?.trim());
+                }
+              } catch (e) {}
+              return { note: n, items };
+            })
+            .filter(({ note, items }) => (items ? items.length > 0 : note.content.trim().length > 0));
+
           return (
             <GlassCard key={day.date} delay={Math.min(idx * 0.05, 0.5)}>
               <div className="flex flex-col gap-4">
@@ -195,7 +207,7 @@ export default function HistoryList() {
                   )}
                 </div>
 
-                {(day.notes.length === 0 && day.events.length === 0 && day.specialDays.length === 0 && day.tasks.length === 0 && (!day.habits || day.habits.length === 0)) ? (
+                {(visibleNotes.length === 0 && day.events.length === 0 && day.specialDays.length === 0 && day.tasks.length === 0 && (!day.habits || day.habits.length === 0)) ? (
                    <p className="text-sm text-tm-blue-gray italic pl-9">No activities recorded on this day.</p>
                 ) : (
                   <div className="flex flex-col gap-4 pl-9">
@@ -248,23 +260,16 @@ export default function HistoryList() {
                       </div>
                     )}
 
-                    {day.notes.length > 0 && (
+                    {visibleNotes.length > 0 && (
                       <div>
                         <h3 className="text-sm font-semibold uppercase tracking-wider text-tm-purple-light dark:text-tm-purple-light mb-2 flex items-center gap-1">
                           <FileText size={14} /> Notes
                         </h3>
                         <ul className="space-y-2">
-                          {day.notes.map((n) => {
-                            let parsedContent = null;
-                            try {
-                              if (n.content.trim().startsWith("[")) {
-                                parsedContent = JSON.parse(n.content);
-                              }
-                            } catch (e) {}
-
+                          {visibleNotes.map(({ note: n, items: parsedContent }) => {
                             return (
                               <li key={n.id} className="text-sm bg-black/5 dark:bg-white/5 p-3 rounded-lg border border-black/5 dark:border-white/5">
-                                {Array.isArray(parsedContent) ? (
+                                {parsedContent ? (
                                   <ul className="space-y-1.5">
                                     {parsedContent.map((item: any, i: number) => (
                                       <li key={item.id || i} className="flex items-start gap-2 text-tm-purple-dark dark:text-white/90">
