@@ -2,19 +2,21 @@
 
 import * as React from "react";
 import { MotionConfig } from "framer-motion";
+import { ERAS, eraForRank, type Era } from "@/lib/eras";
 
-type Rank = "Novice" | "Squire" | "Vanguard" | "Veteran" | "Knight" | "Champion" | "Sentinel" | "Paladin" | "Grandmaster" | "Hero";
+export type Rank = "Novice" | "Squire" | "Vanguard" | "Veteran" | "Knight" | "Champion" | "Sentinel" | "Paladin" | "Grandmaster" | "Hero";
 
 interface ThemeContextType {
   theme: "light" | "dark";
   toggleTheme: () => void;
   rank: Rank;
   setRank: (rank: Rank) => void;
+  era: Era;
 }
 
 const ThemeContext = React.createContext<ThemeContextType | null>(null);
 
-function currentPeriod() {
+export function currentPeriod() {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
 }
@@ -42,10 +44,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("rank", newRank);
     localStorage.setItem("rank_period", currentPeriod());
     document.documentElement.setAttribute("data-rank", newRank);
+    document.documentElement.setAttribute("data-era", eraForRank(newRank).id);
   };
 
+  const era = eraForRank(rank);
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, rank, setRank }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, rank, setRank, era }}>
       <MotionConfig reducedMotion="user">
         {children}
       </MotionConfig>
@@ -57,4 +62,9 @@ export function useTheme() {
   const context = React.useContext(ThemeContext);
   if (!context) throw new Error("useTheme must be used within ThemeProvider");
   return context;
+}
+
+// Safe outside the provider (tests, isolated renders): defaults to the first era
+export function useEra(): Era {
+  return React.useContext(ThemeContext)?.era ?? ERAS[0];
 }

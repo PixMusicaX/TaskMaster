@@ -1,12 +1,19 @@
 "use client";
 
+import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
-import { Home, CheckSquare, FileText, Calendar, Moon, Sun, Info, Shield, History } from "lucide-react";
-import { useTheme } from "./theme-provider";
+import { motion, useAnimationControls } from "framer-motion";
+import { Home, CheckSquare, FileText, Calendar, Moon, Sun, Info, Shield, History, Volume2, VolumeX } from "lucide-react";
+import { differenceInDays, endOfMonth } from "date-fns";
+import { useTheme, type Rank } from "./theme-provider";
+import { useProgress } from "./progress/progress-provider";
+import AnimatedNumber from "./progress/animated-number";
+import { GaseousDivider } from "./GaseousDivider";
 import { cn } from "@/lib/utils";
 import { SPRING } from "@/lib/motion";
+import { RPG_TITLES } from "@/lib/constants";
+import { isMuted, setMuted, subscribeMuted } from "@/lib/sfx";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -17,78 +24,47 @@ const navItems = [
   { href: "/about", label: "About", icon: Info },
 ];
 
-import { GaseousDivider } from "./GaseousDivider";
-
-import { useState, useEffect } from "react";
-import { getProfile } from "@/app/actions/gamification";
-import { Swords, Brain, Coins, HeartPulse, Users } from "lucide-react";
-import { RPG_TITLES } from "@/lib/constants";
-
-import { differenceInDays, endOfMonth, format } from "date-fns";
+function EraBadge({ className }: { className?: string }) {
+  const { era } = useTheme();
+  return (
+    <span className={cn("tm-era-badge", className)} title={`Era ${era.numeral} · ${era.name}`} aria-label={`Era ${era.numeral}, ${era.name}`}>
+      {era.numeral}
+    </span>
+  );
+}
 
 export default function Navbar() {
   const pathname = usePathname();
   const { theme, toggleTheme, rank, setRank } = useTheme();
-  const [profile, setProfile] = useState<any>(null);
-  const [isManuallySet, setIsManuallySet] = useState(false);
+  const { profile, pulse, isManual, setManual } = useProgress();
+  const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
+  const pulseControls = useAnimationControls();
+
+  // Bump the XP readouts when motes land
+  useEffect(() => {
+    if (pulse) pulseControls.start({ scale: [1, 1.08, 1], transition: { duration: 0.4, ease: "easeOut" } });
+  }, [pulse, pulseControls]);
 
   const today = new Date();
   const daysLeft = differenceInDays(endOfMonth(today), today);
-
-  useEffect(() => {
-    // Check localStorage on client side only
-    const manuallySet = !!localStorage.getItem("rank_manually_set");
-    setIsManuallySet(manuallySet);
-
-    fetchProfile(manuallySet);
-
-    const handleUpdate = () => fetchProfile(!!localStorage.getItem("rank_manually_set"));
-    window.addEventListener("profile-updated", handleUpdate);
-    return () => window.removeEventListener("profile-updated", handleUpdate);
-  }, [pathname]); // Refresh when navigating
-
-  async function fetchProfile(manualOverride: boolean) {
-    const todayStr = format(new Date(), "yyyy-MM-dd");
-    const data = await getProfile(todayStr);
-    setProfile(data);
-
-    if (data) {
-      const profileRank = [...RPG_TITLES].reverse().find(t => data.level >= t.minLevel)?.title;
-
-      // LOGIC: If we are not manually overriding, OR if we are "Novice" but should be higher, sync it.
-      // This helps users who got stuck in Novice due to previous manual testing.
-      if (profileRank) {
-        if (!manualOverride || (rank === "Novice" && profileRank !== "Novice")) {
-          setRank(profileRank as any);
-          // If we forced a sync because they were stuck in Novice, clear the manual flag
-          if (rank === "Novice" && profileRank !== "Novice") {
-            localStorage.removeItem("rank_manually_set");
-            setIsManuallySet(false);
-          }
-        }
-      }
-    }
-  }
-
   const progress = profile ? (profile.levelProgress / profile.nextLevelXP) * 100 : 0;
-  const currentClass = rank;
 
   const cycleRank = () => {
-    const ranks: any[] = RPG_TITLES.map(t => t.title);
-    const currentIndex = ranks.indexOf(rank);
-    const nextIndex = (currentIndex + 1) % ranks.length;
-    const newRank = ranks[nextIndex];
-    setRank(newRank);
-
-    localStorage.setItem("rank_manually_set", "true");
-    setIsManuallySet(true);
+    const ranks = RPG_TITLES.map(t => t.title) as Rank[];
+    setRank(ranks[(ranks.indexOf(rank) + 1) % ranks.length]);
+    setManual(true);
   };
 
-  const resetRank = () => {
-    localStorage.removeItem("rank_manually_set");
-    setIsManuallySet(false);
-    fetchProfile(false);
-  };
+  const muteButton = (
+    <button
+      onClick={() => setMuted(!muted)}
+      className="p-2 rounded-full hover:bg-tm-blue-gray/10 text-tm-blue-gray transition-colors"
+      aria-label={muted ? "Unmute sounds" : "Mute sounds"}
+      aria-pressed={muted}
+    >
+      {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+    </button>
+  );
 
   return (
     <div className="sticky top-0 z-[100] w-full">
@@ -102,8 +78,9 @@ export default function Navbar() {
               TaskMaster
             </span>
             <div className="hidden md:flex items-center gap-1.5 leading-none mt-1">
-              <span className="text-tm-orange-dark text-[10px] font-black uppercase tracking-widest">[{currentClass}]</span>
-              <span className="text-[9px] text-tm-blue-gray font-bold uppercase tracking-tighter border-l border-white/10 pl-1.5 ml-0.5">
+              <span className="text-tm-orange-dark text-caption font-black uppercase tracking-widest">[{rank}]</span>
+              <EraBadge className="text-caption" />
+              <span className="text-tiny text-tm-blue-gray font-bold uppercase tracking-tighter border-l border-white/10 pl-1.5 ml-0.5">
                 {daysLeft === 1 ? "1 DAY LEFT" : `${daysLeft} DAYS LEFT`}
               </span>
             </div>
@@ -157,22 +134,26 @@ export default function Navbar() {
           })}
         </div>
 
-
         <div className="flex items-center gap-3">
           {profile && (
-            <div className="hidden lg:flex items-center gap-3 px-4 py-1.5 bg-tm-yellow/10 rounded-full border border-tm-yellow/20">
+            <motion.div
+              data-xp-target
+              className="hidden lg:flex items-center gap-3 px-4 py-1.5 bg-tm-yellow/10 rounded-full border border-tm-yellow/20"
+              animate={pulseControls}
+            >
               <div className="flex flex-col items-end">
-                <span className="text-[10px] font-black uppercase text-tm-yellow leading-none tracking-widest">Level {profile.level}</span>
-                <span className="text-[9px] font-bold text-tm-blue-gray mt-0.5">{profile.xp} XP Total</span>
+                <span className="text-caption font-black uppercase text-tm-yellow leading-none tracking-widest">Level {profile.level}</span>
+                <span className="text-tiny font-bold text-tm-blue-gray mt-0.5"><AnimatedNumber value={profile.xp} /> XP Total</span>
               </div>
               <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden relative">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
-                  className="absolute inset-y-0 left-0 bg-tm-yellow shadow-[0_0_10px_rgba(242,194,48,0.5)]"
+                  transition={SPRING.soft}
+                  className="tm-xp-fill absolute inset-y-0 left-0 bg-tm-yellow shadow-[0_0_10px_rgba(242,194,48,0.5)]"
                 />
               </div>
-            </div>
+            </motion.div>
           )}
 
           <div className="flex items-center gap-1 md:bg-white/5 md:p-1 rounded-full md:border border-white/10">
@@ -180,15 +161,17 @@ export default function Navbar() {
               <>
                 <button
                   onClick={cycleRank}
-                  onContextMenu={(e) => { e.preventDefault(); resetRank(); }}
+                  onContextMenu={(e) => { e.preventDefault(); setManual(false); }}
                   className="hidden md:block p-2 rounded-full hover:bg-tm-blue-gray/10 text-tm-blue-gray transition-colors"
                   title="Cycle Class Scheme (Left Click) | Reset to Auto (Right Click)"
                 >
-                  <Shield size={20} className={cn("transition-colors", isManuallySet ? "text-tm-yellow" : "text-tm-orange-light")} />
+                  <Shield size={20} className={cn("transition-colors", isManual ? "text-tm-yellow" : "text-tm-orange-light")} />
                 </button>
                 <div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
               </>
             )}
+
+            <div className="hidden md:block">{muteButton}</div>
 
             <button
               onClick={toggleTheme}
@@ -203,19 +186,33 @@ export default function Navbar() {
 
       {/* Mobile Bottom Ribbon */}
       <div className="flex lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[200]">
-        <div className="px-4 py-2 bg-white/90 dark:bg-tm-purple-dark/90 backdrop-blur-xl border border-tm-blue-gray/10 dark:border-white/10 rounded-full shadow-2xl flex items-center gap-3">
+        <motion.div
+          animate={pulseControls}
+          className="relative pl-4 pr-1.5 py-1.5 bg-white/90 dark:bg-tm-purple-dark/90 backdrop-blur-xl border border-tm-blue-gray/10 dark:border-white/10 rounded-full shadow-2xl flex items-center gap-3 overflow-hidden"
+        >
           <div className="flex items-center gap-1.5">
-            <span className="text-tm-orange-dark dark:text-tm-yellow text-[10px] font-black uppercase tracking-widest">{currentClass}</span>
-            <span className="text-[9px] text-tm-blue-gray dark:text-white/60 font-bold uppercase tracking-tighter border-l border-tm-blue-gray/20 dark:border-white/20 pl-2">
-              {daysLeft} DAYS REMAINING
+            <span className="text-tm-orange-dark dark:text-tm-yellow text-caption font-black uppercase tracking-widest">{rank}</span>
+            <EraBadge className="text-caption" />
+            <span className="text-tiny text-tm-blue-gray dark:text-white/60 font-bold uppercase tracking-tighter border-l border-tm-blue-gray/20 dark:border-white/20 pl-2">
+              {daysLeft} DAYS LEFT
             </span>
           </div>
           {profile && (
-            <div className="flex items-center gap-2 border-l border-tm-blue-gray/20 dark:border-white/20 pl-3">
-              <span className="text-[10px] font-black uppercase text-tm-orange-dark dark:text-tm-yellow leading-none tracking-widest">Lvl {profile.level}</span>
+            <div data-xp-target className="flex items-center gap-2 border-l border-tm-blue-gray/20 dark:border-white/20 pl-3">
+              <span className="text-caption font-black uppercase text-tm-orange-dark dark:text-tm-yellow leading-none tracking-widest">Lvl {profile.level}</span>
             </div>
           )}
-        </div>
+          <div className="-my-1">{muteButton}</div>
+          {/* Level progress along the ribbon's bottom edge */}
+          {profile && (
+            <motion.div
+              className="tm-xp-fill absolute bottom-0 left-0 h-[2px] bg-tm-yellow"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={SPRING.soft}
+            />
+          )}
+        </motion.div>
       </div>
 
       <div className="relative h-px w-full overflow-visible">

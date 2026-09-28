@@ -34,6 +34,8 @@ export const viewport = {
 };
 
 import ClassWatermark from "@/components/class-watermark";
+import EraAmbient from "@/components/era-ambient";
+import { ProgressProvider } from "@/components/progress/progress-provider";
 
 export default function RootLayout({
   children,
@@ -47,14 +49,17 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col transition-colors duration-300 overflow-x-clip">
         <ThemeProvider>
-          <div className="overflow-x-clip w-full relative flex flex-col flex-1 min-h-full">
-            <ClassWatermark />
-            <SwipeNav />
-            <Navbar />
-            <main className="flex-1 overflow-auto relative pb-24 lg:pb-0">
-              {children}
-            </main>
-          </div>
+          <ProgressProvider>
+            <div className="overflow-x-clip w-full relative flex flex-col flex-1 min-h-full">
+              <EraAmbient />
+              <ClassWatermark />
+              <SwipeNav />
+              <Navbar />
+              <main className="flex-1 overflow-auto relative pb-24 lg:pb-0">
+                {children}
+              </main>
+            </div>
+          </ProgressProvider>
         </ThemeProvider>
       </body>
     </html>
