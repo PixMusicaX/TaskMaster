@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from "react";
 import GlassCard from "@/components/glass-card";
-import { Plus, Trash2, Check, X, Edit2, Archive, RotateCcw, Search, Swords, Brain, Coins, HeartPulse, Users, Music, Code, Gamepad2, Book, Dumbbell, Laptop, Target, Zap, Coffee, Sparkles, Mic, Phone, Mail, MessageSquare, GraduationCap, Terminal } from "lucide-react";
+import { Plus, Trash2, Check, X, Edit2, Archive, RotateCcw, Search, HeartPulse, Flame } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { getHabits, addHabit, updateHabit, archiveHabit, restoreHabit, deleteHabitPermanently, toggleHabitLog, getArchivedHabits, getHabitLogs } from "@/app/actions/habits";
 import { getProfile } from "@/app/actions/gamification";
 import { cn } from "@/lib/utils";
-import { PremiumLoader } from "@/components/loader";
+import { PageSkeleton } from "@/components/loader";
+import CompletionCheck from "@/components/ui/completion-check";
+import AnimatedNumber from "@/components/progress/animated-number";
+import { currentStreak } from "@/lib/progress";
 import TabularViewModal, { Column } from "@/components/TabularViewModal";
 import HabitIconRender, { LUCIDE_ICONS } from "@/components/HabitIconRender";
 
@@ -197,7 +200,7 @@ export default function HabitsPage() {
   return (
     <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-7xl mx-auto space-y-8">
       {isLoading ? (
-        <PremiumLoader />
+        <PageSkeleton />
       ) : (
         <>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -238,10 +241,11 @@ export default function HabitsPage() {
           <AnimatePresence>
             {showAdd && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[200] w-full h-full flex items-center justify-center p-6 bg-black/40 backdrop-blur-md"
+                onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}
               >
                 <GlassCard className="w-full max-w-md space-y-6">
                   <div className="flex items-center justify-between">
@@ -393,9 +397,16 @@ export default function HabitsPage() {
               </div>
 
               <div className="space-y-6">
-                {habits.map((habit) => (
-                  <div
+                <AnimatePresence initial={false}>
+                {habits.map((habit) => {
+                  const streak = currentStreak(habit, today);
+                  return (
+                  <motion.div
                     key={habit.id}
+                    layout
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -40, transition: { duration: 0.25 } }}
                     className="grid items-center group"
                     style={{ gridTemplateColumns: `${nameWidth} repeat(${visibleCount}, 1fr)` }}
                   >
@@ -404,7 +415,23 @@ export default function HabitsPage() {
                         <HabitIconRender icon={habit.icon} size={20} className="text-tm-yellow" />
                       </div>
                       <div className="flex-1 overflow-hidden sm:pr-12">
-                        <p className="font-bold text-xs sm:text-sm truncate leading-tight">{habit.name}</p>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <p className="font-bold text-xs sm:text-sm truncate leading-tight">{habit.name}</p>
+                          <AnimatePresence>
+                            {streak >= 2 && (
+                              <motion.span
+                                initial={{ opacity: 0, scale: 0.4 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.4 }}
+                                className="flex items-center gap-0.5 shrink-0 text-tm-orange-dark"
+                                title={`${streak} in a row`}
+                              >
+                                <Flame size={12} className="tm-flame fill-current" />
+                                <AnimatedNumber value={streak} className="text-tiny font-black" />
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
+                        </div>
                         <p className="text-[8px] sm:text-[10px] text-tm-blue-gray uppercase font-black tracking-tighter truncate mt-0.5">
                           {getFrequencyLabel(habit.frequency)}
                         </p>
@@ -444,43 +471,40 @@ export default function HabitsPage() {
 
                       return (
                         <div key={day.toISOString()} className="flex justify-center">
-                          <button
+                          <motion.button
                             onClick={() => handleToggle(habit.id, day, isDone, habit.frequency || [0, 1, 2, 3, 4, 5, 6])}
                             disabled={!isActive || isPending}
+                            whileTap={isActive ? { scale: 0.88 } : undefined}
                             className={cn(
-                              "relative w-10 h-10 rounded-2xl border-2 transition-all flex items-center justify-center group/check overflow-hidden",
-                              !isActive ? "opacity-20 cursor-not-allowed border-transparent bg-tm-blue-gray/5" : (
-                                isDone
-                                  ? "bg-tm-yellow border-tm-yellow shadow-lg shadow-tm-yellow/20"
-                                  : "border-tm-blue-gray/10 hover:border-tm-yellow/40 bg-white/5"
-                              ),
-                              isPending && "animate-pulse opacity-60"
+                              "relative w-10 h-10 rounded-2xl group/check",
+                              !isActive && "opacity-20 cursor-not-allowed",
+                              isPending && "pointer-events-none"
                             )}
+                            aria-label={`${habit.name}, ${format(day, "EEEE MMM d")}: ${isDone ? "done" : "not done"}`}
+                            aria-pressed={isDone}
                           >
-                            {isActive && (
-                              <>
-                                <Check
-                                  size={20}
-                                  className={cn(
-                                    "transition-all duration-300",
-                                    isDone ? "text-tm-purple-dark scale-100" : "text-tm-yellow opacity-0 scale-50 group-hover/check:opacity-40"
-                                  )}
-                                />
-                                {isDone && (
-                                  <motion.div
-                                    layoutId={`bubble-${habit.id}-${dateStr}`}
-                                    className="absolute inset-0 bg-white/20"
-                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                  />
-                                )}
-                              </>
-                            )}
-                          </button>
+                            <CompletionCheck
+                              done={isActive && isDone}
+                              className={cn(
+                                "w-10 h-10 rounded-2xl border-2 transition-colors duration-300",
+                                !isActive ? "border-transparent bg-tm-blue-gray/5" : (
+                                  isDone
+                                    ? "bg-tm-yellow border-tm-yellow shadow-lg shadow-tm-yellow/20"
+                                    : "border-tm-blue-gray/10 group-hover/check:border-tm-yellow/40 bg-white/5"
+                                )
+                              )}
+                              checkSize={20}
+                              checkClassName="text-tm-purple-dark"
+                              idle={isActive ? <Check size={20} className="text-tm-yellow opacity-0 group-hover/check:opacity-40 transition-opacity" /> : null}
+                            />
+                          </motion.button>
                         </div>
                       );
                     })}
-                  </div>
-                ))}
+                  </motion.div>
+                  );
+                })}
+                </AnimatePresence>
                 {habits.length === 0 && (
                   <div className="py-12 text-center text-tm-blue-gray italic opacity-50">
                     No active habits. Click "Add Habit" to start!
@@ -516,8 +540,8 @@ export default function HabitsPage() {
                         <h3 className="font-bold text-sm truncate max-w-[150px]">{habit.name}</h3>
                       </div>
                       <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-black text-tm-yellow">
-                          {percentage}%
+                        <span className="text-caption font-black text-tm-yellow">
+                          <AnimatedNumber value={percentage} />%
                         </span>
                         <span className="text-[8px] text-tm-blue-gray font-black uppercase tracking-tighter">Consistency</span>
                       </div>
@@ -528,11 +552,11 @@ export default function HabitsPage() {
                         const isDone = habit.logs?.some((l: any) => l.date === dateStr && l.completed);
                         const isScheduled = freq.includes(day.getDay());
                         return (
-                          <motion.div
+                          <div
                             key={i}
-                            whileHover={{ scale: 1.2 }}
+                            style={{ animationDelay: `${(27 - i) * 14}ms` }}
                             className={cn(
-                              "aspect-square rounded-md border transition-all",
+                              "tm-pop-in aspect-square rounded-md border transition-transform hover:scale-125",
                               isDone
                                 ? "bg-tm-yellow border-tm-yellow/30 shadow-[0_0_8px_rgba(242,194,48,0.2)]"
                                 : isScheduled

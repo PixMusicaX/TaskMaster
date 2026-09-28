@@ -1,4 +1,7 @@
-import { Check, Zap } from "lucide-react";
+import { motion } from "framer-motion";
+import { Zap } from "lucide-react";
+import CompletionCheck from "@/components/ui/completion-check";
+import StrikeText from "@/components/ui/strike-text";
 import HabitIconRender from "@/components/HabitIconRender";
 import { XP_VALUES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -39,34 +42,38 @@ export default function DailyMissionsCard({ habits, loading, todayStr, weekday, 
       {habits.filter(h => !h.frequency || h.frequency.includes(weekday)).map(habit => {
         const isDone = habit.logs.some((l: any) => l.date === todayStr && l.completed);
         return (
-          <button
+          <motion.button
             key={habit.id}
             onClick={() => onToggle(habit.id, isDone)}
             disabled={updating.has(habit.id)}
+            whileTap={{ scale: 0.97 }}
             className={cn(
-              "w-full flex items-center gap-4 p-4 rounded-[1.5rem] border transition-all text-left group/card",
-              updating.has(habit.id) && "opacity-50 pointer-events-none",
+              "w-full flex items-center gap-4 p-4 rounded-[1.5rem] border transition-colors text-left group/card",
+              updating.has(habit.id) && "pointer-events-none",
               isDone
-                ? "bg-tm-yellow/10 border-tm-yellow/20 opacity-50"
+                ? "bg-tm-yellow/10 border-tm-yellow/20"
                 : "bg-white/5 border-white/10 hover:border-tm-yellow/40 hover:bg-tm-yellow/[0.03] shadow-lg"
             )}
           >
-            <div className={cn(
-              "w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all",
-              isDone ? "bg-tm-yellow border-tm-yellow" : "border-tm-blue-gray/30 group-hover/card:border-tm-yellow/50"
-            )}>
-              {isDone ? <Check size={16} className="text-tm-purple-dark" /> : <HabitIconRender icon={habit.icon} className="text-tm-yellow/50 group-hover/card:text-tm-yellow" size={14} />}
-            </div>
+            <CompletionCheck
+              done={isDone}
+              className={cn(
+                "w-8 h-8 rounded-xl border-2 transition-colors",
+                isDone ? "bg-tm-yellow border-tm-yellow" : "border-tm-blue-gray/30 group-hover/card:border-tm-yellow/50"
+              )}
+              checkClassName="text-tm-purple-dark"
+              idle={<HabitIconRender icon={habit.icon} className="text-tm-yellow/50 group-hover/card:text-tm-yellow" size={14} />}
+            />
             <div className="flex-1">
               <div className="flex items-center justify-between mb-0.5">
-                <p className={cn("font-black text-sm", isDone ? "text-tm-yellow line-through opacity-50" : "text-foreground/90")}>
-                  {habit.name}
+                <p className={cn("font-black text-sm", isDone ? "text-tm-yellow" : "text-foreground/90")}>
+                  <StrikeText done={isDone}>{habit.name}</StrikeText>
                 </p>
                 <span className="text-tiny font-black text-tm-yellow bg-tm-yellow/10 px-1.5 py-0.5 rounded border border-tm-yellow/20">+{XP_VALUES.HABIT_CHECK} XP</span>
               </div>
               <p className="text-caption font-black text-tm-blue-gray/60 uppercase tracking-widest mt-0.5">{getFrequencyLabel(habit.frequency)}</p>
             </div>
-          </button>
+          </motion.button>
         );
       })}
     </WidgetCard>

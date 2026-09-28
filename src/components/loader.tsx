@@ -1,45 +1,47 @@
-"use client";
+import { cn } from "@/lib/utils";
 
-import { motion } from "framer-motion";
-
-export function PremiumLoader() {
+// Shimmering placeholder rows shaped like list items
+export function SkeletonRows({ rows = 3, className, caption }: { rows?: number; className?: string; caption?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 py-20">
-      <div className="relative w-16 h-16">
-        {/* Outer Ring */}
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="absolute inset-0 border-4 border-tm-yellow/20 border-t-tm-yellow rounded-full"
-        />
-        {/* Inner Ring */}
-        <motion.div
-          animate={{ rotate: -360 }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-          className="absolute inset-2 border-4 border-tm-orange-dark/20 border-t-tm-orange-dark rounded-full"
-        />
-        {/* Center Glow */}
-        <motion.div
-          animate={{ opacity: [0.4, 0.8, 0.4] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="absolute inset-4 bg-tm-yellow/30 blur-xl rounded-full"
-        />
-      </div>
-      <p className="text-tm-blue-gray font-black text-xs uppercase tracking-[0.3em] animate-pulse">
-        Synchronizing Data...
-      </p>
+    <div className={cn("w-full space-y-3", className)} aria-busy="true" aria-label={caption ?? "Loading"}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 p-4 rounded-[1.5rem] border border-tm-blue-gray/10">
+          <div className="tm-skeleton w-8 h-8 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="tm-skeleton h-3" style={{ width: `${70 - i * 12}%` }} />
+            <div className="tm-skeleton h-2 w-1/3" />
+          </div>
+        </div>
+      ))}
+      {caption && (
+        <p className="text-caption font-black uppercase text-tm-blue-gray tracking-[0.2em] text-center pt-1">{caption}</p>
+      )}
     </div>
   );
 }
 
-export function SkeletonCard() {
+// Full-page placeholder: title block plus two content panels
+export function PageSkeleton() {
   return (
-    <div className="w-full h-48 bg-white/5 border border-white/10 rounded-3xl relative overflow-hidden">
-      <motion.div
-        animate={{ x: ["-100%", "100%"] }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent shadow-[0_0_50px_rgba(255,255,255,0.05)]"
-      />
+    <div className="space-y-8" aria-busy="true" aria-label="Loading">
+      <div className="space-y-3">
+        <div className="tm-skeleton h-9 w-56" />
+        <div className="tm-skeleton h-4 w-72 max-w-full" />
+        <div className="tm-skeleton h-7 w-40" />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
+        <div className="tm-skeleton h-[420px] rounded-3xl" />
+        <SkeletonRows rows={4} />
+      </div>
     </div>
   );
+}
+
+// Kept for existing call sites
+export function PremiumLoader({ caption }: { caption?: string }) {
+  return <SkeletonRows rows={3} caption={caption} />;
+}
+
+export function SkeletonCard() {
+  return <div className="tm-skeleton w-full h-48 rounded-3xl" />;
 }

@@ -8,8 +8,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getNoteByDate, saveNote, getRecentNotes } from "@/app/actions/notes";
 import { getProfile } from "@/app/actions/gamification";
 import { cn } from "@/lib/utils";
-import { PremiumLoader } from "@/components/loader";
+import { PageSkeleton } from "@/components/loader";
+import { SPRING } from "@/lib/motion";
 import TabularViewModal, { Column } from "@/components/TabularViewModal";
+
+// The exiting label reads the latest direction via AnimatePresence's custom prop
+const DATE_SLIDE = {
+  enter: (dir: number) => ({ opacity: 0, x: dir * 24 }),
+  center: { opacity: 1, x: 0 },
+  exit: (dir: number) => ({ opacity: 0, x: dir * -24 }),
+};
 
 export type NoteLine = {
   id: string;
@@ -31,6 +39,17 @@ export default function NotesPage() {
   const [mood, setMood] = useState("neutral");
   const [isTabularOpen, setIsTabularOpen] = useState(false);
   const [allNotesForTable, setAllNotesForTable] = useState<any[]>([]);
+  // Bumped when a note finishes loading, so the entry swaps in as one unit
+  const [noteVersion, setNoteVersion] = useState(0);
+
+  // Direction the date header slides, updated when the selected day changes
+  const dateKey = format(selectedDate, "yyyy-MM-dd");
+  const [prevDateKey, setPrevDateKey] = useState(dateKey);
+  const [dateDir, setDateDir] = useState(0);
+  if (dateKey !== prevDateKey) {
+    setDateDir(dateKey > prevDateKey ? 1 : -1);
+    setPrevDateKey(dateKey);
+  }
 
   // Refs so async callbacks always see fresh values
   const linesRef = useRef(lines);
@@ -71,6 +90,7 @@ export default function NotesPage() {
         setLines([{ id: Math.random().toString(36).substr(2, 9), bullet: "○", text: "" }]);
       }
       setIsDirty(false);
+      setNoteVersion(v => v + 1);
     } finally {
       setIsNoteLoading(false);
       setIsLoading(false);
@@ -221,7 +241,7 @@ export default function NotesPage() {
   return (
     <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-5xl mx-auto space-y-8">
       {isLoading ? (
-        <PremiumLoader />
+        <PageSkeleton />
       ) : (
         <>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -245,11 +265,23 @@ export default function NotesPage() {
               >
                 <ChevronLeft size={24} />
               </button>
-              <div className="px-6 text-center">
-                <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest leading-none mb-1.5">{format(selectedDate, "EEEE")}</p>
-                <p className="font-black text-lg sm:text-sm text-tm-purple-dark dark:text-tm-yellow tracking-tight leading-none">
-                  {format(selectedDate, "MMMM d, yyyy")}
-                </p>
+              <div className="px-6 text-center overflow-hidden">
+                <AnimatePresence mode="popLayout" initial={false} custom={dateDir}>
+                  <motion.div
+                    key={dateKey}
+                    custom={dateDir}
+                    variants={DATE_SLIDE}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <p className="text-caption font-black uppercase text-tm-blue-gray tracking-widest leading-none mb-1.5">{format(selectedDate, "EEEE")}</p>
+                    <p className="font-black text-lg sm:text-sm text-tm-purple-dark dark:text-tm-yellow tracking-tight leading-none">
+                      {format(selectedDate, "MMMM d, yyyy")}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
               </div>
               <button
                 onClick={() => handleDateChange(addDays(selectedDate, 1))}
@@ -281,17 +313,32 @@ export default function NotesPage() {
                       { val: "neutral", icon: "😐", color: "text-tm-blue-gray", bg: "bg-white/10" },
                       { val: "bad", icon: "😢", color: "text-tm-orange-dark", bg: "bg-tm-orange-dark/20" }
                     ].map(m => (
-                      <button
+                      <motion.button
                         key={m.val}
                         onClick={() => { setMood(m.val); setIsDirty(true); }}
+                        whileTap={{ scale: 0.8 }}
                         className={cn(
-                          "p-2 rounded-full transition-all flex items-center justify-center w-9 h-9",
-                          mood === m.val ? m.bg + " " + m.color + " shadow-inner scale-95" : "text-tm-blue-gray/40 hover:bg-white/5"
+                          "relative p-2 rounded-full transition-colors flex items-center justify-center w-9 h-9",
+                          mood === m.val ? m.color : "text-tm-blue-gray/40 hover:bg-white/5"
                         )}
                         title={m.val.toUpperCase()}
+                        aria-pressed={mood === m.val}
                       >
-                        <span className="text-xl">{m.icon}</span>
-                      </button>
+                        {mood === m.val && (
+                          <motion.span
+                            layoutId="mood-pill"
+                            className={cn("absolute inset-0 rounded-full shadow-inner", m.bg)}
+                            transition={SPRING.bubble}
+                          />
+                        )}
+                        <motion.span
+                          className={cn("relative text-xl", mood !== m.val && "grayscale-[0.6]")}
+                          animate={mood === m.val ? { scale: [1, 1.35, 1], rotate: [0, -12, 0] } : { scale: 1, rotate: 0 }}
+                          transition={{ duration: 0.4 }}
+                        >
+                          {m.icon}
+                        </motion.span>
+                      </motion.button>
                     ))}
                   </div>
 
@@ -312,13 +359,33 @@ export default function NotesPage() {
               </div>
               <div className="flex-1 bg-transparent p-4 sm:p-8 overflow-y-auto space-y-2 min-h-[400px] relative">
                 {isNoteLoading ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/20 backdrop-blur-[2px] z-10">
-                    <div className="w-12 h-12 border-4 border-tm-yellow/20 border-t-tm-yellow rounded-full animate-spin mb-4" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-tm-blue-gray">Consulting the Archives...</p>
+                  <div className="absolute inset-0 p-4 sm:p-8 space-y-4 bg-background/60 z-10" aria-busy="true">
+                    {[82, 64, 74, 40].map((w, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="tm-skeleton w-6 h-6 shrink-0 rounded-lg" />
+                        <div className="tm-skeleton h-4" style={{ width: `${w}%` }} />
+                      </div>
+                    ))}
+                    <p className="text-caption font-black uppercase tracking-widest text-tm-blue-gray pt-2">Consulting the Archives...</p>
                   </div>
                 ) : null}
+                <motion.div
+                  key={noteVersion}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  className="space-y-2"
+                >
+                <AnimatePresence initial={false}>
                 {lines.map((line, index) => (
-                  <div key={line.id} className="flex items-start gap-3 group">
+                  <motion.div
+                    key={line.id}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="flex items-start gap-3 group"
+                  >
                     <div className="relative mt-1">
                       <button
                         onClick={() => setActiveBulletPicker(line.id)}
@@ -326,8 +393,15 @@ export default function NotesPage() {
                       >
                         {line.bullet}
                       </button>
+                      <AnimatePresence>
                       {activeBulletPicker === line.id && (
-                        <div className="absolute top-8 left-0 z-50 bg-background border border-tm-blue-gray/20 p-2 rounded-xl shadow-2xl flex gap-1 animate-in fade-in zoom-in duration-200">
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.9, y: -4 }}
+                          transition={SPRING.snappy}
+                          className="absolute top-8 left-0 z-50 bg-background border border-tm-blue-gray/20 p-2 rounded-xl shadow-2xl flex gap-1 origin-top-left"
+                        >
                           {["○", "✅", "📍", "💡", "🔥", "✨"].map(b => (
                             <button
                               key={b}
@@ -351,8 +425,9 @@ export default function NotesPage() {
                               }
                             }}
                           />
-                        </div>
+                        </motion.div>
                       )}
+                      </AnimatePresence>
                     </div>
                     <textarea
                       id={`line-${line.id}`}
@@ -367,8 +442,10 @@ export default function NotesPage() {
                       placeholder={index === 0 ? "Start typing your thoughts..." : ""}
                       className="note-textarea flex-1 bg-transparent outline-none text-lg leading-relaxed placeholder:text-tm-blue-gray/20 font-medium resize-none overflow-hidden"
                     />
-                  </div>
+                  </motion.div>
                 ))}
+                </AnimatePresence>
+                </motion.div>
                 {lines.length === 0 && (
                   <button
                     onClick={() => setLines([{ id: Math.random().toString(36).substr(2, 9), bullet: "○", text: "" }])}
@@ -404,9 +481,10 @@ export default function NotesPage() {
                   })();
 
                   return (
-                    <button
+                    <motion.button
                       key={dateStr}
                       onClick={() => handleDateChange(day)}
+                      whileTap={{ scale: 0.98 }}
                       className={cn(
                         "w-full text-left p-4 rounded-2xl border transition-all relative overflow-hidden group min-h-[82px] flex flex-col justify-center",
                         isSelected ? "bg-tm-yellow/20 border-tm-yellow shadow-lg scale-[1.02]" : "bg-white/40 dark:bg-white/5 border-white/20 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10 shadow-sm",
@@ -437,7 +515,7 @@ export default function NotesPage() {
                           )}
                         />
                       )}
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>

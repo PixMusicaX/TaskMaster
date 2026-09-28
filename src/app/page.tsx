@@ -259,10 +259,18 @@ export default function Home() {
 
   async function handleHabitToggle(habitId: string, currentStatus: boolean) {
     setUpdatingHabits(prev => withItem(prev, habitId));
+    // Optimistic: flip today's log so the check animates on tap
+    setHabits(prev => prev.map(h => h.id !== habitId ? h : {
+      ...h,
+      logs: [...h.logs.filter((l: any) => l.date !== todayStr), { date: todayStr, completed: !currentStatus }],
+    }));
     try {
       await toggleHabitLog(habitId, todayStr, !currentStatus);
       const [data] = await Promise.all([getHabits(habitLogsSince), refreshProfile()]);
       setHabits(data);
+    } catch (e) {
+      console.error("Failed to toggle habit:", e);
+      getHabits(habitLogsSince).then(setHabits);
     } finally {
       setUpdatingHabits(prev => withoutItem(prev, habitId));
     }
@@ -270,10 +278,14 @@ export default function Home() {
 
   async function handleTaskToggle(id: string, current: boolean) {
     setUpdatingTasks(prev => withItem(prev, id));
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !current } : t));
     try {
       await toggleEventCompletion(id, !current);
       const [taskData] = await Promise.all([getDashboardTasks(todayStr), refreshProfile()]);
       setTasks(taskData);
+    } catch (e) {
+      console.error("Failed to toggle task:", e);
+      getDashboardTasks(todayStr).then(setTasks);
     } finally {
       setUpdatingTasks(prev => withoutItem(prev, id));
     }
@@ -282,6 +294,7 @@ export default function Home() {
   async function handleSmartToggle() {
     if (!smartMission) return;
     setUpdatingSmart(true);
+    setSmartMission({ ...smartMission, completed: !smartMission.completed });
     try {
       await toggleSmartMission(smartMission.id, !smartMission.completed);
       const [data] = await Promise.all([getSmartMission(todayStr), refreshProfile()]);
@@ -317,8 +330,8 @@ export default function Home() {
     setUpdatingRelief(prev => withItem(prev, key));
     try {
       const newStatus = !relief[field];
-      await toggleReliefRecommendation(relief.id, newStatus, index);
       setRelief({ ...relief, [field]: newStatus });
+      await toggleReliefRecommendation(relief.id, newStatus, index);
       await refreshProfile();
     } finally {
       setUpdatingRelief(prev => withoutItem(prev, key));

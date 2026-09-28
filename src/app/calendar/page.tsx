@@ -10,7 +10,10 @@ import { getProfile } from "@/app/actions/gamification";
 import { getMoodsByDateRange } from "@/app/actions/notes";
 import { getReliefHistory } from "@/app/actions/relief";
 import { cn, getSpecialDayColors } from "@/lib/utils";
-import { PremiumLoader } from "@/components/loader";
+import { PageSkeleton } from "@/components/loader";
+import CompletionCheck from "@/components/ui/completion-check";
+import StrikeText from "@/components/ui/strike-text";
+import { SPRING } from "@/lib/motion";
 import TabularViewModal, { Column } from "@/components/TabularViewModal";
 import { Search } from "lucide-react";
 
@@ -36,6 +39,15 @@ export default function CalendarPage() {
   const [allEventsForTable, setAllEventsForTable] = useState<any[]>([]);
 
   const [updatingEvents, setUpdatingEvents] = useState<Set<string>>(new Set());
+
+  // Direction the month grid slides in from, updated whenever the visible month changes
+  const monthKey = format(currentDate, "yyyy-MM");
+  const [prevMonthKey, setPrevMonthKey] = useState(monthKey);
+  const [monthDir, setMonthDir] = useState(0);
+  if (monthKey !== prevMonthKey) {
+    setMonthDir(monthKey > prevMonthKey ? 1 : -1);
+    setPrevMonthKey(monthKey);
+  }
 
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
@@ -165,10 +177,14 @@ export default function CalendarPage() {
 
   async function handleToggle(id: string, current: boolean) {
     setUpdatingEvents(prev => new Set(prev).add(id));
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, completed: !current } : e));
     try {
       await toggleEventCompletion(id, !current);
       await fetchEvents(false);
       window.dispatchEvent(new CustomEvent("profile-updated"));
+    } catch (e) {
+      console.error("Failed to toggle event:", e);
+      fetchEvents(false);
     } finally {
       setUpdatingEvents(prev => {
         const newSet = new Set(prev);
@@ -215,7 +231,7 @@ export default function CalendarPage() {
   return (
     <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-7xl mx-auto space-y-8">
       {isLoading ? (
-        <PremiumLoader />
+        <PageSkeleton />
       ) : (
         <>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -250,10 +266,11 @@ export default function CalendarPage() {
           <AnimatePresence>
             {showAdd && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[200] w-full h-full flex items-center justify-center p-6 bg-black/40 backdrop-blur-md"
+                onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}
               >
                 <GlassCard className="w-full max-w-md space-y-6">
                   <div className="flex items-center justify-between">
@@ -492,7 +509,13 @@ export default function CalendarPage() {
                   ))}
                 </div>
 
-                <div className="flex-1 grid grid-cols-7 auto-rows-fr">
+                <motion.div
+                  key={monthKey}
+                  initial={{ opacity: 0, x: monthDir * 40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex-1 grid grid-cols-7 auto-rows-fr"
+                >
                   {days.map((day) => {
                     const isToday = isSameDay(day, new Date());
                     const isCurrentMonth = isSameMonth(day, monthStart);
@@ -565,7 +588,7 @@ export default function CalendarPage() {
                       </button>
                     );
                   })}
-                </div>
+                </motion.div>
               </div>
             </GlassCard>
 
@@ -635,8 +658,16 @@ export default function CalendarPage() {
 
               <div className="grid grid-cols-7 gap-1">
                 {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-                  <div key={i} className="text-center text-[10px] font-black text-tm-blue-gray/40 pb-2">{d}</div>
+                  <div key={i} className="text-center text-caption font-black text-tm-blue-gray/40 pb-2">{d}</div>
                 ))}
+              </div>
+              <motion.div
+                key={monthKey}
+                initial={{ opacity: 0, x: monthDir * 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                className="grid grid-cols-7 gap-1 -mt-3"
+              >
                 {days.map((day) => {
                   const isToday = isSameDay(day, new Date());
                   const isCurrentMonth = isSameMonth(day, monthStart);
@@ -653,12 +684,19 @@ export default function CalendarPage() {
                       key={day.toISOString()}
                       onClick={() => setSelectedDate(day)}
                       className={cn(
-                        "aspect-square flex flex-col items-center justify-center rounded-xl transition-all relative",
+                        "aspect-square flex flex-col items-center justify-center rounded-xl transition-colors relative",
                         !isCurrentMonth ? "opacity-20" : "opacity-100",
-                        isSelected ? "bg-tm-yellow text-tm-purple-dark shadow-lg" : "hover:bg-white/5",
+                        isSelected ? "text-tm-purple-dark" : "hover:bg-white/5",
                         isToday && !isSelected && "border border-tm-orange-dark text-tm-orange-dark"
                       )}
                     >
+                      {isSelected && (
+                        <motion.span
+                          layoutId="calendar-selected-day"
+                          className="absolute inset-0 rounded-xl bg-tm-yellow shadow-lg -z-10"
+                          transition={SPRING.bubble}
+                        />
+                      )}
                       <span className="text-sm font-bold">{format(day, "d")}</span>
                       <div className="flex gap-0.5 mt-0.5 h-1">
                         {hasTask && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-purple-dark" : "bg-tm-yellow")} />}
@@ -668,7 +706,7 @@ export default function CalendarPage() {
                     </button>
                   );
                 })}
-              </div>
+              </motion.div>
             </GlassCard>
 
             <div className="space-y-6 flex flex-col">
@@ -693,12 +731,19 @@ export default function CalendarPage() {
               </div>
 
               <div className="flex-1 space-y-4 overflow-y-auto pr-2">
+                <AnimatePresence mode="popLayout" initial={false}>
                 {selectedEvents.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-48 text-center opacity-40 border-2 border-dashed border-tm-blue-gray/20 rounded-3xl p-8">
+                  <motion.div
+                    key={`empty-${format(selectedDate, "yyyy-MM-dd")}`}
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 0.4, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.96 }}
+                    className="flex flex-col items-center justify-center h-48 text-center border-2 border-dashed border-tm-blue-gray/20 rounded-3xl p-8"
+                  >
                     <CalendarIcon size={32} className="mb-4 text-tm-blue-gray" />
                     <p className="text-sm font-bold">No plans for today.</p>
                     <p className="text-xs">Click the + button to add items.</p>
-                  </div>
+                  </motion.div>
                 ) :
                   selectedEvents.map((event) => {
                     const sdColors = event.type === "special_day" ? getSpecialDayColors(event.title) : null;
@@ -707,6 +752,7 @@ export default function CalendarPage() {
                         layout
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
                         key={event.id}
                       >
                         <GlassCard className={cn(
@@ -721,19 +767,26 @@ export default function CalendarPage() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               {event.type === "task" && (
-                                <button
+                                <motion.button
                                   onClick={updatingEvents.has(event.id) ? undefined : () => handleToggle(event.id, event.completed)}
                                   disabled={updatingEvents.has(event.id)}
-                                  className={cn(
-                                    "w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center",
-                                    updatingEvents.has(event.id) && "opacity-50 pointer-events-none",
-                                    event.completed ? "bg-tm-yellow border-tm-yellow" : "border-tm-blue-gray/20 hover:border-tm-yellow"
-                                  )}
+                                  whileTap={{ scale: 0.85 }}
+                                  className={cn("p-1 -m-1", updatingEvents.has(event.id) && "pointer-events-none")}
+                                  aria-label={event.completed ? "Mark as not done" : "Mark as done"}
+                                  aria-pressed={event.completed}
                                 >
-                                  {event.completed && <Check size={12} className="text-tm-purple-dark" />}
-                                </button>
+                                  <CompletionCheck
+                                    done={event.completed}
+                                    className={cn(
+                                      "w-5 h-5 rounded-md border-2 transition-colors",
+                                      event.completed ? "bg-tm-yellow border-tm-yellow" : "border-tm-blue-gray/20 hover:border-tm-yellow"
+                                    )}
+                                    checkSize={12}
+                                    checkClassName="text-tm-purple-dark"
+                                  />
+                                </motion.button>
                               )}
-                              <h4 className={cn("font-bold text-sm", event.completed && "line-through text-tm-blue-gray")}>{event.title}</h4>
+                              <h4 className={cn("font-bold text-sm transition-colors", event.completed && "text-tm-blue-gray")}><StrikeText done={event.completed}>{event.title}</StrikeText></h4>
                             </div>
                             <div className="flex gap-2 items-center">
                               {!event.isApi && (
@@ -789,6 +842,7 @@ export default function CalendarPage() {
                     )
                   })
                 }
+                </AnimatePresence>
               </div>
             </div>
           </div>

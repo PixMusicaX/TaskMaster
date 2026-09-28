@@ -1,5 +1,7 @@
-import { Check, CloudSun, Coffee, MapPin, RotateCw, Sparkles } from "lucide-react";
-import { PremiumLoader } from "@/components/loader";
+import { CloudSun, Coffee, MapPin, RotateCw, Sparkles } from "lucide-react";
+import CompletionCheck from "@/components/ui/completion-check";
+import StrikeText from "@/components/ui/strike-text";
+import { SkeletonRows } from "@/components/loader";
 import { formatReliefTemp } from "@/lib/weather";
 import { cn } from "@/lib/utils";
 import InsightCard from "./insight-card";
@@ -42,10 +44,7 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
     >
       <div className={cn("flex-1 flex flex-col justify-center relative z-10", loading && "items-center")}>
         {loading ? (
-          <div className="flex flex-col items-center">
-            <PremiumLoader />
-            <p className="text-caption font-black uppercase text-tm-yellow animate-pulse -mt-16">Scanning for relief...</p>
-          </div>
+          <SkeletonRows rows={3} caption="Scanning for relief..." />
         ) : relief ? (
           <div className="flex flex-col gap-6">
             {/* Primary Suggestion */}
@@ -65,12 +64,16 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
                 )}
               >
                 <div className="flex items-start gap-5">
-                  <div className={cn(
-                    "w-8 h-8 rounded-2xl border-2 flex items-center justify-center transition-all mt-1 shadow-lg",
-                    relief.completed ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/30 group-hover/card:border-tm-yellow/50"
-                  )}>
-                    {relief.completed ? <Check size={18} className="text-tm-purple-dark" /> : <Sparkles size={14} className="text-tm-yellow" />}
-                  </div>
+                  <CompletionCheck
+                    done={relief.completed}
+                    className={cn(
+                      "w-8 h-8 rounded-2xl border-2 transition-colors mt-1 shadow-lg",
+                      relief.completed ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/30 group-hover/card:border-tm-yellow/50"
+                    )}
+                    checkSize={18}
+                    checkClassName="text-tm-purple-dark"
+                    idle={<Sparkles size={14} className="text-tm-yellow" />}
+                  />
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-caption font-black uppercase text-tm-yellow tracking-[0.3em] flex items-center gap-2">
@@ -79,8 +82,8 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
                       </span>
                       <span className="text-xs font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">+{reward} XP</span>
                     </div>
-                    <h4 className={cn("text-xl font-black leading-tight tracking-tight", relief.completed && "line-through opacity-50")}>
-                      {relief.title}
+                    <h4 className="text-xl font-black leading-tight tracking-tight">
+                      <StrikeText done={relief.completed}>{relief.title}</StrikeText>
                     </h4>
                   </div>
                 </div>
@@ -112,19 +115,20 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
                         )}
                       >
                         <div className="flex items-center justify-between gap-3 relative z-10">
-                          <div className={cn(
-                            "w-8 h-8 rounded-xl border flex items-center justify-center transition-all shrink-0",
-                            isAltCompleted ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/20 group-hover/alt:border-tm-yellow/40"
-                          )}>
-                            {isAltCompleted
-                              ? <Check size={16} className="text-tm-purple-dark" />
-                              : <ReliefTypeIcon type={alt.type} size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
-                          </div>
+                          <CompletionCheck
+                            done={isAltCompleted}
+                            className={cn(
+                              "w-8 h-8 rounded-xl border transition-colors",
+                              isAltCompleted ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/20 group-hover/alt:border-tm-yellow/40"
+                            )}
+                            checkClassName="text-tm-purple-dark"
+                            idle={<ReliefTypeIcon type={alt.type} size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                          />
                           <span className="text-tiny font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/10">+{reward} XP</span>
                         </div>
                         <div className="relative z-10">
                           <span className="text-micro font-black uppercase text-tm-blue-gray/40 tracking-widest block mb-0.5">{alt.type}</span>
-                          <h5 className={cn("text-sm font-black leading-snug line-clamp-2", isAltCompleted && "line-through opacity-50")}>{alt.title}</h5>
+                          <h5 className="text-sm font-black leading-snug line-clamp-2"><StrikeText done={isAltCompleted}>{alt.title}</StrikeText></h5>
                         </div>
                       </button>
                     );

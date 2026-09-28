@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./eras.css";
+@import "./ui.css";
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {

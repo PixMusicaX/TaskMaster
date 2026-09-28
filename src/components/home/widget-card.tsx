@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import GlassCard from "@/components/glass-card";
-import { PremiumLoader } from "@/components/loader";
+import { SkeletonRows } from "@/components/loader";
 import { cn } from "@/lib/utils";
 
 const ACCENTS = {
@@ -34,7 +34,7 @@ interface WidgetCardProps {
 }
 
 // Top-row dashboard card: pulsing title, loader while fetching, and a footer link
-export default function WidgetCard({ accent, title, subtitle, aside, loading, loadingContent = <PremiumLoader />, loadingMinHeight = "min-h-[200px]", footerHref, footerLabel, delay, className, headerClassName, children }: WidgetCardProps) {
+export default function WidgetCard({ accent, title, subtitle, aside, loading, loadingContent = <SkeletonRows rows={3} />, loadingMinHeight = "min-h-[200px]", footerHref, footerLabel, delay, className, headerClassName, children }: WidgetCardProps) {
   const a = ACCENTS[accent];
   return (
     <GlassCard delay={delay} className={cn("flex flex-col gap-5 group relative", a.card, className)}>

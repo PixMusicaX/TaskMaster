@@ -1,4 +1,7 @@
-import { AlertCircle, Check, Clock as ClockIcon } from "lucide-react";
+import { motion } from "framer-motion";
+import { AlertCircle, Clock as ClockIcon } from "lucide-react";
+import CompletionCheck from "@/components/ui/completion-check";
+import StrikeText from "@/components/ui/strike-text";
 import { format, isSameDay } from "date-fns";
 import { XP_VALUES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -36,15 +39,16 @@ export default function ActiveQuestsCard({ tasks, loading, today, updating, onTo
       {tasks.filter(t => t.type !== "special_day").map(task => {
         const isEvent = task.type === "event";
         return (
-          <button
+          <motion.button
             key={task.id}
             onClick={() => !isEvent && onToggle(task.id, task.completed)}
             disabled={updating.has(task.id)}
+            whileTap={isEvent ? undefined : { scale: 0.97 }}
             className={cn(
-              "w-full flex flex-col gap-2 p-4 rounded-[1.5rem] border transition-all text-left group/card",
-              updating.has(task.id) && "opacity-50 pointer-events-none",
+              "w-full flex flex-col gap-2 p-4 rounded-[1.5rem] border transition-all duration-500 text-left group/card",
+              updating.has(task.id) && "pointer-events-none",
               task.completed && !isEvent
-                ? "bg-tm-blue-gray/5 border-transparent opacity-40 grayscale"
+                ? "bg-tm-blue-gray/5 border-transparent opacity-50 grayscale"
                 : cn(
                   "shadow-lg transition-all",
                   task.tier === "epic" ? "bg-tm-orange-dark/5 border-tm-orange-dark/20 hover:border-tm-orange-dark/40 hover:bg-tm-orange-dark/[0.03]" :
@@ -55,14 +59,15 @@ export default function ActiveQuestsCard({ tasks, loading, today, updating, onTo
             )}
           >
             <div className="flex items-start gap-4">
-              <div className={cn(
-                "w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all mt-0.5",
-                task.completed ? "bg-tm-blue-gray border-tm-blue-gray" : "bg-white/5 border-tm-orange-light/20 group-hover/card:border-tm-orange-light/50"
-              )}>
-                {task.completed ? <Check size={16} className="text-white" /> : (
-                  isEvent ? <ClockIcon size={14} className="text-tm-orange-light" /> : <TaskIcon title={task.title} className="text-tm-orange-light/50 group-hover/card:text-tm-orange-light" size={14} />
+              <CompletionCheck
+                done={task.completed}
+                className={cn(
+                  "w-8 h-8 rounded-xl border-2 transition-colors mt-0.5",
+                  task.completed ? "bg-tm-blue-gray border-tm-blue-gray" : "bg-white/5 border-tm-orange-light/20 group-hover/card:border-tm-orange-light/50"
                 )}
-              </div>
+                checkClassName="text-white"
+                idle={isEvent ? <ClockIcon size={14} className="text-tm-orange-light" /> : <TaskIcon title={task.title} className="text-tm-orange-light/50 group-hover/card:text-tm-orange-light" size={14} />}
+              />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
                   <p className={cn(
@@ -76,7 +81,7 @@ export default function ActiveQuestsCard({ tasks, loading, today, updating, onTo
                   </p>
                   <span className="text-tiny font-black text-tm-orange-light bg-tm-orange-light/10 px-1.5 py-0.5 rounded border border-tm-orange-light/20">+{questXP(task)} XP</span>
                 </div>
-                <h4 className={cn("text-sm font-black text-foreground/90 truncate", task.completed && !isEvent && "line-through opacity-50")}>{task.title}</h4>
+                <h4 className="text-sm font-black text-foreground/90 truncate"><StrikeText className="truncate align-bottom" done={task.completed && !isEvent}>{task.title}</StrikeText></h4>
                 <div className="flex items-center gap-2 mt-1 text-tiny font-bold text-tm-blue-gray uppercase tracking-tighter">
                   {task.startTime && (
                     <>
@@ -87,7 +92,7 @@ export default function ActiveQuestsCard({ tasks, loading, today, updating, onTo
                 </div>
               </div>
             </div>
-          </button>
+          </motion.button>
         );
       })}
     </WidgetCard>

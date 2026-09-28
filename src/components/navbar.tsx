@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, useAnimationControls } from "framer-motion";
+import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
 import { Home, CheckSquare, FileText, Calendar, Moon, Sun, Info, Shield, History, Volume2, VolumeX } from "lucide-react";
 import { differenceInDays, endOfMonth } from "date-fns";
 import { useTheme, type Rank } from "./theme-provider";
@@ -39,6 +39,14 @@ export default function Navbar() {
   const { profile, pulse, isManual, setManual } = useProgress();
   const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
   const pulseControls = useAnimationControls();
+  const [ribbonOpen, setRibbonOpen] = useState(false);
+  const [ribbonPath, setRibbonPath] = useState(pathname);
+
+  // Close the season panel when navigating
+  if (pathname !== ribbonPath) {
+    setRibbonPath(pathname);
+    setRibbonOpen(false);
+  }
 
   // Bump the XP readouts when motes land
   useEffect(() => {
@@ -70,8 +78,21 @@ export default function Navbar() {
     <div className="sticky top-0 z-[100] w-full">
       <nav className="w-full bg-background/80 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between relative z-40">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10 shadow-[0_0_10px_rgba(242,79,19,0.3)]">
-            <img src="/logo.png" alt="TaskMaster Logo" className="w-full h-full object-cover dark:invert-0 dark:hue-rotate-0 invert hue-rotate-180 transition-all" />
+          <div className="relative w-10 h-10 shrink-0 flex items-center justify-center">
+            {/* Level progress ring */}
+            <svg className="absolute inset-0 -rotate-90" viewBox="0 0 40 40" aria-hidden>
+              <circle cx="20" cy="20" r="18" fill="none" strokeWidth="2" className="stroke-tm-blue-gray/15" />
+              <motion.circle
+                cx="20" cy="20" r="18" fill="none" strokeWidth="2" strokeLinecap="round"
+                className="stroke-tm-yellow"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: progress / 100 }}
+                transition={SPRING.soft}
+              />
+            </svg>
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 shadow-[0_0_10px_rgba(242,79,19,0.3)]">
+              <img src="/logo.png" alt="TaskMaster Logo" className="w-full h-full object-cover dark:invert-0 dark:hue-rotate-0 invert hue-rotate-180 transition-all" />
+            </div>
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-xl hidden sm:inline-block text-tm-purple-dark dark:text-tm-yellow leading-none">
@@ -101,7 +122,13 @@ export default function Navbar() {
                     : "text-tm-blue-gray hover:text-tm-orange-light"
                 )}
               >
-                <item.icon size={20} />
+                <motion.span
+                  className="inline-flex"
+                  whileHover={{ scale: 1.2, y: -2 }}
+                  transition={SPRING.snappy}
+                >
+                  <item.icon size={20} />
+                </motion.span>
                 <span className="hidden md:inline">{item.label}</span>
                 {isActive && (
                   <motion.div
@@ -128,7 +155,16 @@ export default function Navbar() {
                   isActive ? "text-tm-orange-dark" : "text-tm-blue-gray"
                 )}
               >
-                <item.icon size={20} />
+                {isActive && (
+                  <motion.span
+                    layoutId="bubble-mobile"
+                    className="absolute inset-0 bg-tm-yellow/20 dark:bg-tm-yellow/10 rounded-full -z-10"
+                    transition={SPRING.bubble}
+                  />
+                )}
+                <motion.span className="inline-flex" whileTap={{ scale: 0.85 }}>
+                  <item.icon size={20} />
+                </motion.span>
               </Link>
             );
           })}
@@ -184,35 +220,77 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Bottom Ribbon */}
-      <div className="flex lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[200]">
-        <motion.div
-          animate={pulseControls}
-          className="relative pl-4 pr-1.5 py-1.5 bg-white/90 dark:bg-tm-purple-dark/90 backdrop-blur-xl border border-tm-blue-gray/10 dark:border-white/10 rounded-full shadow-2xl flex items-center gap-3 overflow-hidden"
-        >
-          <div className="flex items-center gap-1.5">
-            <span className="text-tm-orange-dark dark:text-tm-yellow text-caption font-black uppercase tracking-widest">{rank}</span>
-            <EraBadge className="text-caption" />
-            <span className="text-tiny text-tm-blue-gray dark:text-white/60 font-bold uppercase tracking-tighter border-l border-tm-blue-gray/20 dark:border-white/20 pl-2">
-              {daysLeft} DAYS LEFT
-            </span>
-          </div>
-          {profile && (
-            <div data-xp-target className="flex items-center gap-2 border-l border-tm-blue-gray/20 dark:border-white/20 pl-3">
-              <span className="text-caption font-black uppercase text-tm-orange-dark dark:text-tm-yellow leading-none tracking-widest">Lvl {profile.level}</span>
-            </div>
+      {/* Tap outside closes the season panel (kept outside the transformed ribbon so it covers the viewport) */}
+      {ribbonOpen && <div className="lg:hidden fixed inset-0 z-[199]" onClick={() => setRibbonOpen(false)} aria-hidden />}
+
+      {/* Mobile Bottom Ribbon: rank + level at a glance, tap for season details */}
+      <div className="flex lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex-col items-center">
+        <AnimatePresence>
+          {ribbonOpen && (
+              <motion.div
+                key="panel"
+                id="season-panel"
+                initial={{ opacity: 0, y: 12, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 12, scale: 0.95 }}
+                transition={SPRING.snappy}
+                className="mb-2 w-[min(88vw,300px)] p-4 rounded-3xl bg-white/95 dark:bg-tm-purple-dark/95 backdrop-blur-xl border border-tm-blue-gray/10 dark:border-white/10 shadow-2xl origin-bottom space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-caption font-black uppercase tracking-widest text-tm-blue-gray">Season ends</span>
+                  <span className="text-sm font-black text-foreground">{daysLeft === 1 ? "in 1 day" : `in ${daysLeft} days`}</span>
+                </div>
+                {profile && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-caption font-black uppercase tracking-widest text-tm-blue-gray">Next level</span>
+                      <span className="text-sm font-black text-foreground">{profile.nextLevelXP - profile.levelProgress} XP to go</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-tm-blue-gray/15 overflow-hidden">
+                      <div className="tm-xp-fill h-full bg-tm-yellow rounded-full" style={{ width: `${progress}%` }} />
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={() => setMuted(!muted)}
+                  className="w-full flex items-center justify-between pt-3 border-t border-tm-blue-gray/10"
+                  aria-pressed={muted}
+                >
+                  <span className="text-caption font-black uppercase tracking-widest text-tm-blue-gray">Sound</span>
+                  <span className="flex items-center gap-1.5 text-sm font-black text-foreground">
+                    {muted ? <VolumeX size={16} /> : <Volume2 size={16} />} {muted ? "Off" : "On"}
+                  </span>
+                </button>
+              </motion.div>
           )}
-          <div className="-my-1">{muteButton}</div>
+        </AnimatePresence>
+
+        <motion.button
+          animate={pulseControls}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setRibbonOpen(o => !o)}
+          aria-expanded={ribbonOpen}
+          aria-controls="season-panel"
+          className="relative px-5 py-2.5 bg-white/90 dark:bg-tm-purple-dark/90 backdrop-blur-xl border border-tm-blue-gray/10 dark:border-white/10 rounded-full shadow-2xl flex items-center gap-2.5 overflow-hidden whitespace-nowrap"
+        >
+          <span className="text-tm-orange-dark dark:text-tm-yellow text-caption font-black uppercase tracking-widest">{rank}</span>
+          <EraBadge className="text-caption" />
+          {profile && (
+            <>
+              <span className="w-1 h-1 rounded-full bg-tm-blue-gray/40" aria-hidden />
+              <span data-xp-target className="text-caption font-black uppercase text-tm-blue-gray dark:text-white/70 tracking-widest">Lvl {profile.level}</span>
+            </>
+          )}
           {/* Level progress along the ribbon's bottom edge */}
           {profile && (
-            <motion.div
+            <motion.span
               className="tm-xp-fill absolute bottom-0 left-0 h-[2px] bg-tm-yellow"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={SPRING.soft}
             />
           )}
-        </motion.div>
+        </motion.button>
       </div>
 
       <div className="relative h-px w-full overflow-visible">

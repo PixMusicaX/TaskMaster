@@ -1,0 +1,45 @@
+/* Shared UI motion primitives. Transform/opacity only. */
+
+/* Skeleton placeholders tinted by the current palette */
+.tm-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, var(--tm-blue-gray) 10%, transparent);
+}
+.tm-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tm-yellow) 14%, transparent), transparent);
+  transform: translateX(-100%);
+  animation: tm-skeleton 1.4s ease-in-out infinite;
+}
+@keyframes tm-skeleton {
+  to { transform: translateX(100%); }
+}
+
+/* Staggered pop-in for dense grids (cheaper than one framer node per cell) */
+.tm-pop-in {
+  animation: tm-pop-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes tm-pop-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Streak flame flicker */
+.tm-flame {
+  transform-origin: 50% 100%;
+  animation: tm-flame 1.6s ease-in-out infinite;
+}
+@keyframes tm-flame {
+  0%, 100% { transform: scale(1) rotate(-2deg); }
+  50% { transform: scale(1.12, 1.2) rotate(2deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-skeleton::after, .tm-pop-in, .tm-flame {
+    animation: none !important;
+  }
+}
