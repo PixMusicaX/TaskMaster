@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      # Tests use an in-memory Postgres and mock all external APIs, so no secrets are needed
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          # The build never connects; the client just needs a well-formed URL
+          DATABASE_URL: postgres://build:build@localhost:5432/build
