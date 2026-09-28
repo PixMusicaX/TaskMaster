@@ -42,15 +42,15 @@ export async function getSmartMission(clientDateStr?: string) {
             xp: profile.xp,
             stats: profile.stats,
             title: profile.title,
-            habits: habitData.map((h: any) => h.name),
-            recentTasks: taskData.map((t: any) => ({
+            habits: habitData.map((h) => h.name),
+            recentTasks: taskData.map((t) => ({
               title: t.title,
               type: t.type,
               startTime: t.startTime,
               completed: t.completed
             })),
-            recentNotes: notesData.map((n: any) => n.content),
-            missionHistory: history.map((m: any) => ({ title: m.title, completed: m.completed })),
+            recentNotes: notesData.map((n) => n.content),
+            missionHistory: history.map((m) => ({ title: m.title, completed: m.completed })),
             today
           });
 

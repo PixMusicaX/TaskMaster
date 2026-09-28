@@ -1,10 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { RPG_TITLES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useTheme } from "./theme-provider";
+import { useMounted } from "@/lib/use-mounted";
+import type { NoteRow, Profile } from "@/lib/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type BiomeKey =
@@ -330,7 +332,7 @@ function generateMap(params: MapParams, W: number, H: number, h: Float32Array): 
 }
 
 // ─── Overlay ──────────────────────────────────────────────────────────────────
-function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number, H: number, h: Float32Array, playerProgress?: number) {
+function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number, H: number, h: Float32Array) {
   const wl = params.waterLevel;
   const pal = BIOMES[params.biome];
   const rng = makePRNG(params.seed + 99999);
@@ -546,7 +548,7 @@ function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number
   }
   px = Math.max(10, Math.min(W - 10, px));
   py = Math.max(10, Math.min(H - 10, py));
-  
+
   // Pulse glow
   ctx.beginPath();
   ctx.arc(px, py, 14, 0, Math.PI * 2);
@@ -655,12 +657,10 @@ function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number
 }
 
 // ─── Map Popup Modal ───────────────────────────────────────────────────────────
-function MapPopupModal({ 
-  mapConfig, 
-  profile, 
-  moodData, 
-  onClose 
-}: { 
+function MapPopupModal({
+  mapConfig,
+  onClose
+}: {
   mapConfig: {
     name: string;
     biome: BiomeKey;
@@ -668,29 +668,23 @@ function MapPopupModal({
     performanceScore: number;
     performanceState: string;
     nextStops: { name: string; biome: BiomeKey }[];
-  }; 
-  profile: any; 
-  moodData: any[]; 
+  };
   onClose: () => void;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isClosing, setIsClosing] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   // Audio Logic
   useEffect(() => {
     if (!mounted) return;
-    
+
     const audio = audioRef.current;
     if (audio) {
       audio.volume = 0;
       audio.play().catch(err => console.error("Audio play failed:", err));
-      
+
       const fadeInterval = setInterval(() => {
         if (audio.volume < 0.5) {
           audio.volume = Math.min(0.5, audio.volume + 0.05);
@@ -698,7 +692,7 @@ function MapPopupModal({
           clearInterval(fadeInterval);
         }
       }, 100);
-      
+
       return () => clearInterval(fadeInterval);
     }
   }, [mounted]);
@@ -741,7 +735,7 @@ function MapPopupModal({
   // Canvas Logic
   useEffect(() => {
     if (!mounted || !mapConfig || !canvasRef.current) return;
-    
+
     const canvas = canvasRef.current;
     const p = mapConfig.params;
     const [W, H] = SIZES[p.mapSize];
@@ -762,11 +756,9 @@ function MapPopupModal({
       for (let i = 0; i < h.length; i++) h[i] = Math.min(1, h[i] * 0.85 + bump[i] * 0.25);
     }
 
-    const playerProgress = (profile?.levelProgress || 0) / (profile?.nextLevelXP || 100);
-    
     ctx.putImageData(generateMap(p, W, H, h), 0, 0);
-    drawOverlay(ctx, p, W, H, h, playerProgress);
-  }, [mounted, mapConfig, profile]);
+    drawOverlay(ctx, p, W, H, h);
+  }, [mounted, mapConfig]);
 
   if (!mounted) return null;
 
@@ -786,23 +778,23 @@ function MapPopupModal({
 
       <motion.div
         initial={{ scale: 0.8, opacity: 0, rotate: -2 }}
-        animate={{ 
-          scale: isClosing ? 0.8 : 1, 
-          opacity: isClosing ? 0 : 1, 
-          rotate: isClosing ? 2 : 0 
+        animate={{
+          scale: isClosing ? 0.8 : 1,
+          opacity: isClosing ? 0 : 1,
+          rotate: isClosing ? 2 : 0
         }}
         exit={{ scale: 0.8, opacity: 0, rotate: 2 }}
         transition={{ type: "spring", damping: 20, stiffness: 100 }}
         className="relative w-full max-w-6xl h-full flex items-center justify-center"
       >
-        <div 
+        <div
           style={{ clipPath: tornEdge }}
           className="relative w-full aspect-[4/3] max-h-full bg-[#e6d5b8] shadow-[0_0_120px_rgba(0,0,0,1)] overflow-hidden [container-type:inline-size]"
         >
           {/* Parchment Overlays */}
           <div className="absolute inset-0 pointer-events-none z-10 opacity-60 mix-blend-multiply bg-[radial-gradient(circle_at_center,transparent_0%,rgba(139,69,19,0.3)_100%)]" />
           <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-overlay bg-gradient-to-br from-[#8b4513]/30 via-transparent to-[#4b3621]/50" />
-          
+
           {/* Folds Logic */}
           <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.15] mix-blend-multiply bg-[linear-gradient(90deg,transparent_33%,rgba(0,0,0,0.8)_33.5%,transparent_34%,transparent_66%,rgba(0,0,0,0.8)_66.5%,transparent_67%)]" />
           <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.1] mix-blend-screen bg-[linear-gradient(90deg,transparent_32.5%,rgba(255,255,255,0.4)_33%,transparent_33.5%,transparent_65.5%,rgba(255,255,255,0.4)_66%,transparent_66.5%)]" />
@@ -810,7 +802,7 @@ function MapPopupModal({
 
           {/* Stains & Grime */}
           <div className="absolute inset-0 pointer-events-none z-30 opacity-20 mix-blend-multiply bg-[radial-gradient(circle_at_15%_25%,#5d4037_0%,transparent_15%),radial-gradient(circle_at_85%_75%,#5d4037_0%,transparent_20%),radial-gradient(circle_at_50%_10%,#5d4037_0%,transparent_12%)] blur-2xl" />
-          
+
           {/* Paper Texture Grain */}
           <div className="absolute inset-0 pointer-events-none z-20 opacity-[0.05] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]" />
 
@@ -819,7 +811,7 @@ function MapPopupModal({
              <canvas
                 ref={canvasRef}
                 className="w-full h-full object-cover"
-                style={{ 
+                style={{
                   imageRendering: "pixelated",
                   filter: "sepia(0.25) contrast(1.15) brightness(1.02) saturate(0.9)"
                 }}
@@ -827,14 +819,14 @@ function MapPopupModal({
           </div>
 
           {/* Edge Burn/Shadow */}
-          <div 
+          <div
             style={{ clipPath: tornEdge }}
-            className="absolute inset-0 pointer-events-none border-[16px] border-black/40 blur-md z-40" 
+            className="absolute inset-0 pointer-events-none border-[16px] border-black/40 blur-md z-40"
           />
 
           {/* Archaic Location Title at Bottom */}
           <div className="absolute bottom-8 md:bottom-12 left-1/2 -translate-x-1/2 z-50 pointer-events-none text-center w-full">
-            <h2 
+            <h2
               style={{ fontFamily: "'Georgia', serif" }}
               className="text-xl md:text-5xl font-bold text-[#4b3621]/60 italic tracking-[0.2em] uppercase drop-shadow-[0_2px_2px_rgba(255,255,255,0.3)] px-4"
             >
@@ -844,7 +836,7 @@ function MapPopupModal({
         </div>
       </motion.div>
 
-      <motion.button 
+      <motion.button
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.8 }}
@@ -924,31 +916,28 @@ const BIOME_MATRIX: Record<string, Record<"low" | "balanced" | "peak", { name: s
   }
 };
 
-export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { profile: any; moodData: any[]; completionScore?: number }) {
+export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { profile: Profile | null; moodData: Pick<NoteRow, "mood">[]; completionScore?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { rank } = useTheme();
+  // Rolled once per session so the map only changes when its inputs do
   const [randomOffset] = useState(() => Math.floor(Math.random() * 1000000));
+  const [luck] = useState(() => Math.random());
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [mapConfig, setMapConfig] = useState<{ 
-    name: string; 
-    biome: BiomeKey; 
-    params: MapParams;
-    performanceScore: number;
-    performanceState: string;
-    nextStops: { name: string; biome: BiomeKey }[];
-  } | null>(null);
+  // The config uses random rolls, so build it only in the browser to keep hydration stable
+  const mounted = useMounted();
 
-  useEffect(() => {
+  const mapConfig = useMemo(() => {
+    if (!mounted) return null;
     // 30-day Overall Mood
-    const overallJoy = moodData?.filter((m: any) => m.mood === "good").length || 0;
-    const overallSteady = moodData?.filter((m: any) => m.mood === "neutral").length || 0;
+    const overallJoy = moodData?.filter((m) => m.mood === "good").length || 0;
+    const overallSteady = moodData?.filter((m) => m.mood === "neutral").length || 0;
     const totalOverall = (moodData?.length || 0) || 1;
     const overallScore = ((overallJoy * 100) + (overallSteady * 50)) / totalOverall;
 
     // 7-day Recent Mood (most recent 7 entries)
     const recentMoods = moodData?.slice(0, 7) || [];
-    const recentJoy = recentMoods.filter((m: any) => m.mood === "good").length;
-    const recentSteady = recentMoods.filter((m: any) => m.mood === "neutral").length;
+    const recentJoy = recentMoods.filter((m) => m.mood === "good").length;
+    const recentSteady = recentMoods.filter((m) => m.mood === "neutral").length;
     const totalRecent = recentMoods.length || 1;
     const recentScore = ((recentJoy * 100) + (recentSteady * 50)) / totalRecent;
 
@@ -959,7 +948,7 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
 
 
     // Custom weights: 37% Task/Habit, 45% Mood, 18% Random (Total: 90%)
-    const performanceScore = (completionScore * 0.37) + (moodScore * 0.45) + (Math.random() * 100 * 0.18);
+    const performanceScore = (completionScore * 0.37) + (moodScore * 0.45) + (luck * 100 * 0.18);
 
     let performance: "low" | "balanced" | "peak" = "balanced";
     if (performanceScore > 60) performance = "peak";
@@ -976,7 +965,7 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
 
     const nextTitle = titles[(currentTitleIndex + 1) % titles.length];
     const nextEntry = BIOME_MATRIX[nextTitle] || BIOME_MATRIX["Hero"];
-    
+
     const allStops = [
       { name: matrixEntry?.["low"]?.name || "The Wilds", biome: matrixEntry?.["low"]?.biome || "temperate" },
       { name: matrixEntry?.["balanced"]?.name || "The Plains", biome: matrixEntry?.["balanced"]?.biome || "temperate" },
@@ -1006,20 +995,20 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
       ...perfConfig.params,
     };
 
-    setMapConfig({
+    return {
       name: perfConfig.name,
-      biome: perfConfig.biome,
+      biome: perfConfig.biome as BiomeKey,
       params: finalParams,
       performanceScore,
       performanceState: performance,
-      nextStops
-    });
-  }, [profile, moodData, rank, completionScore]);
+      nextStops: nextStops as { name: string; biome: BiomeKey }[],
+    };
+  }, [mounted, profile, moodData, rank, completionScore, randomOffset, luck]);
 
   useEffect(() => {
     if (!mapConfig || !canvasRef.current) return;
     const canvas = canvasRef.current;
-    
+
     // We render it dynamically with requestAnimationFrame
     const p = mapConfig.params;
     const [W, H] = SIZES[p.mapSize];
@@ -1036,9 +1025,8 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
       const bump = valueNoise(makePRNG(p.seed + 1234), W, H, W / 6);
       for (let i = 0; i < h.length; i++) h[i] = Math.min(1, h[i] * 0.85 + bump[i] * 0.25);
     }
-    const playerProgress = (profile?.levelProgress || 0) / (profile?.nextLevelXP || 100);
     ctx.putImageData(generateMap(p, W, H, h), 0, 0);
-    drawOverlay(ctx, p, W, H, h, playerProgress);
+    drawOverlay(ctx, p, W, H, h);
   }, [mapConfig]);
 
   if (!mapConfig) return null;
@@ -1048,50 +1036,50 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
   return (
     <>
       <div className="w-full h-full flex flex-col relative z-10">
-        <div 
+        <div
           onClick={() => setIsFullscreen(true)}
           className="relative w-full aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl group/map cursor-pointer"
         >
           <canvas ref={canvasRef} className="w-full h-full object-cover transition-transform duration-1000 group-hover/map:scale-105" style={{ imageRendering: "pixelated" }} />
-          
+
           {/* Vignette Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-black/30 pointer-events-none" />
-          
+
           {/* Name and Biome label */}
           <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
             <div className="space-y-1">
-              <h4 className="text-xl md:text-2xl font-black text-white drop-shadow-md tracking-tighter italic">
+              <h4 className="text-xl md:text-2xl font-display font-bold text-white drop-shadow-md tracking-tight">
                 {mapConfig.name}
               </h4>
               <div className="flex items-center gap-2">
                 <span className="text-sm">{pal.icon}</span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/80">{pal.label} Realm</span>
+                <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-white/80">{pal.label} Realm</span>
               </div>
             </div>
-            
+
             <div className="hidden sm:block text-right">
               {/* Labels removed by request */}
             </div>
           </div>
         </div>
-        
+
         {/* Possible Next Stops */}
         <div className="mt-5 space-y-3">
-          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-tm-blue-gray">
+          <div className="flex items-center justify-between text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">
             <span>Adjacent Areas</span>
             <span className={cn(
-              mapConfig.performanceState === "peak" ? "text-tm-yellow" : 
+              mapConfig.performanceState === "peak" ? "text-tm-yellow" :
               mapConfig.performanceState === "low" ? "text-tm-orange-dark" : "text-tm-blue-gray"
             )}>
               Status: {mapConfig.performanceState} / {Math.round(mapConfig.performanceScore)}
             </span>
         </div>
-        
+
         <div className="flex flex-wrap gap-1.5 justify-center">
           {mapConfig.nextStops.map((stop, i) => (
             <div key={i} className="flex-[0_0_calc(33.33%-6px)] py-2.5 px-1 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-colors group/stop text-center min-w-0">
-              <span className="text-[10px] opacity-70 group-hover/stop:opacity-100 transition-opacity mb-0.5">{BIOMES[stop.biome].icon}</span>
-              <h5 className="text-[9px] font-black uppercase text-foreground/90 tracking-tighter leading-tight w-full px-1 whitespace-normal break-words">{stop.name}</h5>
+              <span className="text-caption opacity-70 group-hover/stop:opacity-100 transition-opacity mb-0.5">{BIOMES[stop.biome].icon}</span>
+              <h5 className="text-tiny font-mono font-semibold uppercase text-foreground/90 tracking-[0.12em] leading-tight w-full px-1 whitespace-normal break-words">{stop.name}</h5>
             </div>
           ))}
         </div>
@@ -1103,8 +1091,6 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
         {isFullscreen && mapConfig && (
           <MapPopupModal
             mapConfig={mapConfig}
-            profile={profile}
-            moodData={moodData}
             onClose={() => setIsFullscreen(false)}
           />
         )}
@@ -1145,7 +1131,8 @@ export default function FantasyMapGenerator() {
     }, 50);
   }, []);
 
-  useEffect(() => { runGenerate(params); }, []);
+  const initialParams = useRef(params);
+  useEffect(() => { runGenerate(initialParams.current); }, [runGenerate]);
 
   const set = <K extends keyof MapParams>(k: K, v: MapParams[K]) => setParams(p => ({ ...p, [k]: v }));
   const randomize = () => setParams(p => ({ ...p, seed: Math.floor(Math.random() * 99999) }));

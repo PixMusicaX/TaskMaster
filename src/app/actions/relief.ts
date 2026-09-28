@@ -8,6 +8,7 @@ import { getReliefRecommendationPrompt } from "@/lib/prompts";
 import { invalidateSeasonSnapshots } from "./gamification";
 import { getEventsByDateRange } from "./events";
 import { safeGenerateContent } from "@/lib/ai-utils";
+import { parseNoteLines, type ReliefAlternative } from "@/lib/types";
 import { eq, desc, gte, lte, lt, ne, asc, and, isNotNull } from "drizzle-orm";
 
 const GEMINI_API_KEY = process.env.gemini_key;
@@ -28,7 +29,7 @@ export async function getReliefRecommendation(
     });
 
     if (!recommendation) {
-      let weatherInfo: { weather: string; temp: string; location: string; precipitation?: number; windSpeed?: number } = { 
+      const weatherInfo: { weather: string; temp: string; location: string; precipitation?: number; windSpeed?: number } = { 
         weather: cachedWeather || "Clear", 
         temp: cachedTemp || "22", 
         location: cachedLocation || "No location found" 
@@ -100,19 +101,14 @@ export async function getReliefRecommendation(
 
           const prompt = getReliefRecommendationPrompt({
             ...weatherInfo,
-            recentNotes: notesData.map((n: any) => {
-              try {
-                const parsed = JSON.parse(n.content);
-                return Array.isArray(parsed) ? parsed.map((p: any) => p.text).join(" ") : n.content;
-              } catch (e) { return n.content; }
-            }),
-            recentTasks: taskData.map((t: any) => ({
+            recentNotes: notesData.map((n) => parseNoteLines(n.content)?.map(p => p.text).join(" ") ?? n.content),
+            recentTasks: taskData.map((t) => ({
               title: t.title,
               completed: t.completed
             })),
-            history: history.flatMap((r: any) => [
+            history: history.flatMap((r) => [
               { title: r.title, type: r.type },
-              ...(r.alternatives || []).map((alt: any) => ({ title: alt.title, type: alt.type }))
+              ...((r.alternatives as ReliefAlternative[] | null) || []).map((alt) => ({ title: alt.title, type: alt.type }))
             ]),
             today
           });
@@ -173,7 +169,7 @@ export async function getReliefRecommendation(
 
 export async function toggleReliefRecommendation(id: string, completed: boolean, index: number = 0) {
   try {
-    const updateData: any = {};
+    const updateData: Partial<typeof reliefRecommendation.$inferInsert> = {};
     if (index === 0) updateData.completed = completed;
     else if (index === 1) updateData.alt1Completed = completed;
     else if (index === 2) updateData.alt2Completed = completed;
@@ -234,7 +230,7 @@ export async function getReliefHistory(sinceDate?: string) {
     const since = sinceDate || format(subDays(new Date(), 14), "yyyy-MM-dd");
     const processed = await getReliefsWithCarriedLocation(since);
     return processed.sort((a, b) => b.date.localeCompare(a.date));
-  } catch (e) {
+  } catch {
     return [];
   }
 }
@@ -251,7 +247,7 @@ export async function regenerateReliefRecommendation(
   try {
     await db.delete(reliefRecommendation).where(eq(reliefRecommendation.date, today));
     return await getReliefRecommendation(lat, lon, clientDateStr, cachedLocation, cachedWeather, cachedTemp);
-  } catch (e) {
+  } catch {
     return null;
   }
 }

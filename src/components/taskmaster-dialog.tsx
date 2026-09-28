@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, MessageSquare, Send, Sparkles } from "lucide-react";
 import GlassCard from "./glass-card";
 import { askTaskmaster, getTaskmasterRemainingQueries } from "@/app/actions/taskmaster";
-import { cn } from "@/lib/utils";
 
 function formatResponse(text: string) {
   return text.split('\n').map((line, i) => {
@@ -38,15 +37,22 @@ export default function TaskmasterDialog({ isOpen, onClose }: TaskmasterDialogPr
   const [remaining, setRemaining] = useState<number | string>(3);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Start fresh each time the dialog opens
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
     if (isOpen) {
-      getTaskmasterRemainingQueries().then((res) => {
-        setRemaining(res.remaining);
-      });
       setQuestion("");
       setResponse(null);
       setError(null);
     }
+  }
+
+  useEffect(() => {
+    if (!isOpen) return;
+    getTaskmasterRemainingQueries().then((res) => {
+      setRemaining(res.remaining);
+    });
   }, [isOpen]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -99,10 +105,10 @@ export default function TaskmasterDialog({ isOpen, onClose }: TaskmasterDialogPr
                     <MessageSquare className="text-tm-yellow" size={24} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-foreground dark:text-tm-yellow tracking-tighter uppercase italic">
+                    <h2 className="text-xl font-bold text-foreground dark:text-tm-yellow tracking-tighter uppercase italic">
                       Ask The Taskmaster
                     </h2>
-                    <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest">
+                    <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">
                       {remaining} / 3 Queries Remaining
                     </p>
                   </div>
@@ -128,7 +134,7 @@ export default function TaskmasterDialog({ isOpen, onClose }: TaskmasterDialogPr
                   <button
                     type="submit"
                     disabled={!question.trim() || loading || (typeof remaining === 'number' && remaining <= 0)}
-                    className="self-end px-6 py-2 bg-tm-yellow text-tm-purple-dark font-black uppercase rounded-xl hover:scale-105 transition-all shadow-xl shadow-tm-yellow/20 disabled:opacity-50 disabled:hover:scale-100 flex items-center gap-2 text-xs tracking-widest"
+                    className="self-end px-6 py-2 bg-tm-yellow text-tm-purple-dark font-mono font-semibold uppercase rounded-xl hover:scale-105 transition-all shadow-xl shadow-tm-yellow/20 disabled:opacity-50 disabled:hover:scale-100 flex items-center gap-2 text-xs tracking-[0.12em]"
                   >
                     {loading ? (
                       <span className="animate-pulse">Consulting...</span>
@@ -159,7 +165,7 @@ export default function TaskmasterDialog({ isOpen, onClose }: TaskmasterDialogPr
                     animate={{ opacity: 1, y: 0 }}
                     className="p-4 bg-tm-orange-dark/10 border border-tm-orange-dark/20 rounded-2xl relative z-10"
                   >
-                    <p className="text-xs font-bold text-tm-orange-dark uppercase tracking-widest text-center">
+                    <p className="text-xs font-mono font-semibold text-tm-orange-dark uppercase tracking-[0.12em] text-center">
                       {error}
                     </p>
                   </motion.div>

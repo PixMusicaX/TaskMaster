@@ -46,16 +46,17 @@ export async function askTaskmaster(question: string, clientDateStr?: string) {
       // protocol (simple: false) rejects multiple statements, so "SELECT 1; COMMIT; DELETE ..." can't escape it.
       const result = await client.begin("read only", async (tx) => {
         await tx`SET LOCAL statement_timeout = 5000`;
-        return tx.unsafe(generatedSql, [], { simple: false } as any);
+        // `simple` is a valid postgres.js option missing from its typings
+        return tx.unsafe(generatedSql, [], { simple: false } as unknown as Parameters<typeof tx.unsafe>[2]);
       });
       queryData = JSON.stringify(result, null, 2);
       // Optional: limit string size to avoid token limit errors
       if (queryData.length > 5000) {
          queryData = queryData.slice(0, 5000) + "\n... [TRUNCATED DUE TO SIZE]";
       }
-    } catch (sqlError: any) {
+    } catch (sqlError: unknown) {
       console.error("SQL Execution Error:", sqlError);
-      queryData = `[Error executing query: ${sqlError.message || "Unknown SQL Error"}]`;
+      queryData = `[Error executing query: ${(sqlError instanceof Error && sqlError.message) || "Unknown SQL Error"}]`;
     }
 
     // Step 2: Answer Formulator
@@ -112,7 +113,7 @@ export async function getTaskmasterRemainingQueries(clientDateStr?: string) {
       where: eq(taskmasterQueryCount.date, today)
     });
     return { remaining: 3 - (queryRecord?.count || 0) };
-  } catch (e) {
+  } catch {
     return { remaining: 0 };
   }
 }

@@ -146,6 +146,8 @@
 .tm-card-fx {
   position: absolute;
   inset: 0;
+  /* Cards often use space-y-*, which would give this first child a margin and shrink it */
+  margin: 0;
   z-index: -1;
   border-radius: inherit;
   overflow: hidden;
@@ -501,9 +503,12 @@
 }
 
 /* XP bar shimmer when motes land */
-.tm-xp-fill {
-  position: relative;
-  overflow: hidden;
+/* Layered so utilities like `absolute` on the same element still win */
+@layer components {
+  .tm-xp-fill {
+    position: relative;
+    overflow: hidden;
+  }
 }
 .tm-xp-fill::after {
   content: "";

@@ -1,11 +1,13 @@
 /* Shared UI motion primitives. Transform/opacity only. */
 
 /* Skeleton placeholders tinted by the current palette */
-.tm-skeleton {
-  position: relative;
-  overflow: hidden;
-  border-radius: 0.875rem;
-  background: color-mix(in srgb, var(--tm-blue-gray) 10%, transparent);
+@layer components {
+  .tm-skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.875rem;
+    background: color-mix(in srgb, var(--tm-blue-gray) 10%, transparent);
+  }
 }
 .tm-skeleton::after {
   content: "";
@@ -21,7 +23,7 @@
 
 /* Staggered pop-in for dense grids (cheaper than one framer node per cell) */
 .tm-pop-in {
-  animation: tm-pop-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: tm-pop-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 @keyframes tm-pop-in {
   from { opacity: 0; transform: scale(0.6); }

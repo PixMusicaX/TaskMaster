@@ -48,13 +48,13 @@ export default function CharacterStatsRadar({
   ] as const;
 
   const dataPoints = stats.map(s => getPoint(data[s.key], s.angle));
-  const pathData = `M ${dataPoints.map((p, i) => `${p.x} ${p.y}`).join(" L ")} Z`;
+  const pathData = `M ${dataPoints.map((p) => `${p.x} ${p.y}`).join(" L ")} Z`;
 
   // Background grid levels
   const gridLevels = [0.25, 0.5, 0.75, 1];
   const gridPaths = gridLevels.map(level => {
     const points = stats.map(s => getPoint(max * level, s.angle));
-    return `M ${points.map((p, i) => `${p.x} ${p.y}`).join(" L ")} Z`;
+    return `M ${points.map((p) => `${p.x} ${p.y}`).join(" L ")} Z`;
   });
 
   return (
@@ -83,7 +83,7 @@ export default function CharacterStatsRadar({
               x2={p.x}
               y2={p.y}
               stroke="currentColor"
-              className="text-tm-blue-gray/40"
+              className="text-tm-blue-gray/70"
               strokeDasharray="2 2"
               strokeWidth={0.5}
             />
@@ -163,10 +163,10 @@ export default function CharacterStatsRadar({
       {/* Total XP Display */}
       {totalXP > 0 && (
         <div className="text-center px-8 py-3 bg-tm-yellow/5 rounded-3xl border border-tm-yellow/10 backdrop-blur-sm">
-          <p className="text-[10px] font-black uppercase text-tm-blue-gray/40 tracking-[0.4em] mb-1">
+          <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray/70 tracking-[0.12em] mb-1">
             Total XP
           </p>
-          <p className="text-4xl font-black text-tm-yellow tracking-tighter">{totalXP}</p>
+          <p className="text-4xl font-display font-bold text-tm-yellow tracking-tight">{totalXP}</p>
         </div>
       )}
     </div>

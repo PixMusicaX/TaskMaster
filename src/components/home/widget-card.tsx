@@ -42,10 +42,10 @@ export default function WidgetCard({ accent, title, subtitle, aside, loading, lo
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <div className={cn("w-2 h-2 rounded-full animate-pulse", a.dot)} />
-            <h2 className={cn("text-2xl font-black uppercase tracking-tighter italic", a.text)}>{title}</h2>
+            <h2 className={cn("text-2xl font-display font-bold uppercase tracking-tight", a.text)}>{title}</h2>
           </div>
           {typeof subtitle === "string" ? (
-            <p className="text-caption font-black text-tm-blue-gray uppercase tracking-widest">{subtitle}</p>
+            <p className="text-caption font-mono font-semibold text-tm-blue-gray uppercase tracking-[0.12em]">{subtitle}</p>
           ) : subtitle}
         </div>
         {aside}
@@ -55,7 +55,7 @@ export default function WidgetCard({ accent, title, subtitle, aside, loading, lo
         {loading ? loadingContent : <div className="space-y-3">{children}</div>}
       </div>
 
-      <Link href={footerHref} className={cn("mt-auto flex items-center gap-2 font-black text-caption uppercase tracking-[0.2em] hover:underline group/link", a.text)}>
+      <Link href={footerHref} className={cn("mt-auto flex items-center gap-2 font-mono font-semibold text-caption uppercase tracking-[0.12em] hover:underline group/link", a.text)}>
         <Plus size={14} className="group-hover/link:rotate-90 transition-transform" /> {footerLabel}
       </Link>
     </GlassCard>

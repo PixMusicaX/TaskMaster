@@ -1,40 +1,55 @@
 "use client";
 
-import GlassCard from "@/components/glass-card";
-import { Info, Shield, Zap, Heart, Github, Twitter, Mail, Code2, Palette, Sparkles, Trophy, Star, History, Swords, CheckCircle2, Library, ExternalLink } from "lucide-react";
-import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import { getSeasonHistory } from "@/app/actions/gamification";
-import { getSmartMissionHistory } from "@/app/actions/smart-missions";
-import { getReliefHistory } from "@/app/actions/relief";
-import { getPreparationTipHistory } from "@/app/actions/preparation";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { format, subDays } from "date-fns";
-import { Music, Film, Coffee, Dumbbell, Database, Download, AlertTriangle, Brain, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useTheme } from "@/components/theme-provider";
-import { generatePruneArchive, deletePrunedData } from "@/app/actions/prune";
+import { Database, Download, AlertTriangle, ExternalLink, Library, Palette } from "lucide-react";
+import GlassCard from "@/components/glass-card";
 import TabularViewModal from "@/components/TabularViewModal";
-import { toggleSmartMission } from "@/app/actions/smart-missions";
-import { toggleReliefRecommendation } from "@/app/actions/relief";
-import { togglePreparationTip } from "@/app/actions/preparation";
+import VaultHero from "@/components/vault/vault-hero";
+import HallOfFame from "@/components/vault/hall-of-fame";
+import Chronicle, { type ChronicleKind } from "@/components/vault/chronicle";
+import SettingsPanel from "@/components/vault/settings-panel";
+import VaultSection from "@/components/vault/vault-section";
+import { getSeasonHistory } from "@/app/actions/gamification";
+import { getSmartMissionHistory, toggleSmartMission } from "@/app/actions/smart-missions";
+import { getReliefHistory, toggleReliefRecommendation } from "@/app/actions/relief";
+import { getPreparationTipHistory, togglePreparationTip } from "@/app/actions/preparation";
+import { generatePruneArchive, deletePrunedData } from "@/app/actions/prune";
+import { cn } from "@/lib/utils";
+import type { PrepTipRow, ReliefRow, Season, SmartMissionRow } from "@/lib/types";
+
+const flip = <T extends { id: string; completed: boolean }>(list: T[], id: string) =>
+  list.map(item => item.id === id ? { ...item, completed: !item.completed } : item);
+
+const noopSubscribe = () => () => {};
+const readNotificationPermission = () => ("Notification" in window ? Notification.permission : "default");
+
+function renderDate(val: string) {
+  const d = new Date(val);
+  return (
+    <span className="font-mono text-tm-blue-gray whitespace-nowrap">
+      <span className="sm:hidden flex flex-col leading-tight">
+        <span className="text-caption opacity-50">{d.getFullYear()}</span>
+        <span>{format(d, "MMM d")}</span>
+      </span>
+      <span className="hidden sm:inline">{format(d, "yyyy-MM-dd")}</span>
+    </span>
+  );
+}
 
 export default function AboutPage() {
-  const { theme } = useTheme();
-  const [seasonHistory, setSeasonHistory] = useState<any[]>([]);
-  const [missionHistory, setMissionHistory] = useState<any[]>([]);
-  const [reliefHistory, setReliefHistory] = useState<any[]>([]);
-  const [preparationHistory, setPreparationHistory] = useState<any[]>([]);
+  const [seasonHistory, setSeasonHistory] = useState<Season[]>([]);
+  const [missionHistory, setMissionHistory] = useState<SmartMissionRow[]>([]);
+  const [reliefHistory, setReliefHistory] = useState<ReliefRow[]>([]);
+  const [preparationHistory, setPreparationHistory] = useState<PrepTipRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal States
-  const [isSeasonsModalOpen, setIsSeasonsModalOpen] = useState(false);
-  const [isMissionsModalOpen, setIsMissionsModalOpen] = useState(false);
-  const [isPrepsModalOpen, setIsPrepsModalOpen] = useState(false);
-  const [isReliefsModalOpen, setIsReliefsModalOpen] = useState(false);
-
-  const [seasonsLimit, setSeasonsLimit] = useState(6);
+  const [openTable, setOpenTable] = useState<"seasons" | ChronicleKind | null>(null);
   const [pruneLoading, setPruneLoading] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState<string>("default");
+  // The browser's current permission, overridden by the answer to our own request
+  const browserNotificationPermission = useSyncExternalStore(noopSubscribe, readNotificationPermission, () => "default");
+  const [requestedPermission, setRequestedPermission] = useState<string | null>(null);
+  const notificationPermission = requestedPermission ?? browserNotificationPermission;
   const [locationPermission, setLocationPermission] = useState<string>("default");
 
   async function handlePrune() {
@@ -66,35 +81,26 @@ export default function AboutPage() {
     setPruneLoading(false);
   }
 
-  const handleToggleMission = async (mission: any, idx: number) => {
-    const newVal = !mission.completed;
-    const newHistory = [...missionHistory];
-    newHistory[idx].completed = newVal;
-    setMissionHistory(newHistory);
-    
-    await toggleSmartMission(mission.id, newVal);
+  async function handleToggle(kind: ChronicleKind, id: string) {
+    if (kind === "quests") {
+      const item = missionHistory.find(m => m.id === id);
+      if (!item) return;
+      setMissionHistory(prev => flip(prev, id));
+      await toggleSmartMission(id, !item.completed);
+    } else if (kind === "prep") {
+      const item = preparationHistory.find(p => p.id === id);
+      if (!item) return;
+      setPreparationHistory(prev => flip(prev, id));
+      await togglePreparationTip(id, !item.completed);
+    } else {
+      // Relief rows toggle their main suggestion
+      const item = reliefHistory.find(r => r.id === id);
+      if (!item) return;
+      setReliefHistory(prev => flip(prev, id));
+      await toggleReliefRecommendation(id, !item.completed, 0);
+    }
     window.dispatchEvent(new Event("profile-updated"));
-  };
-
-  const handleTogglePrep = async (p: any, idx: number) => {
-    const newVal = !p.completed;
-    const newHistory = [...preparationHistory];
-    newHistory[idx].completed = newVal;
-    setPreparationHistory(newHistory);
-    
-    await togglePreparationTip(p.id, newVal);
-    window.dispatchEvent(new Event("profile-updated"));
-  };
-
-  const handleToggleRelief = async (r: any, idx: number) => {
-    const newVal = !r.completed;
-    const newHistory = [...reliefHistory];
-    newHistory[idx].completed = newVal;
-    setReliefHistory(newHistory);
-    
-    await toggleReliefRecommendation(r.id, newVal, 0);
-    window.dispatchEvent(new Event("profile-updated"));
-  };
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -112,10 +118,6 @@ export default function AboutPage() {
       setLoading(false);
     }
     loadData();
-
-    if ("Notification" in window) {
-      setNotificationPermission(Notification.permission);
-    }
 
     if ("permissions" in navigator) {
       navigator.permissions.query({ name: 'geolocation' as PermissionName }).then((result) => {
@@ -135,7 +137,7 @@ export default function AboutPage() {
       return;
     }
     const permission = await Notification.requestPermission();
-    setNotificationPermission(permission);
+    setRequestedPermission(permission);
     if (permission === "granted") {
       new Notification("Notifications Enabled!", {
         body: "You'll now receive updates from TaskMaster.",
@@ -147,20 +149,20 @@ export default function AboutPage() {
   function handleEnableLocation() {
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
+        () => {
           if ("permissions" in navigator) {
-             navigator.permissions.query({ name: 'geolocation' as PermissionName }).then(res => setLocationPermission(res.state)).catch(() => setLocationPermission("granted"));
+            navigator.permissions.query({ name: 'geolocation' as PermissionName }).then(res => setLocationPermission(res.state)).catch(() => setLocationPermission("granted"));
           } else {
-             setLocationPermission("granted");
+            setLocationPermission("granted");
           }
         },
         (err) => {
           console.error(err);
           if (err.code === err.PERMISSION_DENIED) {
-             alert("Location permission is blocked in your browser settings. Please enable it manually by clicking the lock icon next to the URL.");
-             setLocationPermission("denied");
+            alert("Location permission is blocked in your browser settings. Please enable it manually by clicking the lock icon next to the URL.");
+            setLocationPermission("denied");
           } else {
-             alert("Failed to access location. Please check your browser or device settings.");
+            alert("Failed to access location. Please check your browser or device settings.");
           }
         },
         { timeout: 5000 }
@@ -170,359 +172,49 @@ export default function AboutPage() {
     }
   }
 
-  const stats = [
-    { label: "Design", value: "Premium", icon: Palette },
-    { label: "Performance", value: "Blazing", icon: Zap },
-    { label: "Security", value: "Robust", icon: Shield },
-    { label: "Built for", value: "Creatives", icon: Sparkles },
-  ];
+  const closeTable = () => setOpenTable(null);
 
   return (
-    <div className="p-6 md:p-12 max-w-6xl mx-auto space-y-16 pb-24">
-      {/* Header section */}
-      <div className="text-center space-y-4">
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="w-24 h-24 mx-auto rounded-[2rem] flex items-center justify-center shadow-2xl shadow-tm-orange-dark/20 mb-8 overflow-hidden border border-white/5"
-        >
-          <img src="/logo.png" alt="TaskMaster Logo" className="w-full h-full object-cover dark:invert-0 dark:hue-rotate-0 invert hue-rotate-180 transition-all" />
-        </motion.div>
-        <h1 className="text-5xl md:text-6xl font-black tracking-tight text-tm-purple-dark dark:text-tm-yellow">
-          The Vault
-        </h1>
-        <p className="text-tm-blue-gray dark:text-tm-blue-gray/80 font-medium max-w-2xl mx-auto uppercase tracking-widest text-[10px] font-black">
-          Legacy • History • Achievements
-        </p>
-      </div>
+    <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-5xl mx-auto space-y-16 pb-24">
+      <VaultHero />
 
-      {/* Gallery Section */}
-      <div className="space-y-8">
-        <div className="flex items-center gap-4">
-          <Palette className="text-tm-red" size={32} />
-          <h2 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-3xl font-black dark:text-tm-red italic tracking-tighter uppercase">Gallery</h2>
-        </div>
+      <HallOfFame seasons={seasonHistory} loading={loading} onViewAll={() => setOpenTable("seasons")} />
 
-        <a
-          href="https://pinakipsingha.vercel.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block group"
-        >
-          <GlassCard className="p-6 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:border-tm-orange-light/40 transition-all">
-            <div className="flex items-center gap-6">
-              <div className="w-12 h-12 rounded-2xl bg-tm-orange-light/20 text-tm-orange-light flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                <Library size={24} />
-              </div>
-              <div className="flex-1">
-                <h4 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-xl font-black dark:text-white leading-tight">Library</h4>
-                <p className="text-sm text-tm-blue-gray font-medium mt-1">Explore the curated collection of assets and resources.</p>
-              </div>
-              <ExternalLink size={20} className="text-tm-blue-gray group-hover:text-tm-orange-light transition-colors" />
-            </div>
-          </GlassCard>
-        </a>
-      </div>
+      <Chronicle
+        missions={missionHistory}
+        preps={preparationHistory}
+        reliefs={reliefHistory}
+        loading={loading}
+        onToggle={handleToggle}
+        onViewAll={setOpenTable}
+      />
 
-      {/* Hall of Fame Section */}
-      <div className="space-y-8">
-        <div className="flex items-center gap-4">
-          <Trophy className="text-tm-yellow" size={32} />
-          <h2 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-3xl font-black dark:text-tm-yellow italic tracking-tighter uppercase">Hall of Fame</h2>
-        </div>
+      <SettingsPanel
+        notificationPermission={notificationPermission}
+        locationPermission={locationPermission}
+        onEnableNotifications={handleEnableNotifications}
+        onEnableLocation={handleEnableLocation}
+      />
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-48 bg-white/5 rounded-3xl animate-pulse" />
-            ))}
-          </div>
-        ) : seasonHistory.length > 0 ? (
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {seasonHistory.slice(0, 3).map((season, idx) => (
-                <GlassCard key={idx} delay={idx * 0.1} className="p-6 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.04] dark:bg-white/5 hover:bg-tm-purple-dark/[0.06] dark:hover:bg-white/10 transition-all group">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h4 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-xl font-black dark:text-tm-yellow leading-tight">{season.monthName}</h4>
-                      <p className="text-xs font-bold text-tm-blue-gray uppercase tracking-widest">{season.year}</p>
-                    </div>
-                    <div className="bg-tm-yellow/20 p-2 rounded-xl group-hover:scale-110 transition-transform">
-                      <Star className="text-tm-yellow" size={20} fill="currentColor" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-end">
-                      <span className="text-[10px] font-black uppercase text-tm-blue-gray">Final Score</span>
-                      <span style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-2xl font-black dark:text-white">{season.xp} <span className="text-xs text-tm-blue-gray">XP</span></span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-1 bg-tm-yellow/10 rounded text-[8px] font-black uppercase tracking-widest text-tm-yellow border border-tm-yellow/20">
-                        LVL {season.level}
-                      </span>
-                      <span className="px-2 py-1 bg-tm-blue-gray/10 rounded text-[8px] font-black uppercase tracking-widest text-tm-blue-gray border border-tm-blue-gray/20">
-                        {season.title}
-                      </span>
-                    </div>
-                  </div>
-                </GlassCard>
-              ))}
-            </div>
-            <div className="flex justify-center pt-4">
-              <button
-                onClick={() => setIsSeasonsModalOpen(true)}
-                className="px-8 py-4 bg-white/5 border border-tm-blue-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-yellow/10 hover:text-tm-yellow transition-all flex items-center gap-3 group"
-              >
-                <Search size={16} className="group-hover:scale-110 transition-transform" />
-                View Full Hall of Fame
-              </button>
-            </div>
-          </div>
-        ) : (
-          <GlassCard className="p-12 text-center border-tm-blue-gray/5">
-            <Trophy size={48} className="mx-auto text-tm-blue-gray/20 mb-4" />
-            <p className="text-tm-blue-gray font-medium">Your legacy begins today. Complete your first season to enter the Hall of Fame.</p>
-          </GlassCard>
-        )}
-      </div>
-
-      {/* Quest Log Section */}
-      <div className="space-y-8">
-        <div className="flex items-center gap-4">
-          <History className="text-tm-orange-light" size={32} />
-          <h2 className="text-3xl font-black text-foreground dark:text-tm-orange-light italic tracking-tighter uppercase">Smart Quest Log</h2>
-        </div>
-
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 bg-white/5 rounded-2xl animate-pulse" />
-            ))}
-          </div>
-        ) : missionHistory.length > 0 ? (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              {missionHistory.slice(0, 5).map((mission, idx) => (
-                <GlassCard 
-                  key={idx} 
-                  delay={idx * 0.05} 
-                  onClick={() => handleToggleMission(mission, idx)}
-                  className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:border-tm-orange-light/40 transition-all cursor-pointer text-left"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                      mission.completed ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-blue-gray/10 text-tm-blue-gray"
-                    )}>
-                      {mission.completed ? <CheckCircle2 size={20} /> : <Zap size={20} />}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <h4 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="font-bold text-sm leading-tight dark:text-white">{mission.title}</h4>
-                        <span className="text-[10px] font-black text-tm-blue-gray uppercase">{format(new Date(mission.date), "MMM d, yyyy")}</span>
-                      </div>
-                      <p className="text-xs text-tm-blue-gray/90 line-clamp-1 mt-0.5 italic">{mission.description}</p>
-                    </div>
-                    {mission.completed && (
-                      <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-1 rounded-lg border border-tm-yellow/20">
-                        +50 XP
-                      </div>
-                    )}
-                  </div>
-                </GlassCard>
-              ))}
-            </div>
-            <div className="flex justify-center pt-4">
-              <button
-                onClick={() => setIsMissionsModalOpen(true)}
-                className="px-8 py-4 bg-white/5 border border-tm-blue-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-orange-light/10 hover:text-tm-orange-light transition-all flex items-center gap-3 group"
-              >
-                <Search size={16} className="group-hover:scale-110 transition-transform" />
-                View All Quests
-              </button>
-            </div>
-          </div>
-        ) : (
-          <GlassCard className="p-12 text-center border-tm-blue-gray/5">
-            <History size={48} className="mx-auto text-tm-blue-gray/20 mb-4" />
-            <p className="text-tm-blue-gray font-medium">Your quest history is empty. Check your Attention widget on the home page!</p>
-          </GlassCard>
-        )}
-      </div>
-
-      {/* Preparation History Section */}
-      <div className="space-y-8">
-        <div className="flex items-center gap-4">
-          <Brain className="text-tm-purple-dark dark:text-tm-yellow" size={32} />
-          <h2 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-3xl font-black dark:text-tm-yellow italic tracking-tighter uppercase">Strategic Prep Log</h2>
-        </div>
-
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2].map(i => (
-              <div key={i} className="h-20 bg-white/5 rounded-2xl animate-pulse" />
-            ))}
-          </div>
-        ) : preparationHistory.length > 0 ? (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              {preparationHistory.slice(0, 5).map((p, idx) => (
-                <GlassCard 
-                  key={idx} 
-                  delay={idx * 0.05} 
-                  onClick={() => handleTogglePrep(p, idx)}
-                  className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:border-tm-yellow/40 transition-all cursor-pointer text-left"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                      p.completed ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-blue-gray/10 text-tm-blue-gray"
-                    )}>
-                      <Brain size={20} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start gap-2">
-                        <h4 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="font-bold text-sm leading-tight dark:text-white">{p.title}</h4>
-                        <span className="text-[10px] font-black text-tm-blue-gray uppercase shrink-0">{format(new Date(p.date), "MMM d, yyyy")}</span>
-                      </div>
-                      <p className="text-xs text-tm-blue-gray/90 line-clamp-1 mt-0.5 italic">{p.description}</p>
-                    </div>
-                    {p.completed && (
-                      <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-1 rounded-lg border border-tm-yellow/20 shrink-0">
-                        +25 XP
-                      </div>
-                    )}
-                  </div>
-                </GlassCard>
-              ))}
-            </div>
-            <div className="flex justify-center pt-4">
-              <button
-                onClick={() => setIsPrepsModalOpen(true)}
-                className="px-8 py-4 bg-white/5 border border-tm-blue-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-yellow/10 hover:text-tm-yellow transition-all flex items-center gap-3 group"
-              >
-                <Search size={16} className="group-hover:scale-110 transition-transform" />
-                View All Strategies
-              </button>
-            </div>
-          </div>
-        ) : (
-          <GlassCard className="p-12 text-center border-tm-blue-gray/5">
-            <Brain size={48} className="mx-auto text-tm-blue-gray/20 mb-4" />
-            <p className="text-tm-blue-gray font-medium">No strategic preparations logged yet. Check your Attention widget!</p>
-          </GlassCard>
-        )}
-      </div>
-
-      {/* Relief Log Section */}
-      <div className="space-y-8">
-        <div className="flex items-center gap-4">
-          <Heart className="text-tm-orange-dark" size={32} />
-          <h2 className="text-3xl font-black text-foreground dark:text-tm-orange-dark italic tracking-tighter uppercase">Relief Log</h2>
-        </div>
-
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2].map(i => (
-              <div key={i} className="h-20 bg-white/5 rounded-2xl animate-pulse" />
-            ))}
-          </div>
-        ) : reliefHistory.length > 0 ? (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              {reliefHistory.slice(0, 5).map((r, idx) => (
-                <GlassCard 
-                  key={idx} 
-                  delay={idx * 0.05} 
-                  onClick={() => handleToggleRelief(r, idx)}
-                  className="p-4 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 hover:bg-tm-purple-dark/[0.06] dark:hover:bg-white/10 transition-all cursor-pointer text-left"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                      r.completed || r.alt1Completed || r.alt2Completed ? "bg-tm-yellow/20 text-tm-yellow" : "bg-tm-blue-gray/10 text-tm-blue-gray"
-                    )}>
-                      {r.type === 'movie' && <Film size={20} />}
-                      {r.type === 'song' && <Music size={20} />}
-                      {r.type === 'food' && <Coffee size={20} />}
-                      {r.type === 'activity' && <Dumbbell size={20} />}
-                      {!r.type && <Heart size={20} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start gap-2">
-                        <h4 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="font-bold text-sm leading-tight truncate dark:text-white">{r.title}</h4>
-                        <span className="text-[10px] font-black text-tm-blue-gray uppercase shrink-0">{format(new Date(r.date), "MMM d, yyyy")}</span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1.5">
-                        {[
-                          { label: "Main", done: r.completed },
-                          { label: "Alt 1", done: r.alt1Completed },
-                          { label: "Alt 2", done: r.alt2Completed }
-                        ].map((task, i) => (
-                          <div key={i} className="flex items-center gap-1.5">
-                            <div className={cn("w-1.5 h-1.5 rounded-full", task.done ? "bg-tm-yellow" : "bg-tm-blue-gray/20")} />
-                            <span className={cn("text-[8px] font-black uppercase tracking-widest", task.done ? "text-tm-yellow" : "text-tm-blue-gray/50")}>
-                              {task.label}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className="text-[10px] font-black text-tm-blue-gray/70 uppercase tracking-tighter italic">{r.location || "Global"}</span>
-                      <div className="text-[10px] font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">
-                        +{([r.completed, r.alt1Completed, r.alt2Completed].filter(Boolean).length * 10)} XP
-                      </div>
-                    </div>
-                  </div>
-                </GlassCard>
-              ))}
-            </div>
-            <div className="flex justify-center pt-4">
-              <button
-                onClick={() => setIsReliefsModalOpen(true)}
-                className="px-8 py-4 bg-white/5 border border-tm-blue-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-tm-orange-dark/10 hover:text-tm-orange-dark transition-all flex items-center gap-3 group"
-              >
-                <Search size={16} className="group-hover:scale-110 transition-transform" />
-                View Full Relief Log
-              </button>
-            </div>
-          </div>
-        ) : (
-          <GlassCard className="p-12 text-center border-tm-blue-gray/5">
-            <Heart size={48} className="mx-auto text-tm-blue-gray/20 mb-4" />
-            <p className="text-tm-blue-gray font-medium">No relief recommendations logged yet. Take a break today!</p>
-          </GlassCard>
-        )}
-      </div>
-
-      {/* Storage Management Section */}
-      <div className="space-y-8">
-        <div className="flex items-center gap-4">
-          <Database className="text-tm-blue-gray" size={32} />
-          <h2 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-3xl font-black dark:text-tm-blue-gray italic tracking-tighter uppercase">Cloud Storage</h2>
-        </div>
-
-        <GlassCard className="p-6 md:p-8 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 relative overflow-hidden">
+      <VaultSection icon={Database} iconClassName="text-tm-blue-gray" title="Cloud Storage">
+        <GlassCard className="p-5 md:p-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
             <Database size={120} />
           </div>
-          <div className="relative z-10 space-y-6">
+          <div className="relative z-10 space-y-5">
             <div>
-              <h3 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-2xl font-black dark:text-white leading-tight">Database Archiving</h3>
+              <h3 className="text-xl font-bold text-foreground leading-tight">Database Archiving</h3>
               <p className="text-sm text-tm-blue-gray mt-2 max-w-2xl font-medium">
                 Keep your cloud database fast and storage-efficient. This tool will automatically bundle all your records (Habits, Notes, Quests) older than 5 years into a CSV file, download it to your local device, and safely delete the old rows from the cloud.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <button
                 onClick={handlePrune}
                 disabled={pruneLoading}
                 className={cn(
-                  "flex items-center gap-3 px-6 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all",
+                  "flex items-center gap-3 px-6 py-4 rounded-xl font-mono font-semibold uppercase tracking-[0.12em] text-caption transition-all active:scale-95",
                   pruneLoading
                     ? "bg-tm-blue-gray/20 text-tm-blue-gray cursor-not-allowed"
                     : "bg-tm-yellow/10 hover:bg-tm-yellow/20 text-tm-yellow border border-tm-yellow/20 hover:border-tm-yellow/40"
@@ -541,71 +233,35 @@ export default function AboutPage() {
                 )}
               </button>
 
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase text-tm-blue-gray tracking-widest px-4 py-2 bg-tm-blue-gray/10 rounded-lg">
+              <div className="flex items-center gap-2 text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] px-4 py-2 bg-tm-blue-gray/10 rounded-lg">
                 <AlertTriangle size={12} className="text-tm-orange-light" />
-                <span>Cannot be undone</span>
-                <span>Do not prune unless necessary!</span>
+                <span>Cannot be undone. Do not prune unless necessary!</span>
               </div>
             </div>
           </div>
         </GlassCard>
-      </div>
+      </VaultSection>
 
-      {/* App Settings Section */}
-      <div className="space-y-8">
-        <div className="flex items-center gap-4">
-          <Zap className="text-tm-yellow" size={32} />
-          <h2 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-3xl font-black dark:text-tm-yellow italic tracking-tighter uppercase">App Settings</h2>
-        </div>
-
-        <GlassCard className="p-6 md:p-8 border-tm-blue-gray/20 dark:border-white/5 bg-tm-purple-dark/[0.03] dark:bg-white/5 relative overflow-hidden flex flex-col gap-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-              <h3 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-xl font-black dark:text-white leading-tight">Browser Notifications</h3>
-              <p className="text-sm text-tm-blue-gray mt-1 max-w-2xl font-medium">Enable browser notifications to receive alerts for your smart missions and habit reminders.</p>
+      <VaultSection icon={Palette} iconClassName="text-tm-red" title="Gallery">
+        <a href="https://pinakipsingha.vercel.app" target="_blank" rel="noopener noreferrer" className="block group">
+          <GlassCard className="p-5 md:p-6 hover:border-tm-orange-light/40 transition-colors">
+            <div className="flex items-center gap-5">
+              <div className="w-12 h-12 rounded-2xl bg-tm-orange-light/20 text-tm-orange-light flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                <Library size={24} />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-lg font-bold text-foreground leading-tight">Library</h4>
+                <p className="text-sm text-tm-blue-gray font-medium mt-1">Explore the curated collection of assets and resources.</p>
+              </div>
+              <ExternalLink size={20} className="text-tm-blue-gray group-hover:text-tm-orange-light group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
             </div>
-            <button
-              onClick={handleEnableNotifications}
-              disabled={notificationPermission === "granted"}
-              className={cn(
-                "px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all whitespace-nowrap",
-                notificationPermission === "granted"
-                  ? "bg-tm-yellow/5 text-tm-yellow/50 border border-tm-yellow/10 cursor-default"
-                  : "bg-tm-yellow/10 hover:bg-tm-yellow/20 text-tm-yellow border border-tm-yellow/20 hover:scale-105"
-              )}
-            >
-              {notificationPermission === "granted" ? "Notifications Enabled" : "Enable Notifications"}
-            </button>
-          </div>
-
-          <div className="w-full h-[1px] bg-tm-blue-gray/10" />
-
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-              <h3 style={{ color: theme === 'light' ? '#1a1a1a' : undefined }} className="text-xl font-black dark:text-white leading-tight">Location Services</h3>
-              <p className="text-sm text-tm-blue-gray mt-1 max-w-2xl font-medium">Allow access to your location to enable weather-based relief recommendations in the Tavern widget.</p>
-            </div>
-            <button
-              onClick={handleEnableLocation}
-              disabled={locationPermission === "granted"}
-              className={cn(
-                "px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all whitespace-nowrap",
-                locationPermission === "granted"
-                  ? "bg-tm-yellow/5 text-tm-yellow/50 border border-tm-yellow/10 cursor-default"
-                  : locationPermission === "denied"
-                  ? "bg-tm-red/10 text-tm-red border border-tm-red/20 cursor-not-allowed"
-                  : "bg-tm-yellow/10 hover:bg-tm-yellow/20 text-tm-yellow border border-tm-yellow/20 hover:scale-105"
-              )}
-            >
-              {locationPermission === "granted" ? "Location Enabled" : locationPermission === "denied" ? "Location Blocked" : "Enable Location"}
-            </button>
-          </div>
-        </GlassCard>
-      </div>
+          </GlassCard>
+        </a>
+      </VaultSection>
 
       {/* Footer */}
-      <div className="pt-12 text-center space-y-4 border-t border-tm-blue-gray/10">
-        <p className="text-xs font-black uppercase text-tm-blue-gray tracking-[0.3em]">
+      <div className="pt-12 text-center border-t border-tm-blue-gray/10">
+        <p className="text-xs font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">
           Version 6.0.0 • TaskMaster • By Pinaki AKA PiX
         </p>
       </div>
@@ -613,8 +269,8 @@ export default function AboutPage() {
       {/* Tabular Modals */}
       <TabularViewModal
         title="Hall of Fame"
-        isOpen={isSeasonsModalOpen}
-        onClose={() => setIsSeasonsModalOpen(false)}
+        isOpen={openTable === "seasons"}
+        onClose={closeTable}
         data={seasonHistory}
         columns={[
           { header: "Year", key: "year" },
@@ -627,24 +283,11 @@ export default function AboutPage() {
 
       <TabularViewModal
         title="Smart Quest Log"
-        isOpen={isMissionsModalOpen}
-        onClose={() => setIsMissionsModalOpen(false)}
+        isOpen={openTable === "quests"}
+        onClose={closeTable}
         data={missionHistory}
         columns={[
-          {
-            header: "Date", key: "date", render: (val) => {
-              const d = new Date(val);
-              return (
-                <span className="font-mono text-tm-blue-gray whitespace-nowrap">
-                  <span className="sm:hidden flex flex-col leading-tight">
-                    <span className="text-[10px] opacity-50">{d.getFullYear()}</span>
-                    <span>{format(d, "MMM d")}</span>
-                  </span>
-                  <span className="hidden sm:inline">{format(d, "yyyy-MM-dd")}</span>
-                </span>
-              );
-            }
-          },
+          { header: "Date", key: "date", render: renderDate },
           { header: "Title", key: "title", wrap: true, className: "w-[25%]" },
           { header: "Description", key: "description", wrap: true, className: "w-[50%]" },
           {
@@ -660,24 +303,11 @@ export default function AboutPage() {
 
       <TabularViewModal
         title="Strategic Prep Log"
-        isOpen={isPrepsModalOpen}
-        onClose={() => setIsPrepsModalOpen(false)}
+        isOpen={openTable === "prep"}
+        onClose={closeTable}
         data={preparationHistory}
         columns={[
-          {
-            header: "Date", key: "date", render: (val) => {
-              const d = new Date(val);
-              return (
-                <span className="font-mono text-tm-blue-gray whitespace-nowrap">
-                  <span className="sm:hidden flex flex-col leading-tight">
-                    <span className="text-[10px] opacity-50">{d.getFullYear()}</span>
-                    <span>{format(d, "MMM d")}</span>
-                  </span>
-                  <span className="hidden sm:inline">{format(d, "yyyy-MM-dd")}</span>
-                </span>
-              );
-            }
-          },
+          { header: "Date", key: "date", render: renderDate },
           { header: "Strategy", key: "title", wrap: true, className: "w-[25%]" },
           { header: "Directive", key: "description", wrap: true, className: "w-[50%]" },
           {
@@ -693,24 +323,11 @@ export default function AboutPage() {
 
       <TabularViewModal
         title="Relief Log"
-        isOpen={isReliefsModalOpen}
-        onClose={() => setIsReliefsModalOpen(false)}
+        isOpen={openTable === "relief"}
+        onClose={closeTable}
         data={reliefHistory}
         columns={[
-          {
-            header: "Date", key: "date", render: (val) => {
-              const d = new Date(val);
-              return (
-                <span className="font-mono text-tm-blue-gray whitespace-nowrap">
-                  <span className="sm:hidden flex flex-col leading-tight">
-                    <span className="text-[10px] opacity-50">{d.getFullYear()}</span>
-                    <span>{format(d, "MMM d")}</span>
-                  </span>
-                  <span className="hidden sm:inline">{format(d, "yyyy-MM-dd")}</span>
-                </span>
-              );
-            }
-          },
+          { header: "Date", key: "date", render: renderDate },
           { header: "Title", key: "title", wrap: true, className: "w-[30%]" },
           { header: "Type", key: "type", render: (val) => val?.toUpperCase() },
           { header: "Location", key: "location" },

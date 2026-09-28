@@ -5,9 +5,10 @@ import { MotionConfig } from "framer-motion";
 import { ERAS, eraForRank, type Era } from "@/lib/eras";
 
 export type Rank = "Novice" | "Squire" | "Vanguard" | "Veteran" | "Knight" | "Champion" | "Sentinel" | "Paladin" | "Grandmaster" | "Hero";
+type Theme = "light" | "dark";
 
 interface ThemeContextType {
-  theme: "light" | "dark";
+  theme: Theme;
   toggleTheme: () => void;
   rank: Rank;
   setRank: (rank: Rank) => void;
@@ -21,30 +22,33 @@ export function currentPeriod() {
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = React.useState<"light" | "dark">("light");
-  const [rank, setRankState] = React.useState<Rank>("Novice");
+// <html> is the source of truth: the init script sets theme/rank before first paint,
+// and the setters below write to it and notify subscribers synchronously.
+const listeners = new Set<() => void>();
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+};
+const notify = () => listeners.forEach(l => l());
+const readTheme = (): Theme => (document.documentElement.classList.contains("dark") ? "dark" : "light");
+const readRank = (): Rank => (document.documentElement.getAttribute("data-rank") as Rank | null) ?? "Novice";
 
-  React.useEffect(() => {
-    // The init script has already applied both to <html>; mirror them into state
-    const root = document.documentElement;
-    setTheme(root.classList.contains("dark") ? "dark" : "light");
-    setRankState((root.getAttribute("data-rank") as Rank | null) ?? "Novice");
-  }, []);
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const theme = React.useSyncExternalStore(subscribe, readTheme, () => "light" as Theme);
+  const rank = React.useSyncExternalStore(subscribe, readRank, () => "Novice" as Rank);
 
   const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
     // No localStorage.setItem for theme - we don't want to remember it!
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    document.documentElement.classList.toggle("dark", theme === "light");
+    notify();
   };
 
   const setRank = (newRank: Rank) => {
-    setRankState(newRank);
     localStorage.setItem("rank", newRank);
     localStorage.setItem("rank_period", currentPeriod());
     document.documentElement.setAttribute("data-rank", newRank);
     document.documentElement.setAttribute("data-era", eraForRank(newRank).id);
+    notify();
   };
 
   const era = eraForRank(rank);

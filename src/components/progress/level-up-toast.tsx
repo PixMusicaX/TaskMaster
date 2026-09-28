@@ -28,7 +28,7 @@ export default function LevelUpToast({ level }: { level: number | null }) {
               transition={{ duration: 3, ease: "linear" }}
             />
             <motion.div
-              className="relative w-12 h-12 rounded-xl bg-tm-yellow text-tm-purple-dark flex items-center justify-center text-2xl font-black"
+              className="relative w-12 h-12 rounded-xl bg-tm-yellow text-tm-purple-dark flex items-center justify-center text-2xl font-display font-bold"
               initial={{ rotate: -20, scale: 0.4 }}
               animate={{ rotate: 0, scale: 1 }}
               transition={{ type: "spring", stiffness: 400, damping: 12, delay: 0.1 }}
@@ -36,8 +36,8 @@ export default function LevelUpToast({ level }: { level: number | null }) {
               {level}
             </motion.div>
             <div className="relative">
-              <p className="text-caption font-black uppercase tracking-[0.3em] text-tm-orange-dark dark:text-tm-yellow">Level Up</p>
-              <p className="text-sm font-black text-foreground">You reached level {level}</p>
+              <p className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-orange-dark dark:text-tm-yellow">Level Up</p>
+              <p className="text-sm font-semibold text-foreground">You reached level {level}</p>
               {nextRank && (
                 <p className="text-caption font-bold text-tm-blue-gray">
                   {nextRank.minLevel - level} to {nextRank.title}

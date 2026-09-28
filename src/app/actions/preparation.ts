@@ -103,7 +103,7 @@ export async function regeneratePreparationTip(clientDateStr?: string) {
   try {
     await db.delete(preparationTip).where(eq(preparationTip.date, today));
     return await getPreparationTip(clientDateStr);
-  } catch (e) {
+  } catch {
     return null;
   }
 }

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 export function Pill({ children, className }: { children: React.ReactNode, className?: string }) {
   return (
-    <div className={cn("px-3 py-1 bg-white/5 rounded-full border border-white/10 text-tiny font-black uppercase tracking-widest text-tm-blue-gray whitespace-nowrap", className)}>
+    <div className={cn("px-3 py-1 bg-white/5 rounded-full border border-white/10 text-tiny font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray whitespace-nowrap", className)}>
       {children}
     </div>
   );
@@ -31,11 +31,11 @@ export default function InsightCard({ icon: Icon, iconClassName, title, subtitle
 
       <div className="flex items-center justify-between relative z-10">
         <div className="flex flex-col gap-1">
-          <h3 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
+          <h3 className="text-2xl font-display font-bold uppercase tracking-tight flex items-center gap-3">
             <Icon className={iconClassName} size={24} /> {title}
           </h3>
           {typeof subtitle === "string" ? (
-            <p className="text-caption font-black uppercase text-tm-blue-gray/40 tracking-[0.3em]">{subtitle}</p>
+            <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray/70 tracking-[0.12em]">{subtitle}</p>
           ) : subtitle}
         </div>
         {aside}

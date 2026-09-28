@@ -44,11 +44,12 @@ export async function safeGenerateContent(prompt: string, options: {
         if (text) return text;
         
         throw new Error("Empty response from AI");
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
         
         // Check for 503 (Service Unavailable) or 429 (Rate Limit)
-        const isTransient = error.status === 503 || error.status === 429 || error.message?.includes("503") || error.message?.includes("high demand");
+        const err = error as { status?: number; message?: string };
+        const isTransient = err.status === 503 || err.status === 429 || err.message?.includes("503") || err.message?.includes("high demand");
         
         if (isTransient && retries > 1) {
           console.log(`AI Model ${modelName} busy/limited. Retrying in ${waitTime}ms... (${retries-1} left)`);
@@ -59,7 +60,7 @@ export async function safeGenerateContent(prompt: string, options: {
         }
         
         // If not transient or no retries left, move to next model
-        console.warn(`AI Model ${modelName} failed. Trying next model...`, error.message);
+        console.warn(`AI Model ${modelName} failed. Trying next model...`, err.message);
         break; 
       }
     }

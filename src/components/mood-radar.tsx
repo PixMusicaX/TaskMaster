@@ -56,7 +56,7 @@ export default function MoodRadar({ data, size = 200 }: MoodRadarProps) {
             d={path}
             fill="none"
             stroke="currentColor"
-            className="text-tm-blue-gray/30"
+            className="text-tm-blue-gray/60"
             strokeWidth={1}
           />
         ))}

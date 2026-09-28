@@ -1,10 +1,10 @@
 "use server";
 
 import { db, client } from "@/db";
-import { habit, habitLog, event, note, smartMission, reliefRecommendation, seasonSnapshot, preparationTip } from "@/db/schema";
-import { revalidatePath } from "next/cache";
+import { habitLog, event, note, smartMission, reliefRecommendation, seasonSnapshot, preparationTip } from "@/db/schema";
+import type { StatName, Stats } from "@/lib/types";
 import { XP_VALUES, RPG_TITLES, LEVEL_UP_XP } from "@/lib/constants";
-import { startOfMonth, endOfMonth, format, subMonths, isSameMonth } from "date-fns";
+import { startOfMonth, endOfMonth, format, subMonths } from "date-fns";
 import { and, or, gte, lte, eq, inArray } from "drizzle-orm";
 
 export async function getStatsForPeriod(startDate: Date, endDate: Date, referenceDate: Date = new Date()) {
@@ -49,7 +49,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date, referenc
     ]);
 
     // Dynamic Stat XP
-    const stats: any = {
+    const stats: Stats = {
       strength: 0,
       intelligence: 0,
       wealth: 0,
@@ -59,13 +59,19 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date, referenc
 
     let totalXP = 0;
 
+    // Rewards always count toward total XP; they feed a stat only when it's a known one
+    const award = (stat: string, reward: number) => {
+      totalXP += reward;
+      if (stat in stats) stats[stat as StatName] += reward;
+    };
+
     // Add Habit XP -> Vitality
     const habitXP = habitLogs.length * XP_VALUES.HABIT_CHECK;
     totalXP += habitXP;
     stats.vitality += habitXP;
 
     // Add Event/Task XP
-    events.forEach((e: any) => {
+    events.forEach((e) => {
       let xp = 0;
       const tier = e.tier?.toLowerCase() || "side";
       const reward = tier === "epic" ? XP_VALUES.QUEST_EPIC : 
@@ -87,7 +93,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date, referenc
     });
 
     // Add Note XP -> Intelligence
-    notes.forEach((n: any) => {
+    notes.forEach((n) => {
       try {
         const parsed = JSON.parse(n.content);
         if (Array.isArray(parsed)) {
@@ -95,7 +101,7 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date, referenc
           totalXP += xp;
           stats.intelligence += xp;
         }
-      } catch (e) {
+      } catch {
         if (n.content.trim()) {
           totalXP += XP_VALUES.NOTE_ENTRY;
           stats.intelligence += XP_VALUES.NOTE_ENTRY;
@@ -104,44 +110,16 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date, referenc
     });
 
     // Add Smart Mission XP
-    smartMissions.forEach((sm: any) => {
-      const reward = sm.xpReward;
-      totalXP += reward;
-      if (sm.stat === "charisma") stats.charisma += reward;
-      else if (sm.stat === "strength") stats.strength += reward;
-      else if (sm.stat === "intelligence") stats.intelligence += reward;
-      else if (sm.stat === "wealth") stats.wealth += reward;
-      else if (sm.stat === "vitality") stats.vitality += reward;
-    });
+    smartMissions.forEach((sm) => award(sm.stat, sm.xpReward));
 
     // Add Preparation Tip XP
-    preparationTips.forEach((pt: any) => {
-      const reward = pt.xpReward;
-      totalXP += reward;
-      if (pt.stat === "charisma") stats.charisma += reward;
-      else if (pt.stat === "strength") stats.strength += reward;
-      else if (pt.stat === "intelligence") stats.intelligence += reward;
-      else if (pt.stat === "wealth") stats.wealth += reward;
-      else if (pt.stat === "vitality") stats.vitality += reward;
-    });
+    preparationTips.forEach((pt) => award(pt.stat, pt.xpReward));
 
     // Add Relief Recommendation XP (3 separate tasks)
-    reliefRecommendations.forEach((rr: any) => {
-      const awardXP = (isCompleted: boolean) => {
-        if (isCompleted) {
-          const reward = rr.xpReward;
-          totalXP += reward;
-          if (rr.stat === "charisma") stats.charisma += reward;
-          else if (rr.stat === "strength") stats.strength += reward;
-          else if (rr.stat === "intelligence") stats.intelligence += reward;
-          else if (rr.stat === "wealth") stats.wealth += reward;
-          else if (rr.stat === "vitality") stats.vitality += reward;
-        }
-      };
-
-      awardXP(rr.completed);
-      awardXP(rr.alt1Completed);
-      awardXP(rr.alt2Completed);
+    reliefRecommendations.forEach((rr) => {
+      [rr.completed, rr.alt1Completed, rr.alt2Completed].forEach(done => {
+        if (done) award(rr.stat, rr.xpReward);
+      });
     });
 
     // Calculate Level (Flat XP per level for frequent progression)
@@ -153,12 +131,12 @@ export async function getStatsForPeriod(startDate: Date, endDate: Date, referenc
     }
 
     // Identify Top and Weakest stats
-    const statEntries = Object.entries(stats).map(([name, val]) => ({ name, val: val as number }));
+    const statEntries = Object.entries(stats).map(([name, val]) => ({ name, val }));
     const sortedStats = [...statEntries].sort((a, b) => b.val - a.val);
     const topStat = sortedStats[0].name;
     const weakStat = sortedStats[sortedStats.length - 1].name;
 
-    const title = [...RPG_TITLES].reverse().find((t: any) => currentLevel >= t.minLevel)?.title || "Novice";
+    const title = [...RPG_TITLES].reverse().find((t) => currentLevel >= t.minLevel)?.title || "Novice";
 
     return {
       xp: totalXP,

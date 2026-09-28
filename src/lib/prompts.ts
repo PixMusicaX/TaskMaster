@@ -1,12 +1,17 @@
+// Context shapes the prompts read from
+type StatMap = Record<string, number>;
+type ActivityItem = { title: string; type: string; startTime: Date | string | null; completed: boolean };
+type TitledOutcome = { title: string; completed: boolean };
+
 export const getSmartMissionPrompt = (context: {
   level: number;
   xp: number;
-  stats: any;
+  stats: StatMap;
   title: string;
   habits: string[];
-  recentTasks: any[];
+  recentTasks: ActivityItem[];
   recentNotes: string[];
-  missionHistory: any[];
+  missionHistory: TitledOutcome[];
   today: string;
 }) => `
 You are the TaskMaster RPG Game Master — a wise, witty guide who speaks like a seasoned dungeon master.
@@ -79,8 +84,8 @@ export const getReliefRecommendationPrompt = (context: {
   precipitation?: number;
   windSpeed?: number;
   recentNotes: string[];
-  recentTasks: any[];
-  history: any[];
+  recentTasks: { title: string; completed: boolean }[];
+  history: { title: string; type: string | null | undefined }[];
   today: string;
 }) => `
 You are the TaskMaster RPG Game Master — a wise, witty guide who speaks like a seasoned dungeon master.
@@ -168,14 +173,14 @@ Return ONLY a valid JSON object. No preamble, no markdown, no extra keys.
 `;
 
 export const getPreparationTipPrompt = (context: {
-  futureTasks: any[];
-  history: any[];
+  futureTasks: { title: string; type: string; date: string }[];
+  history: TitledOutcome[];
   today: string;
   profile?: {
     level: number;
     title: string;
     topStat: string;
-    stats: any;
+    stats: StatMap;
   };
 }) => `
 You are the TaskMaster Grand Strategist, a mystical advisor in a high-stakes productivity RPG. 
@@ -277,7 +282,7 @@ USER QUESTION: "${question}"
 export const getTaskmasterAnswerPrompt = (context: {
   level: number;
   xp: number;
-  stats: any;
+  stats: StatMap;
   queryData: string;
   question: string;
 }) => `

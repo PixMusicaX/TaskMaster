@@ -1,92 +1,234 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { HistoryDay, getHistory } from "@/app/actions/history";
 import GlassCard from "@/components/glass-card";
 import { format, parseISO, subDays } from "date-fns";
-import { Calendar, CheckSquare, FileText, CalendarDays, Search, Star, Activity, MapPin, CloudSun } from "lucide-react";
+import { Calendar, CheckSquare, FileText, Search, Star, MapPin, CloudSun, X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import HabitIconRender from "@/components/HabitIconRender";
+import { SkeletonRows } from "@/components/loader";
 import { formatReliefTemp } from "@/lib/weather";
+import { parseNoteLines } from "@/lib/types";
+
+const getMoodEmoji = (mood: string) => {
+  if (mood === "good") return "😇";
+  if (mood === "bad") return "😢";
+  return "😐";
+};
+
+// Note rows with at least one non-empty line (JSON bullet notes or legacy plain text)
+function visibleNotesFor(day: HistoryDay) {
+  return day.notes
+    .map((n) => {
+      const lines = n.content.trim().startsWith("[") ? parseNoteLines(n.content) : null;
+      return { note: n, items: lines ? lines.filter((item) => item?.text?.trim()) : null };
+    })
+    .filter(({ note, items }) => (items ? items.length > 0 : note.content.trim().length > 0));
+}
+
+// Consecutive days grouped under their month
+function groupByMonth(days: HistoryDay[]) {
+  const groups: { key: string; label: string; days: HistoryDay[] }[] = [];
+  for (const day of days) {
+    const key = day.date.slice(0, 7);
+    const last = groups[groups.length - 1];
+    if (last?.key === key) last.days.push(day);
+    else groups.push({ key, label: format(parseISO(day.date), "MMMM yyyy"), days: [day] });
+  }
+  return groups;
+}
+
+function Section({ icon: Icon, title, className, children }: { icon: typeof Calendar; title: string; className: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h3 className={cn("text-caption font-mono font-semibold uppercase tracking-[0.12em] mb-2 flex items-center gap-1.5", className)}>
+        <Icon size={13} /> {title}
+      </h3>
+      <ul className="space-y-1.5">{children}</ul>
+    </div>
+  );
+}
+
+const itemClass = "text-sm bg-tm-blue-gray/5 px-3 py-2 rounded-xl border border-tm-blue-gray/10";
+
+function DayCard({ day, delay }: { day: HistoryDay; delay: number }) {
+  const visibleNotes = visibleNotesFor(day);
+  const habits = day.habits ?? [];
+  const isEmpty = visibleNotes.length === 0 && day.events.length === 0 && day.specialDays.length === 0 && day.tasks.length === 0 && habits.length === 0;
+  const summary = [
+    day.tasks.length && `${day.tasks.length} task${day.tasks.length > 1 ? "s" : ""}`,
+    day.events.length && `${day.events.length} event${day.events.length > 1 ? "s" : ""}`,
+    habits.length && `${habits.length} habit${habits.length > 1 ? "s" : ""}`,
+  ].filter(Boolean).join(" · ");
+
+  return (
+    <GlassCard delay={delay} className="p-4 md:p-5">
+      <div className="flex flex-col gap-4">
+        <div>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-base md:text-lg font-semibold text-foreground leading-tight">
+              {format(parseISO(day.date), "EEEE, MMMM do yyyy")}
+            </h2>
+            {summary && (
+              <span className="hidden sm:block text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray whitespace-nowrap pt-1">{summary}</span>
+            )}
+          </div>
+
+          {day.relief && day.relief.location && day.relief.location !== "No location found" && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption font-mono font-semibold uppercase text-tm-blue-gray/70 tracking-[0.12em] mt-1.5">
+              <span className="flex items-center gap-1.5"><MapPin size={12} className="text-tm-yellow/60" /> {day.relief.location}</span>
+              <span className="flex items-center gap-1.5"><CloudSun size={12} className="text-tm-yellow/60" /> {formatReliefTemp(day.relief.temp)}°C {day.relief.weather}</span>
+            </div>
+          )}
+
+          {habits.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {habits.map((h) => (
+                <div key={h.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-tm-yellow/10 border border-tm-yellow/20 text-xs font-bold text-foreground/80">
+                  {h.habitIcon && <HabitIconRender icon={h.habitIcon} size={13} className="text-tm-yellow" />}
+                  <span>{h.habitName}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {isEmpty ? (
+          <p className="text-sm text-tm-blue-gray italic">No activities recorded on this day.</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {day.tasks.length > 0 && (
+              <Section icon={CheckSquare} title="Completed Tasks" className="text-tm-orange-light">
+                {day.tasks.map((t) => (
+                  <li key={t.id} className={itemClass}>
+                    <span className="font-semibold">{t.title}</span>
+                    {t.description && <span className="text-tm-blue-gray ml-2">- {t.description}</span>}
+                  </li>
+                ))}
+              </Section>
+            )}
+
+            {day.events.length > 0 && (
+              <Section icon={Calendar} title="Events" className="text-tm-yellow">
+                {day.events.map((e) => (
+                  <li key={e.id} className={cn(itemClass, "flex items-center gap-2 flex-wrap")}>
+                    <span className={cn(e.tier === "side" ? "italic" : e.tier === "epic" ? "font-bold" : "font-normal")}>{e.title}</span>
+                    {e.startTime && <span className="text-caption text-tm-yellow font-black bg-tm-yellow/10 px-1.5 py-0.5 rounded">{format(new Date(e.startTime), "h:mm a")}</span>}
+                    {e.description && <span className="text-tm-blue-gray">- {e.description}</span>}
+                  </li>
+                ))}
+              </Section>
+            )}
+
+            {day.specialDays.length > 0 && (
+              <Section icon={Star} title="Special Days" className="text-tm-orange-dark">
+                {day.specialDays.map((e) => (
+                  <li key={e.id} className={itemClass}>
+                    <span className={cn(e.tier === "side" ? "italic" : e.tier === "epic" ? "font-bold" : "font-normal")}>{e.title}</span>
+                    {e.description && <span className="text-tm-blue-gray ml-2">- {e.description}</span>}
+                  </li>
+                ))}
+              </Section>
+            )}
+
+            {visibleNotes.length > 0 && (
+              <Section icon={FileText} title="Notes" className="text-tm-blue-gray">
+                {visibleNotes.map(({ note: n, items }) => (
+                  <li key={n.id} className={cn(itemClass, "py-3")}>
+                    {items ? (
+                      <ul className="space-y-1.5">
+                        {items.map((item, i) => (
+                          <li key={item.id || i} className="flex items-start gap-2 text-foreground/90">
+                            <span className="text-tm-blue-gray opacity-70 select-none mt-0.5">{item.bullet || '•'}</span>
+                            <span className="leading-snug">{item.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="whitespace-pre-wrap text-foreground/90">{n.content}</p>
+                    )}
+                  </li>
+                ))}
+              </Section>
+            )}
+          </div>
+        )}
+      </div>
+    </GlassCard>
+  );
+}
 
 export default function HistoryList() {
   const [data, setData] = useState<HistoryDay[]>([]);
   const [defaultData, setDefaultData] = useState<HistoryDay[]>([]);
-  const [currentEndDateStr, setCurrentEndDateStr] = useState("");
+  // History runs up to yesterday, anchored to the viewer's local date
+  const [clientDateStr] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [initialEndDateStr] = useState(() => format(subDays(new Date(), 1), "yyyy-MM-dd"));
+  const [currentEndDateStr, setCurrentEndDateStr] = useState(initialEndDateStr);
   const [loading, setLoading] = useState(true);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [clientDateStr, setClientDateStr] = useState("");
-  
+
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
-  const searchTimeoutRef = useRef<any>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // If search is toggled off, clear the query
+  // First page of history
   useEffect(() => {
-    if (!isSearchVisible) {
-      setQuery("");
-    }
-  }, [isSearchVisible]);
+    let cancelled = false;
+    getHistory(initialEndDateStr, 28, "", clientDateStr).then(res => {
+      if (cancelled) return;
+      setData(res);
+      setDefaultData(res);
+      setInitialLoadComplete(true);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [initialEndDateStr, clientDateStr]);
 
+  function handleQueryChange(value: string) {
+    setQuery(value);
+    if (value.trim() === "") {
+      // Back to the paginated timeline
+      setData(defaultData);
+      setIsSearching(false);
+    } else {
+      setIsSearching(true);
+    }
+  }
+
+  function closeSearch() {
+    setIsSearchVisible(false);
+    handleQueryChange("");
+  }
+
+  // Debounced search
   useEffect(() => {
-    if (!initialLoadComplete) {
-      const todayStr = format(new Date(), "yyyy-MM-dd");
-      const yesterdayStr = format(subDays(new Date(), 1), "yyyy-MM-dd");
-      setClientDateStr(todayStr);
-      setCurrentEndDateStr(yesterdayStr);
-      
-      getHistory(yesterdayStr, 28, "", todayStr).then(res => {
-        setData(res);
-        setDefaultData(res);
-        setInitialLoadComplete(true);
-        setLoading(false);
-      });
-    }
-  }, [initialLoadComplete]);
-
-  useEffect(() => {
-    if (!initialLoadComplete) return;
-
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    
-    if (query.trim() === "") {
-      // Revert to initial paginated data
-      if (isSearching) {
-         setData(defaultData);
-         setIsSearching(false);
-      }
-      return;
-    }
-
-    setIsSearching(true);
-    searchTimeoutRef.current = setTimeout(async () => {
+    if (!initialLoadComplete || query.trim() === "") return;
+    const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const searchResults = await getHistory("", 28, query, clientDateStr);
-        setData(searchResults);
+        setData(await getHistory("", 28, query, clientDateStr));
       } catch (e) {
         console.error(e);
       } finally {
         setLoading(false);
       }
     }, 500);
+    return () => clearTimeout(timer);
+  }, [query, initialLoadComplete, clientDateStr]);
 
-    return () => {
-      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    }
-  }, [query, initialLoadComplete, defaultData, clientDateStr]);
-
-  const loadMore = async () => {
+  const loadMore = useCallback(async () => {
     setLoading(true);
     try {
       // Calculate new end date (subtract 28 days from current end date)
       const nextEndDate = subDays(parseISO(currentEndDateStr), 28);
       const nextEndDateStr = format(nextEndDate, "yyyy-MM-dd");
-      
+
       const moreData = await getHistory(nextEndDateStr, 28, "", clientDateStr);
-      
+
       setData((prev) => [...prev, ...moreData]);
       setDefaultData((prev) => [...prev, ...moreData]);
       setCurrentEndDateStr(nextEndDateStr);
@@ -95,213 +237,129 @@ export default function HistoryList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentEndDateStr, clientDateStr]);
 
-  const getMoodEmoji = (mood: string) => {
-    if (mood === "good") return "😇";
-    if (mood === "bad") return "😢";
-    return "😐";
-  };
+  // Load the next 4 weeks automatically as the end of the timeline scrolls into view
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === "undefined" || isSearching || loading || !initialLoadComplete) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) loadMore();
+    }, { rootMargin: "400px" });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [isSearching, loading, initialLoadComplete, loadMore]);
+
+  let cardIndex = 0;
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
-      <div className="max-w-4xl mx-auto mb-4 w-full">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h1 className="text-4xl font-black text-tm-purple-dark dark:text-tm-yellow">History</h1>
-            <p className="text-tm-blue-gray font-medium">Review your past completed tasks, events, and personal notes.</p>
-          </div>
-          
-          <button
-            onClick={() => setIsSearchVisible(!isSearchVisible)}
-            className={cn(
-              "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-black transition-all backdrop-blur-xl border shadow-2xl w-full sm:w-auto",
-              isSearchVisible 
-                ? "bg-tm-purple-dark text-tm-yellow border-tm-purple-dark" 
-                : "bg-white/20 dark:bg-white/5 border-white/20 text-tm-purple-dark dark:text-tm-yellow saturate-150 hover:bg-white/30 dark:hover:bg-white/10"
-            )}
-          >
-            <Search size={20} />
-            {isSearchVisible ? "Close Search" : "Search Archive"}
-          </button>
+    <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow">History</h1>
+          <p className="text-tm-blue-gray font-medium">Review your past completed tasks, events, and personal notes.</p>
         </div>
 
-        <AnimatePresence>
-          {isSearchVisible && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="mt-6 overflow-hidden"
-            >
-              <div className="relative w-full max-w-md">
-                <input 
-                  type="text" 
+        <motion.div layout className="flex items-center justify-end" transition={{ type: "spring", stiffness: 400, damping: 32 }}>
+          <AnimatePresence mode="popLayout" initial={false}>
+            {isSearchVisible ? (
+              <motion.div
+                key="search"
+                initial={{ opacity: 0, width: 48 }}
+                animate={{ opacity: 1, width: "100%" }}
+                exit={{ opacity: 0, width: 48 }}
+                className="relative w-full md:w-80"
+              >
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-tm-blue-gray pointer-events-none" />
+                <input
+                  type="text"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => handleQueryChange(e.target.value)}
                   placeholder="Search history..."
                   autoFocus
-                  className="w-full bg-white/40 dark:bg-black/20 border border-tm-blue-gray/20 dark:border-white/10 rounded-2xl px-6 py-3 outline-none focus:border-tm-yellow/50 focus:ring-2 focus:ring-tm-yellow/20 transition-all backdrop-blur-md text-tm-purple-dark dark:text-white font-medium"
+                  className="w-full bg-white/40 dark:bg-black/20 border border-tm-blue-gray/20 dark:border-white/10 rounded-2xl pl-11 pr-11 py-3 outline-none focus:border-tm-yellow/50 focus:ring-2 focus:ring-tm-yellow/20 transition-colors text-foreground font-medium"
                 />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                <button
+                  onClick={closeSearch}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl text-tm-blue-gray hover:text-tm-yellow"
+                  aria-label="Close search"
+                >
+                  <X size={16} />
+                </button>
+              </motion.div>
+            ) : (
+              <motion.button
+                key="toggle"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => setIsSearchVisible(true)}
+                className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-black bg-white/20 dark:bg-white/5 border border-tm-blue-gray/20 text-tm-purple-dark dark:text-tm-yellow hover:bg-white/30 dark:hover:bg-white/10 transition-colors w-full sm:w-auto"
+              >
+                <Search size={18} /> Search Archive
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </div>
 
       {loading && data.length === 0 ? (
-        <div className="text-center py-12 text-tm-blue-gray animate-pulse">Loading history...</div>
+        <SkeletonRows rows={4} caption="Loading history..." />
       ) : loading && isSearching ? (
-        <div className="text-center py-12 text-tm-blue-gray animate-pulse">Searching...</div>
+        <SkeletonRows rows={3} caption="Searching..." />
       ) : data.length === 0 ? (
-        <div className="text-center py-12 text-tm-blue-gray">No history found for this period.</div>
+        <div className="text-center py-16 text-tm-blue-gray">
+          <Search size={32} className="mx-auto mb-3 opacity-30" />
+          <p>No history found for this period.</p>
+        </div>
       ) : (
-        data.map((day, idx) => {
-          const hasNote = day.notes.length > 0;
-          const firstNoteMood = hasNote ? day.notes[0].mood : null;
-          const visibleNotes = day.notes
-            .map((n) => {
-              let items: any[] | null = null;
-              try {
-                if (n.content.trim().startsWith("[")) {
-                  const parsed = JSON.parse(n.content);
-                  if (Array.isArray(parsed)) items = parsed.filter((item: any) => item?.text?.trim());
-                }
-              } catch (e) {}
-              return { note: n, items };
-            })
-            .filter(({ note, items }) => (items ? items.length > 0 : note.content.trim().length > 0));
+        <div className="relative">
+          {/* Timeline spine */}
+          <div className="absolute left-[15px] sm:left-[19px] top-2 bottom-0 w-px bg-gradient-to-b from-tm-yellow/50 via-tm-blue-gray/20 to-transparent" aria-hidden />
 
-          return (
-            <GlassCard key={day.date} delay={Math.min(idx * 0.05, 0.5)}>
-              <div className="flex flex-col gap-4">
-                <div className="border-b border-tm-blue-gray/10 dark:border-white/10 pb-3">
-                  <div className="flex items-center gap-3">
-                    {firstNoteMood ? (
-                      <span className="text-2xl leading-none select-none drop-shadow-md">{getMoodEmoji(firstNoteMood)}</span>
-                    ) : (
-                      <CalendarDays className="text-tm-orange-dark dark:text-tm-yellow" size={24} />
-                    )}
-                    <h2 className="text-xl font-bold text-tm-purple-dark dark:text-white">
-                      {format(parseISO(day.date), "EEEE, MMMM do yyyy")}
-                    </h2>
-                  </div>
-                  
-                  {day.relief && day.relief.location && day.relief.location !== "No location found" && (
-                    <div className="flex items-center gap-3 text-[10px] font-black uppercase text-tm-blue-gray/60 tracking-[0.2em] mt-2 pl-9">
-                      <span className="flex items-center gap-1.5"><MapPin size={12} className="text-tm-yellow/40" /> {day.relief.location}</span>
-                      <span className="w-1 h-1 rounded-full bg-black/10 dark:bg-white/10" />
-                      <span className="flex items-center gap-1.5"><CloudSun size={12} className="text-tm-yellow/40" /> {formatReliefTemp(day.relief.temp)}°C {day.relief.weather}</span>
-                    </div>
-                  )}
-
-                  {day.habits && day.habits.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3 pl-9">
-                      {day.habits.map((h) => (
-                        <div key={h.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 text-xs font-semibold text-tm-purple-dark dark:text-white/80">
-                          {h.habitIcon && <HabitIconRender icon={h.habitIcon} size={14} className="text-tm-blue-gray" />}
-                          <span>{h.habitName}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {(visibleNotes.length === 0 && day.events.length === 0 && day.specialDays.length === 0 && day.tasks.length === 0 && (!day.habits || day.habits.length === 0)) ? (
-                   <p className="text-sm text-tm-blue-gray italic pl-9">No activities recorded on this day.</p>
-                ) : (
-                  <div className="flex flex-col gap-4 pl-9">
-                    {day.tasks.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wider text-tm-orange-light mb-2 flex items-center gap-1">
-                          <CheckSquare size={14} /> Completed Tasks
-                        </h3>
-                        <ul className="space-y-2">
-                          {day.tasks.map((t) => (
-                            <li key={t.id} className="text-sm bg-black/5 dark:bg-white/5 p-2 rounded-lg border border-black/5 dark:border-white/5">
-                              <span className="font-medium">{t.title}</span>
-                              {t.description && <span className="text-tm-blue-gray ml-2">- {t.description}</span>}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {day.events.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wider text-tm-yellow mb-2 flex items-center gap-1">
-                          <Calendar size={14} /> Events
-                        </h3>
-                        <ul className="space-y-2">
-                          {day.events.map((e) => (
-                            <li key={e.id} className="text-sm bg-black/5 dark:bg-white/5 p-2 rounded-lg border border-black/5 dark:border-white/5">
-                              <span className={cn(e.tier === "side" ? "italic" : e.tier === "epic" ? "font-bold" : "font-normal")}>{e.title}</span>
-                              {e.startTime && <span className="text-xs text-tm-yellow/80 ml-2 font-medium bg-black/10 dark:bg-white/10 px-1.5 py-0.5 rounded">{format(new Date(e.startTime), "h:mm a")}</span>}
-                              {e.description && <span className="text-tm-blue-gray ml-2">- {e.description}</span>}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    {day.specialDays.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wider text-tm-orange-dark mb-2 flex items-center gap-1">
-                          <Star size={14} /> Special Days
-                        </h3>
-                        <ul className="space-y-2">
-                          {day.specialDays.map((e) => (
-                            <li key={e.id} className="text-sm bg-black/5 dark:bg-white/5 p-2 rounded-lg border border-black/5 dark:border-white/5">
-                              <span className={cn(e.tier === "side" ? "italic" : e.tier === "epic" ? "font-bold" : "font-normal")}>{e.title}</span>
-                              {e.description && <span className="text-tm-blue-gray ml-2">- {e.description}</span>}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {visibleNotes.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wider text-tm-purple-light dark:text-tm-purple-light mb-2 flex items-center gap-1">
-                          <FileText size={14} /> Notes
-                        </h3>
-                        <ul className="space-y-2">
-                          {visibleNotes.map(({ note: n, items: parsedContent }) => {
-                            return (
-                              <li key={n.id} className="text-sm bg-black/5 dark:bg-white/5 p-3 rounded-lg border border-black/5 dark:border-white/5">
-                                {parsedContent ? (
-                                  <ul className="space-y-1.5">
-                                    {parsedContent.map((item: any, i: number) => (
-                                      <li key={item.id || i} className="flex items-start gap-2 text-tm-purple-dark dark:text-white/90">
-                                        <span className="text-tm-blue-gray opacity-70 select-none mt-0.5">{item.bullet || '•'}</span>
-                                        <span className="leading-snug">{item.text}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="whitespace-pre-wrap text-tm-purple-dark dark:text-white/90">{n.content}</p>
-                                )}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
+          {groupByMonth(data).map(group => (
+            <section key={group.key} className="relative">
+              <div className="sticky top-20 z-20 py-2 pl-10 sm:pl-12">
+                <span className="inline-block px-3 py-1 rounded-full bg-background/85 backdrop-blur-md border border-tm-blue-gray/15 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">
+                  {group.label}
+                </span>
               </div>
-            </GlassCard>
-          );
-        })
+
+              <div className="space-y-4 pb-6">
+                {group.days.map(day => {
+                  const mood = day.notes.length > 0 ? day.notes[0].mood : null;
+                  const delay = Math.min(cardIndex++ * 0.04, 0.4);
+                  return (
+                    <div key={day.date} className="relative pl-10 sm:pl-12">
+                      {/* Day marker: mood emoji, or a dot */}
+                      <div className="absolute left-0 top-4 w-8 sm:w-10 flex justify-center">
+                        {mood ? (
+                          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-background border border-tm-blue-gray/15 flex items-center justify-center text-lg leading-none select-none shadow-sm">
+                            {getMoodEmoji(mood)}
+                          </span>
+                        ) : (
+                          <span className="mt-2.5 w-3 h-3 rounded-full bg-background border-2 border-tm-yellow/60" />
+                        )}
+                      </div>
+                      <DayCard day={day} delay={delay} />
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
       )}
 
-      {!isSearching && (
-        <div className="flex justify-center mt-4">
+      {!isSearching && data.length > 0 && (
+        <div ref={sentinelRef} className="flex justify-center py-4">
           <button
             onClick={loadMore}
             disabled={loading}
-            className="px-6 py-3 rounded-full bg-tm-orange-dark hover:bg-tm-orange-light text-white font-bold tracking-widest uppercase transition-all shadow-lg hover:shadow-[0_0_15px_rgba(242,79,19,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-3 rounded-full bg-tm-orange-dark hover:bg-tm-orange-light text-white text-caption font-mono font-semibold tracking-[0.12em] uppercase transition-all shadow-lg active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
           >
+            {loading && <Loader2 size={14} className="animate-spin" />}
             {loading ? "Loading..." : "View More History"}
           </button>
         </div>

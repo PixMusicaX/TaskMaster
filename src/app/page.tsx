@@ -14,6 +14,7 @@ import { getDailyQuote } from "@/app/actions/daily-quote";
 import { getReliefRecommendation, toggleReliefRecommendation, regenerateReliefRecommendation } from "@/app/actions/relief";
 import { getPreparationTip, togglePreparationTip, regeneratePreparationTip } from "@/app/actions/preparation";
 import { getSpecialDayColors } from "@/lib/utils";
+import type { EventRow, HabitWithLogs, NoteRow, PrepTipRow, Profile, Relief, Season, SmartMissionRow } from "@/lib/types";
 import RecapModal from "@/components/RecapModal";
 import TaskmasterDialog from "@/components/taskmaster-dialog";
 import DailyMissionsCard from "@/components/home/daily-missions-card";
@@ -29,7 +30,7 @@ import MapCard from "@/components/home/map-card";
 type ReliefFetcher = typeof getReliefRecommendation;
 
 // Fetch a relief recommendation with the device location, falling back to the last known location/weather
-function fetchReliefWithLocation(fetcher: ReliefFetcher, todayStr: string): Promise<any> {
+function fetchReliefWithLocation(fetcher: ReliefFetcher, todayStr: string): Promise<Relief | null> {
   const run = async (lat?: number, lon?: number) => {
     const cachedLocation = localStorage.getItem('tm_lastLocation') || undefined;
     const cachedWeather = localStorage.getItem('tm_lastWeather') || undefined;
@@ -67,7 +68,7 @@ function withoutItem(set: Set<string>, id: string) {
 }
 
 // Special days pinned to a time of day are shown under the clock
-function isTimedSpecialDay(t: any) {
+function isTimedSpecialDay(t: EventRow) {
   if (t.type !== "special_day") return false;
   if (t.startTime) {
     const d = new Date(t.startTime);
@@ -77,19 +78,19 @@ function isTimedSpecialDay(t: any) {
 }
 
 export default function Home() {
-  const [habits, setHabits] = useState<any[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [profile, setProfile] = useState<any>(null);
-  const [recapData, setRecapData] = useState<any>(null);
+  const [habits, setHabits] = useState<HabitWithLogs[]>([]);
+  const [tasks, setTasks] = useState<EventRow[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [recapData, setRecapData] = useState<Season | null>(null);
 
   const [showRecap, setShowRecap] = useState(false);
   const [showTaskmaster, setShowTaskmaster] = useState(false);
-  const [smartMission, setSmartMission] = useState<any>(null);
+  const [smartMission, setSmartMission] = useState<SmartMissionRow | null>(null);
   const [dailyQuote, setDailyQuote] = useState<string>("");
-  const [relief, setRelief] = useState<any>(null);
-  const [prepTip, setPrepTip] = useState<any>(null);
-  const [moodData, setMoodData] = useState<any[]>([]);
-  const [futureEvents, setFutureEvents] = useState<any[]>([]);
+  const [relief, setRelief] = useState<Relief | null>(null);
+  const [prepTip, setPrepTip] = useState<PrepTipRow | null>(null);
+  const [moodData, setMoodData] = useState<NoteRow[]>([]);
+  const [futureEvents, setFutureEvents] = useState<EventRow[]>([]);
   const [completionScore, setCompletionScore] = useState(0);
   const [missingInfo, setMissingInfo] = useState<string[]>([]);
   const [habitsLoading, setHabitsLoading] = useState(true);
@@ -104,12 +105,13 @@ export default function Home() {
   const [updatingRelief, setUpdatingRelief] = useState<Set<string>>(new Set());
   const [updatingPrep, setUpdatingPrep] = useState(false);
 
-  const today = new Date();
+  // Pinned for the page's lifetime; the midnight check below reloads when the day changes
+  const [today] = useState(() => new Date());
   const todayStr = format(today, "yyyy-MM-dd");
   // The dashboard only looks at the last 7 days of habit logs
   const habitLogsSince = format(subDays(today, 6), "yyyy-MM-dd");
 
-  const rawQuote = profile?.quote || dailyQuote || smartMission?.quote || "Master your day, master your life.";
+  const rawQuote = dailyQuote || smartMission?.quote || "Master your day, master your life.";
   const quoteParts = rawQuote.split(/\s*[—-]\s*/).filter(Boolean);
   const quoteText = quoteParts[0];
   const quoteAuthor = quoteParts.length > 1 ? quoteParts.slice(1).join(" - ") : "";
@@ -138,7 +140,7 @@ export default function Home() {
         if (!yesterdayNote) missing.push("Note");
 
         const habitsScheduledYesterday = habitData.filter(h => !h.frequency || h.frequency.includes(yesterdayDay));
-        const anyHabitLoggedYesterday = habitData.some(h => h.logs.some((l: any) => l.date === yesterdayStr));
+        const anyHabitLoggedYesterday = habitData.some(h => h.logs.some((l) => l.date === yesterdayStr));
 
         if (habitsScheduledYesterday.length > 0 && !anyHabitLoggedYesterday) {
           missing.push("Habits");
@@ -212,7 +214,7 @@ export default function Home() {
           allHabits.forEach(h => {
             if (!h.frequency || h.frequency.includes(dDay)) {
               totalScheduledHabits++;
-              if (h.logs.some((l: any) => l.date === dStr && l.completed)) {
+              if (h.logs.some((l) => l.date === dStr && l.completed)) {
                 totalCompletedHabits++;
               }
             }
@@ -233,7 +235,7 @@ export default function Home() {
           getDailyQuote(todayStr)
         ]);
         setSmartMission(smartData);
-        setPrepTip(prepData);
+        setPrepTip(prepData ?? null);
         setDailyQuote(quoteData);
 
         setRelief(await fetchReliefWithLocation(getReliefRecommendation, todayStr));
@@ -244,7 +246,7 @@ export default function Home() {
       }
     }
     fetchData();
-  }, []);
+  }, [today, todayStr, habitLogsSince]);
 
   // Midnight Reload Logic
   useEffect(() => {
@@ -262,7 +264,10 @@ export default function Home() {
     // Optimistic: flip today's log so the check animates on tap
     setHabits(prev => prev.map(h => h.id !== habitId ? h : {
       ...h,
-      logs: [...h.logs.filter((l: any) => l.date !== todayStr), { date: todayStr, completed: !currentStatus }],
+      logs: [
+        ...h.logs.filter((l) => l.date !== todayStr),
+        { id: `optimistic-${habitId}`, habitId, habitName: h.name, habitIcon: h.icon, date: todayStr, completed: !currentStatus },
+      ],
     }));
     try {
       await toggleHabitLog(habitId, todayStr, !currentStatus);
@@ -319,7 +324,7 @@ export default function Home() {
 
   async function handleRegeneratePrep() {
     setPrepLoading(true);
-    setPrepTip(await regeneratePreparationTip(todayStr));
+    setPrepTip((await regeneratePreparationTip(todayStr)) ?? null);
     setPrepLoading(false);
   }
 
@@ -361,11 +366,11 @@ export default function Home() {
           <Clock />
 
           {specialDays.length > 0 && (
-            <div className="flex flex-row items-center justify-center gap-3 my-2 flex-wrap text-lg md:text-xl font-black uppercase tracking-tighter italic">
+            <div className="flex flex-row items-center justify-center gap-3 my-2 flex-wrap text-lg md:text-xl font-bold uppercase tracking-tighter italic">
               {specialDays.map((sd, index) => (
                 <div key={sd.id} className="flex items-center gap-3">
-                  {index > 0 && <span className="text-tm-blue-gray/30">/</span>}
-                  <span className={getSpecialDayColors(sd.title).text}>{sd.title}</span>
+                  {index > 0 && <span className="text-tm-blue-gray/60">/</span>}
+                  <span className={getSpecialDayColors().text}>{sd.title}</span>
                 </div>
               ))}
             </div>
@@ -373,7 +378,7 @@ export default function Home() {
         </div>
 
         <p className="text-sm text-center md:text-base font-medium text-tm-blue-gray italic opacity-80 max-w-xl mx-auto -mt-8 mb-12">
-          "{quoteText}"{quoteAuthor ? ` - ${quoteAuthor}` : ""}
+          &ldquo;{quoteText}&rdquo;{quoteAuthor ? ` - ${quoteAuthor}` : ""}
         </p>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-6xl">
@@ -413,7 +418,7 @@ export default function Home() {
 
         {/* Insights / Scroll Indicator */}
         <div className="flex flex-col items-center gap-4 py-12 opacity-50 hover:opacity-100 transition-opacity">
-          <span className="text-caption font-black uppercase tracking-[0.4em] text-tm-blue-gray">Deep Insights</span>
+          <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">Deep Insights</span>
           <motion.div
             animate={{ y: [0, 8, 0] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
@@ -427,7 +432,7 @@ export default function Home() {
 
       <section className="min-h-screen p-6 md:p-12 flex flex-col items-center justify-center gap-12">
         <div className="text-center space-y-4">
-          <h2 className="text-4xl md:text-6xl font-black text-tm-purple-dark dark:text-tm-yellow tracking-tighter">Growth Analytics</h2>
+          <h2 className="text-4xl md:text-6xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow tracking-tight">Growth Analytics</h2>
           <p className="text-tm-blue-gray max-w-2xl mx-auto font-medium">
             Visualizing your progress towards becoming the master of your tasks.
           </p>
@@ -465,8 +470,8 @@ export default function Home() {
               <MessageSquare className="text-tm-yellow" size={20} />
             </div>
             <div className="text-left relative z-10">
-              <p className="text-xs font-black text-tm-yellow tracking-[0.2em] uppercase">Need Guidance?</p>
-              <p className="text-lg font-black text-white italic tracking-tight">Ask The Taskmaster</p>
+              <p className="text-xs font-mono font-semibold text-tm-yellow tracking-[0.12em] uppercase">Need Guidance?</p>
+              <p className="text-lg font-bold text-white italic tracking-tight">Ask The Taskmaster</p>
             </div>
           </button>
         </div>

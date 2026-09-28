@@ -67,7 +67,7 @@ export default function RankUpCeremony({ ceremony, onDone }: { ceremony: Ceremon
             </motion.div>
 
             <motion.p
-              className="relative mt-10 text-caption font-black uppercase tracking-[0.5em] text-tm-yellow/80"
+              className="relative mt-10 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-yellow/80"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
@@ -75,7 +75,7 @@ export default function RankUpCeremony({ ceremony, onDone }: { ceremony: Ceremon
               Rank Achieved
             </motion.p>
             <motion.h2
-              className="relative mt-2 text-5xl sm:text-6xl font-black uppercase tracking-tighter text-white"
+              className="relative mt-2 text-5xl sm:text-6xl font-display font-bold uppercase tracking-tight text-white"
               initial={{ opacity: 0, scale: 1.4, letterSpacing: "0.3em" }}
               animate={{ opacity: 1, scale: 1, letterSpacing: "-0.05em" }}
               transition={{ delay: 0.75, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
@@ -91,12 +91,12 @@ export default function RankUpCeremony({ ceremony, onDone }: { ceremony: Ceremon
                 transition={{ delay: 1.2 }}
               >
                 <span className="font-serif font-bold text-tm-yellow">{newEra.numeral}</span>
-                <span className="text-caption font-black uppercase tracking-[0.3em] text-white/90">New Era · {newEra.name}</span>
+                <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-white/90">New Era · {newEra.name}</span>
               </motion.div>
             )}
 
             <motion.p
-              className="relative mt-10 text-caption font-bold uppercase tracking-[0.3em] text-white/40"
+              className="relative mt-10 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-white/40"
               initial={{ opacity: 0 }}
               animate={{ opacity: [0, 1, 0.4, 1] }}
               transition={{ delay: 1.8, duration: 2, repeat: Infinity }}

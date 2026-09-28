@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { Map as MapIcon, RotateCw } from "lucide-react";
 import { WorldMapWidget } from "@/components/map-generator";
+import type { NoteRow, Profile } from "@/lib/types";
 import InsightCard, { Pill } from "./insight-card";
 
-export default function MapCard({ profile, moodData, completionScore }: { profile: any, moodData: any[], completionScore: number }) {
+export default function MapCard({ profile, moodData, completionScore }: { profile: Profile | null, moodData: NoteRow[], completionScore: number }) {
   const [refreshKey, setRefreshKey] = useState(0);
 
   return (

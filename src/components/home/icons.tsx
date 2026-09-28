@@ -61,7 +61,7 @@ const RELIEF_ICONS: Record<string, typeof Film> = {
 };
 
 // Icon for an AI relief suggestion type; unknown types render Coffee only when `fallback` is set
-export function ReliefTypeIcon({ type, size, className, fallback = false }: { type?: string, size: number, className?: string, fallback?: boolean }) {
+export function ReliefTypeIcon({ type, size, className, fallback = false }: { type?: string | null, size: number, className?: string, fallback?: boolean }) {
   const Icon = (type && RELIEF_ICONS[type]) || (fallback ? Coffee : null);
   return Icon ? <Icon size={size} className={className} /> : null;
 }

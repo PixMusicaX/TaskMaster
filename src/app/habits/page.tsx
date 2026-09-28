@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import GlassCard from "@/components/glass-card";
 import { Plus, Trash2, Check, X, Edit2, Archive, RotateCcw, Search, HeartPulse, Flame } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { format, startOfWeek, addDays, isSameDay } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { getHabits, addHabit, updateHabit, archiveHabit, restoreHabit, deleteHabitPermanently, toggleHabitLog, getArchivedHabits, getHabitLogs } from "@/app/actions/habits";
 import { getProfile } from "@/app/actions/gamification";
 import { cn } from "@/lib/utils";
@@ -12,21 +12,22 @@ import { PageSkeleton } from "@/components/loader";
 import CompletionCheck from "@/components/ui/completion-check";
 import AnimatedNumber from "@/components/progress/animated-number";
 import { currentStreak } from "@/lib/progress";
-import TabularViewModal, { Column } from "@/components/TabularViewModal";
+import TabularViewModal from "@/components/TabularViewModal";
+import type { HabitLog, HabitWithLogs, Profile } from "@/lib/types";
 import HabitIconRender, { LUCIDE_ICONS } from "@/components/HabitIconRender";
 
 
 
 export default function HabitsPage() {
-  const [habits, setHabits] = useState<any[]>([]);
+  const [habits, setHabits] = useState<HabitWithLogs[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [archivedHabits, setArchivedHabits] = useState<any[]>([]);
+  const [archivedHabits, setArchivedHabits] = useState<HabitWithLogs[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [editingHabit, setEditingHabit] = useState<any>(null);
+  const [editingHabit, setEditingHabit] = useState<HabitWithLogs | null>(null);
   const [showArchive, setShowArchive] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isTabularOpen, setIsTabularOpen] = useState(false);
-  const [allLogs, setAllLogs] = useState<any[]>([]);
+  const [allLogs, setAllLogs] = useState<HabitLog[]>([]);
 
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("Sparkles");
@@ -118,10 +119,10 @@ export default function HabitsPage() {
     setEditingHabit(null);
   }
 
-  function openEdit(habit: any) {
+  function openEdit(habit: HabitWithLogs) {
     setEditingHabit(habit);
     setNewName(habit.name);
-    setNewIcon(habit.icon);
+    setNewIcon(habit.icon ?? "Sparkles");
     setNewStat(habit.stat || "intelligence");
     setNewFrequency(habit.frequency || [0, 1, 2, 3, 4, 5, 6]);
     setShowAdd(true);
@@ -156,11 +157,11 @@ export default function HabitsPage() {
     setHabits(prevHabits => prevHabits.map(h => {
       if (h.id === habitId) {
         const newLogs = h.logs ? [...h.logs] : [];
-        const existingLogIdx = newLogs.findIndex((l: any) => l.date === dateStr);
+        const existingLogIdx = newLogs.findIndex((l) => l.date === dateStr);
         if (existingLogIdx >= 0) {
           newLogs[existingLogIdx] = { ...newLogs[existingLogIdx], completed: newStatus };
         } else {
-          newLogs.push({ date: dateStr, completed: newStatus });
+          newLogs.push({ id: `optimistic-${toggleKey}`, habitId, habitName: h.name, habitIcon: h.icon, date: dateStr, completed: newStatus });
         }
         return { ...h, logs: newLogs };
       }
@@ -187,7 +188,7 @@ export default function HabitsPage() {
     }
   }
 
-  function getFrequencyLabel(freq: number[]) {
+  function getFrequencyLabel(freq: number[] | null) {
     if (!freq || freq.length === 0) return "Daily";
     if (freq.length === 7) return "Daily";
     if (freq.length === 6 && !freq.includes(0)) return "Weekdays + Sat";
@@ -205,14 +206,14 @@ export default function HabitsPage() {
         <>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <h1 className="text-4xl font-black text-tm-purple-dark dark:text-tm-yellow">Habit Tracker</h1>
+              <h1 className="text-4xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow">Habit Tracker</h1>
               <p className="text-tm-blue-gray font-medium">Consistency is the key to mastery.</p>
 
               {profile && (
-                <div className="flex gap-4 mt-4">
+                <div className="flex flex-wrap gap-2 mt-4">
                   <div className="flex items-center gap-2 bg-tm-orange-light/10 px-3 py-1.5 rounded-xl border border-tm-orange-light/20">
                     <HeartPulse size={14} className="text-tm-orange-light" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-tm-orange-light">Vitality: {profile.vitality} XP</span>
+                    <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] whitespace-nowrap text-tm-orange-light">Vitality: {profile.vitality} XP</span>
                   </div>
                 </div>
               )}
@@ -254,7 +255,7 @@ export default function HabitsPage() {
                   </div>
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest pl-1">Name</p>
+                      <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] pl-1">Name</p>
                       <input
                         autoFocus
                         placeholder="E.g. Morning Yoga"
@@ -265,7 +266,7 @@ export default function HabitsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest pl-1">Icon</p>
+                      <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] pl-1">Icon</p>
                       <div className="flex flex-col gap-3 p-1 bg-white/5 rounded-2xl border border-white/10">
                         <div className="flex items-center justify-center p-4 bg-white/5 rounded-xl border border-white/5">
                           <HabitIconRender icon={newIcon} size={40} className="text-tm-yellow" />
@@ -289,7 +290,7 @@ export default function HabitsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest pl-1">Repeat on</p>
+                      <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] pl-1">Repeat on</p>
                       <div className="flex justify-between gap-1">
                         {DAYS.map((day) => {
                           const isSelected = newFrequency.includes(day.value);
@@ -337,7 +338,7 @@ export default function HabitsPage() {
               >
                 <div className="flex items-center gap-3 pl-2">
                   <Archive size={24} className="text-tm-purple-dark dark:text-tm-yellow" />
-                  <h2 className="text-2xl font-black">Habit Archive</h2>
+                  <h2 className="text-2xl font-display font-bold">Habit Archive</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {archivedHabits.map((habit) => (
@@ -347,7 +348,7 @@ export default function HabitsPage() {
                           <HabitIconRender icon={habit.icon} size={24} className="text-tm-blue-gray" />
                           <div>
                             <h3 className="font-bold text-sm truncate max-w-[150px]">{habit.name}</h3>
-                            <p className="text-[10px] text-tm-blue-gray font-black uppercase">{getFrequencyLabel(habit.frequency)}</p>
+                            <p className="text-caption text-tm-blue-gray font-mono font-semibold uppercase tracking-[0.12em]">{getFrequencyLabel(habit.frequency)}</p>
                           </div>
                         </div>
                         <div className="flex gap-1">
@@ -380,10 +381,10 @@ export default function HabitsPage() {
                 className="grid mb-8"
                 style={{ gridTemplateColumns: `${nameWidth} repeat(${visibleCount}, 1fr)` }}
               >
-                <div className="font-bold text-tm-blue-gray text-[10px] sm:text-xs uppercase tracking-widest pl-1 sm:pl-4">Habit</div>
+                <div className="font-mono font-semibold text-tm-blue-gray text-caption sm:text-xs uppercase tracking-[0.12em] pl-1 sm:pl-4">Habit</div>
                 {weekDays.map((day) => (
                   <div key={day.toISOString()} className="text-center space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-tm-blue-gray">
+                    <p className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">
                       {format(day, "EEE")}
                     </p>
                     <div className={cn(
@@ -427,20 +428,20 @@ export default function HabitsPage() {
                                 title={`${streak} in a row`}
                               >
                                 <Flame size={12} className="tm-flame fill-current" />
-                                <AnimatedNumber value={streak} className="text-tiny font-black" />
+                                <AnimatedNumber value={streak} className="text-tiny font-mono font-semibold" />
                               </motion.span>
                             )}
                           </AnimatePresence>
                         </div>
-                        <p className="text-[8px] sm:text-[10px] text-tm-blue-gray uppercase font-black tracking-tighter truncate mt-0.5">
+                        <p className="text-micro sm:text-caption text-tm-blue-gray uppercase font-mono font-semibold tracking-[0.12em] truncate mt-0.5">
                           {getFrequencyLabel(habit.frequency)}
                         </p>
                         {/* Mobile Actions */}
                         <div className="flex sm:hidden gap-1.5 mt-1.5">
-                          <button onClick={() => openEdit(habit)} className="flex items-center gap-1 px-2 py-1 text-tm-blue-gray hover:text-tm-yellow bg-tm-blue-gray/10 rounded-md transition-colors text-[8px] font-black uppercase tracking-widest">
+                          <button onClick={() => openEdit(habit)} className="flex items-center gap-1 px-2 py-1 text-tm-blue-gray hover:text-tm-yellow bg-tm-blue-gray/10 rounded-md transition-colors text-micro font-mono font-semibold uppercase tracking-[0.12em]">
                             <Edit2 size={10} /> Edit
                           </button>
-                          <button onClick={() => handleArchive(habit.id)} className="flex items-center gap-1 px-2 py-1 text-tm-blue-gray hover:text-tm-orange-dark bg-tm-blue-gray/10 rounded-md transition-colors text-[8px] font-black uppercase tracking-widest">
+                          <button onClick={() => handleArchive(habit.id)} className="flex items-center gap-1 px-2 py-1 text-tm-blue-gray hover:text-tm-orange-dark bg-tm-blue-gray/10 rounded-md transition-colors text-micro font-mono font-semibold uppercase tracking-[0.12em]">
                             <Archive size={10} /> Hide
                           </button>
                         </div>
@@ -464,7 +465,7 @@ export default function HabitsPage() {
                     </div>
                     {weekDays.map((day) => {
                       const dateStr = format(day, "yyyy-MM-dd");
-                      const isDone = habit.logs?.some((l: any) => l.date === dateStr && l.completed);
+                      const isDone = habit.logs?.some((l) => l.date === dateStr && l.completed);
                       const isActive = !habit.frequency || habit.frequency.includes(day.getDay());
                       const toggleKey = `${habit.id}-${dateStr}`;
                       const isPending = pendingToggles.includes(toggleKey);
@@ -507,7 +508,7 @@ export default function HabitsPage() {
                 </AnimatePresence>
                 {habits.length === 0 && (
                   <div className="py-12 text-center text-tm-blue-gray italic opacity-50">
-                    No active habits. Click "Add Habit" to start!
+                    No active habits. Click &ldquo;Add Habit&rdquo; to start!
                   </div>
                 )}
               </div>
@@ -524,7 +525,7 @@ export default function HabitsPage() {
                 const last28Days = Array.from({ length: 28 }, (_, i) => subDays(today, i));
                 const dateStrings = last28Days.map(d => format(d, "yyyy-MM-dd"));
                 const scheduledDays = last28Days.filter(day => freq.includes(day.getDay()));
-                const completedInLast28 = habit.logs?.filter((l: any) =>
+                const completedInLast28 = habit.logs?.filter((l) =>
                   l.completed && dateStrings.includes(l.date)
                 ).length || 0;
 
@@ -543,13 +544,13 @@ export default function HabitsPage() {
                         <span className="text-caption font-black text-tm-yellow">
                           <AnimatedNumber value={percentage} />%
                         </span>
-                        <span className="text-[8px] text-tm-blue-gray font-black uppercase tracking-tighter">Consistency</span>
+                        <span className="text-micro text-tm-blue-gray font-mono font-semibold uppercase tracking-[0.12em]">Consistency</span>
                       </div>
                     </div>
                     <div className="grid grid-cols-7 gap-1.5">
                       {last28Days.map((day, i) => {
                         const dateStr = format(day, "yyyy-MM-dd");
-                        const isDone = habit.logs?.some((l: any) => l.date === dateStr && l.completed);
+                        const isDone = habit.logs?.some((l) => l.date === dateStr && l.completed);
                         const isScheduled = freq.includes(day.getDay());
                         return (
                           <div
@@ -576,7 +577,7 @@ export default function HabitsPage() {
           <div className="flex justify-center pt-8 border-t border-white/5">
             <button
               onClick={() => setIsTabularOpen(true)}
-              className="flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-tm-blue-gray hover:text-tm-yellow font-black uppercase tracking-widest text-xs transition-all group"
+              className="flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-tm-blue-gray hover:text-tm-yellow font-mono font-semibold uppercase tracking-[0.12em] text-xs transition-all group"
             >
               <Search size={16} className="group-hover:scale-110 transition-transform" />
               View All Habits in Tabular Format
@@ -611,7 +612,7 @@ export default function HabitsPage() {
                 return (
                   <span className="font-mono text-tm-blue-gray whitespace-nowrap">
                     <span className="sm:hidden flex flex-col leading-tight">
-                      <span className="text-[10px] opacity-50">{year}</span>
+                      <span className="text-caption opacity-50">{year}</span>
                       <span>{shortDate}</span>
                     </span>
                     <span className="hidden sm:inline">{val}</span>

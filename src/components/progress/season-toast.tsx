@@ -28,10 +28,10 @@ export default function SeasonToast({ season, onDone }: { season: Season | null;
           onClick={onDone}
         >
           <div className="px-5 py-4 rounded-2xl bg-white/90 dark:bg-tm-purple-dark/90 backdrop-blur-xl border border-tm-orange-dark/30 shadow-2xl">
-            <p className="text-caption font-black uppercase tracking-[0.3em] text-tm-orange-dark dark:text-tm-yellow">
+            <p className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-orange-dark dark:text-tm-yellow">
               New Season · {format(new Date(), "MMMM")}
             </p>
-            <p className="mt-1 text-sm font-black text-foreground">The climb begins again. Earn your rank back.</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">The climb begins again. Earn your rank back.</p>
             {season.lastRank && (
               <p className="mt-1 text-caption font-bold text-tm-blue-gray">Last season you reached {season.lastRank}.</p>
             )}

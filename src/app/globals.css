@@ -11,8 +11,8 @@
 /* Base Rank Colors (Novice) */
 :root,
 :root[data-rank="Novice"] {
-  --tm-yellow: #F2C230;
-  --tm-orange-light: #F2921D;
+  --tm-yellow: #B68C0B;
+  --tm-orange-light: #DA7D0D;
   --tm-orange-dark: #F24F13;
   --tm-blue-gray: #64748B;
   --tm-purple-dark: #2D1B33;
@@ -20,7 +20,7 @@
 }
 
 :root[data-rank="Squire"] {
-  --tm-yellow: #84CC16;
+  --tm-yellow: #69A312;
   --tm-orange-light: #A16207;
   --tm-orange-dark: #3F6212;
   --tm-blue-gray: #52525B;
@@ -31,7 +31,7 @@
 :root[data-rank="Vanguard"] {
   --tm-yellow: #B8860B;
   /* Ochre Gold */
-  --tm-orange-light: #C18E92;
+  --tm-orange-light: #BC8488;
   /* Dusty Rose */
   --tm-orange-dark: #5F8A8B;
   /* Steel Teal */
@@ -65,14 +65,8 @@
   /* Silver Shine */
 }
 
-/* Fix for black-on-black buttons in Knight light mode */
-:root[data-rank="Knight"]:not(.dark) .bg-tm-yellow.text-tm-purple-dark,
-:root[data-rank="Knight"]:not(.dark) .bg-tm-yellow .text-tm-purple-dark {
-  color: #ffffff !important;
-}
-
 :root[data-rank="Champion"] {
-  --tm-yellow: #FBBF24;
+  --tm-yellow: #C08B04;
   /* Amber Gold */
   --tm-orange-light: #8B5CF6;
   /* Bright Violet */
@@ -88,7 +82,7 @@
 
 :root[data-rank="Sentinel"] {
   --tm-yellow: #059669;
-  --tm-orange-light: #10B981;
+  --tm-orange-light: #0EA674;
   --tm-orange-dark: #064E3B;
   --tm-blue-gray: #475569;
   --tm-purple-dark: #064E3B;
@@ -97,7 +91,7 @@
 
 :root[data-rank="Paladin"] {
   --tm-yellow: #B45309;
-  --tm-orange-light: #0EA5E9;
+  --tm-orange-light: #0D9EDF;
   --tm-orange-dark: #0284C7;
   --tm-blue-gray: #475569;
   --tm-purple-dark: #0C4A6E;
@@ -105,7 +99,7 @@
 }
 
 :root[data-rank="Grandmaster"] {
-  --tm-yellow: #F59E0B;
+  --tm-yellow: #CA8208;
   /* Amber/Gold */
   --tm-orange-light: #BE123C;
   /* Rose Crimson */
@@ -122,11 +116,11 @@
 :root[data-rank="Hero"] {
   --tm-yellow: #F43F5E;
   /* Rose/Red */
-  --tm-orange-light: #F59E0B;
+  --tm-orange-light: #CA8208;
   /* Amber/Orange */
-  --tm-orange-dark: #10B981;
+  --tm-orange-dark: #0EA674;
   /* Emerald/Green */
-  --tm-blue-gray: #3B82F6;
+  --tm-blue-gray: #1E6FF5;
   /* Blue */
   --tm-purple-dark: #8B5CF6;
   /* Purple */
@@ -146,6 +140,8 @@
 
 .dark[data-rank="Squire"] {
   --tm-blue-gray: #A1A1AA;
+  --tm-orange-dark: #456B14;
+  /* Readability: lifted for contrast on the dark background */
 }
 
 .dark[data-rank="Vanguard"] {
@@ -158,6 +154,8 @@
   --tm-blue-gray: #94A3B8;
   --tm-yellow: #60A5FA;
   --tm-red: #3B82F6;
+  --tm-orange-dark: #1E50DC;
+  /* Readability: lifted for contrast on the dark background */
 }
 
 .dark[data-rank="Knight"] {
@@ -169,9 +167,9 @@
   /* Platinum */
   --tm-purple-dark: #000000;
   /* Absolute Black */
-  --tm-orange-light: #52525B;
+  --tm-orange-light: #5E5E68;
   /* Iron Grey */
-  --tm-orange-dark: #3F3F46;
+  --tm-orange-dark: #5E5E69;
   /* Dark Zinc */
 }
 
@@ -179,12 +177,16 @@
   --tm-blue-gray: #C4B5FD;
   --tm-yellow: #FDE047;
   --tm-red: #D8B4FE;
+  --tm-orange-dark: #7635DB;
+  /* Readability: lifted for contrast on the dark background */
 }
 
 .dark[data-rank="Sentinel"] {
   --tm-blue-gray: #94A3B8;
   --tm-yellow: #34D399;
   --tm-red: #10B981;
+  --tm-orange-dark: #096F54;
+  /* Readability: lifted for contrast on the dark background */
 }
 
 .dark[data-rank="Paladin"] {
@@ -217,6 +219,21 @@
   --tm-red: #F472B6;
 }
 
+/* Ink drawn on accent surfaces (bg-tm-yellow). Defaults to the palette's dark ink;
+   ranks whose ink and accent are too close get black or white instead. */
+:root { --tm-on-accent: var(--tm-purple-dark); }
+:root[data-rank="Veteran"]:not(.dark) { --tm-on-accent: #FFFFFF; }
+:root[data-rank="Knight"]:not(.dark) { --tm-on-accent: #FFFFFF; }
+:root[data-rank="Sentinel"]:not(.dark) { --tm-on-accent: #141014; }
+:root[data-rank="Paladin"]:not(.dark) { --tm-on-accent: #FFFFFF; }
+:root[data-rank="Hero"]:not(.dark) { --tm-on-accent: #141014; }
+.dark[data-rank="Hero"] { --tm-on-accent: #141014; }
+
+.bg-tm-yellow.text-tm-purple-dark,
+.bg-tm-yellow .text-tm-purple-dark {
+  color: var(--tm-on-accent);
+}
+
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -228,13 +245,14 @@
   --color-tm-purple-dark: var(--tm-purple-dark);
   --color-tm-red: var(--tm-red);
 
-  /* Micro type scale for HUD labels (replaces text-[8px]/[9px]/[10px]) */
-  --text-micro: 0.5rem;
-  --text-tiny: 0.5625rem;
-  --text-caption: 0.625rem;
+  /* Small type scale for HUD labels: 10 / 11 / 12px, the floor for legible uppercase labels on phones */
+  --text-micro: 0.625rem;
+  --text-tiny: 0.6875rem;
+  --text-caption: 0.75rem;
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-space-grotesk);
 }
 
 body {

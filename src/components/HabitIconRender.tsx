@@ -1,7 +1,7 @@
-import { Sparkles, Brain, Music, Code, Gamepad2, Book, Dumbbell, HeartPulse, Laptop, Target, Zap, Coffee, Mic, Phone, Mail, MessageSquare, GraduationCap, Terminal } from "lucide-react";
+import { Sparkles, Brain, Music, Code, Gamepad2, Book, Dumbbell, HeartPulse, Laptop, Target, Zap, Coffee, Mic, Phone, Mail, MessageSquare, GraduationCap, Terminal, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const LUCIDE_ICONS: Record<string, any> = {
+export const LUCIDE_ICONS: Record<string, LucideIcon> = {
   Brain, Music, Code, Gamepad2, Book, Dumbbell, HeartPulse, Laptop, Target, Zap, Coffee, Sparkles, Mic, Phone, Mail, MessageSquare, GraduationCap, Terminal
 };
 

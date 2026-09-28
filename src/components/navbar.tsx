@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
@@ -91,7 +92,7 @@ export default function Navbar() {
               />
             </svg>
             <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 shadow-[0_0_10px_rgba(242,79,19,0.3)]">
-              <img src="/logo.png" alt="TaskMaster Logo" className="w-full h-full object-cover dark:invert-0 dark:hue-rotate-0 invert hue-rotate-180 transition-all" />
+              <Image src="/logo.png" alt="TaskMaster Logo" width={32} height={32} priority className="w-full h-full object-cover dark:invert-0 dark:hue-rotate-0 invert hue-rotate-180 transition-all" />
             </div>
           </div>
           <div className="flex flex-col">
@@ -99,9 +100,9 @@ export default function Navbar() {
               TaskMaster
             </span>
             <div className="hidden md:flex items-center gap-1.5 leading-none mt-1">
-              <span className="text-tm-orange-dark text-caption font-black uppercase tracking-widest">[{rank}]</span>
+              <span className="text-tm-orange-dark text-caption font-mono font-semibold uppercase tracking-[0.12em]">[{rank}]</span>
               <EraBadge className="text-caption" />
-              <span className="text-tiny text-tm-blue-gray font-bold uppercase tracking-tighter border-l border-white/10 pl-1.5 ml-0.5">
+              <span className="text-tiny text-tm-blue-gray font-mono font-semibold uppercase tracking-[0.12em] border-l border-white/10 pl-1.5 ml-0.5">
                 {daysLeft === 1 ? "1 DAY LEFT" : `${daysLeft} DAYS LEFT`}
               </span>
             </div>
@@ -178,7 +179,7 @@ export default function Navbar() {
               animate={pulseControls}
             >
               <div className="flex flex-col items-end">
-                <span className="text-caption font-black uppercase text-tm-yellow leading-none tracking-widest">Level {profile.level}</span>
+                <span className="text-caption font-mono font-semibold uppercase text-tm-yellow leading-none tracking-[0.12em]">Level {profile.level}</span>
                 <span className="text-tiny font-bold text-tm-blue-gray mt-0.5"><AnimatedNumber value={profile.xp} /> XP Total</span>
               </div>
               <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden relative">
@@ -237,14 +238,14 @@ export default function Navbar() {
                 className="mb-2 w-[min(88vw,300px)] p-4 rounded-3xl bg-white/95 dark:bg-tm-purple-dark/95 backdrop-blur-xl border border-tm-blue-gray/10 dark:border-white/10 shadow-2xl origin-bottom space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-caption font-black uppercase tracking-widest text-tm-blue-gray">Season ends</span>
-                  <span className="text-sm font-black text-foreground">{daysLeft === 1 ? "in 1 day" : `in ${daysLeft} days`}</span>
+                  <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">Season ends</span>
+                  <span className="text-sm font-semibold text-foreground">{daysLeft === 1 ? "in 1 day" : `in ${daysLeft} days`}</span>
                 </div>
                 {profile && (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-caption font-black uppercase tracking-widest text-tm-blue-gray">Next level</span>
-                      <span className="text-sm font-black text-foreground">{profile.nextLevelXP - profile.levelProgress} XP to go</span>
+                      <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">Next level</span>
+                      <span className="text-sm font-semibold text-foreground">{profile.nextLevelXP - profile.levelProgress} XP to go</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-tm-blue-gray/15 overflow-hidden">
                       <div className="tm-xp-fill h-full bg-tm-yellow rounded-full" style={{ width: `${progress}%` }} />
@@ -256,8 +257,8 @@ export default function Navbar() {
                   className="w-full flex items-center justify-between pt-3 border-t border-tm-blue-gray/10"
                   aria-pressed={muted}
                 >
-                  <span className="text-caption font-black uppercase tracking-widest text-tm-blue-gray">Sound</span>
-                  <span className="flex items-center gap-1.5 text-sm font-black text-foreground">
+                  <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">Sound</span>
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
                     {muted ? <VolumeX size={16} /> : <Volume2 size={16} />} {muted ? "Off" : "On"}
                   </span>
                 </button>
@@ -271,29 +272,25 @@ export default function Navbar() {
           onClick={() => setRibbonOpen(o => !o)}
           aria-expanded={ribbonOpen}
           aria-controls="season-panel"
-          className="relative px-5 py-2.5 bg-white/90 dark:bg-tm-purple-dark/90 backdrop-blur-xl border border-tm-blue-gray/10 dark:border-white/10 rounded-full shadow-2xl flex items-center gap-2.5 overflow-hidden whitespace-nowrap"
+          className="px-5 py-2.5 bg-white/90 dark:bg-tm-purple-dark/90 backdrop-blur-xl border border-tm-blue-gray/10 dark:border-white/10 rounded-full shadow-2xl flex items-center gap-2.5 overflow-hidden whitespace-nowrap"
         >
-          <span className="text-tm-orange-dark dark:text-tm-yellow text-caption font-black uppercase tracking-widest">{rank}</span>
+          <span className="text-tm-orange-dark dark:text-tm-yellow text-caption font-mono font-semibold uppercase tracking-[0.12em]">{rank}</span>
           <EraBadge className="text-caption" />
           {profile && (
             <>
               <span className="w-1 h-1 rounded-full bg-tm-blue-gray/40" aria-hidden />
-              <span data-xp-target className="text-caption font-black uppercase text-tm-blue-gray dark:text-white/70 tracking-widest">Lvl {profile.level}</span>
+              <span data-xp-target className="text-caption font-mono font-semibold uppercase text-tm-blue-gray dark:text-white/70 tracking-[0.12em]">Lvl {profile.level}</span>
             </>
           )}
-          {/* Level progress along the ribbon's bottom edge */}
-          {profile && (
-            <motion.span
-              className="tm-xp-fill absolute bottom-0 left-0 h-[2px] bg-tm-yellow"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={SPRING.soft}
-            />
-          )}
+          <span className="w-1 h-1 rounded-full bg-tm-blue-gray/40" aria-hidden />
+          <span className="text-caption font-black text-tm-blue-gray dark:text-white/70 tracking-widest" aria-label={`${daysLeft} days left in the season`}>
+            {daysLeft}d
+          </span>
         </motion.button>
       </div>
 
-      <div className="relative h-px w-full overflow-visible">
+      {/* Half height on phones so the gas doesn't cover content while scrolling */}
+      <div className="relative h-px w-full overflow-visible origin-top scale-y-50 opacity-80 lg:scale-y-100 lg:opacity-100">
         <GaseousDivider
           hoveredSide={null}
           variant="artpaint"

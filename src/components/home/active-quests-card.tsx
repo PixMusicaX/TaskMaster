@@ -4,11 +4,12 @@ import CompletionCheck from "@/components/ui/completion-check";
 import StrikeText from "@/components/ui/strike-text";
 import { format, isSameDay } from "date-fns";
 import { XP_VALUES } from "@/lib/constants";
+import type { EventRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import WidgetCard from "./widget-card";
 import { TaskIcon } from "./icons";
 
-function questXP(task: any) {
+function questXP(task: EventRow) {
   if (task.type === "task") return XP_VALUES.TASK;
   if (task.tier === "epic") return XP_VALUES.QUEST_EPIC;
   if (task.tier === "main") return XP_VALUES.QUEST_MAIN;
@@ -16,7 +17,7 @@ function questXP(task: any) {
 }
 
 interface ActiveQuestsCardProps {
-  tasks: any[];
+  tasks: EventRow[];
   loading: boolean;
   today: Date;
   updating: Set<string>;
@@ -71,7 +72,7 @@ export default function ActiveQuestsCard({ tasks, loading, today, updating, onTo
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
                   <p className={cn(
-                    "text-tiny font-black uppercase tracking-widest",
+                    "text-tiny font-mono font-semibold uppercase tracking-[0.12em]",
                     task.type === "task" ? "text-tm-blue-gray" :
                       task.tier === "epic" ? "text-tm-orange-dark" :
                         task.tier === "main" ? "text-tm-orange-light" :
@@ -79,10 +80,10 @@ export default function ActiveQuestsCard({ tasks, loading, today, updating, onTo
                   )}>
                     {task.type === "event" ? `${task.tier} Quest` : "Objective"}
                   </p>
-                  <span className="text-tiny font-black text-tm-orange-light bg-tm-orange-light/10 px-1.5 py-0.5 rounded border border-tm-orange-light/20">+{questXP(task)} XP</span>
+                  <span className="text-tiny font-mono font-semibold text-tm-orange-light bg-tm-orange-light/10 px-1.5 py-0.5 rounded border border-tm-orange-light/20">+{questXP(task)} XP</span>
                 </div>
-                <h4 className="text-sm font-black text-foreground/90 truncate"><StrikeText className="truncate align-bottom" done={task.completed && !isEvent}>{task.title}</StrikeText></h4>
-                <div className="flex items-center gap-2 mt-1 text-tiny font-bold text-tm-blue-gray uppercase tracking-tighter">
+                <h4 className="text-sm font-semibold text-foreground/90 truncate"><StrikeText className="truncate align-bottom" done={task.completed && !isEvent}>{task.title}</StrikeText></h4>
+                <div className="flex items-center gap-2 mt-1 text-tiny font-mono font-semibold text-tm-blue-gray uppercase tracking-[0.12em]">
                   {task.startTime && (
                     <>
                       <ClockIcon size={10} />

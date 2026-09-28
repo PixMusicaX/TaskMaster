@@ -1,11 +1,11 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Trophy, TrendingUp, TrendingDown, Swords, Brain, Coins, HeartPulse, Users } from "lucide-react";
+import { X, Trophy, TrendingUp, Swords, Brain, Coins, HeartPulse, Users, type LucideIcon } from "lucide-react";
 import GlassCard from "./glass-card";
-import { useEffect, useState } from "react";
+import type { Season } from "@/lib/types";
 
-const statIcons: Record<string, any> = {
+const statIcons: Record<string, LucideIcon> = {
   strength: Swords,
   intelligence: Brain,
   wealth: Coins,
@@ -13,16 +13,8 @@ const statIcons: Record<string, any> = {
   charisma: Users,
 };
 
-const statColors: Record<string, string> = {
-  strength: "var(--tm-orange-dark)",
-  intelligence: "var(--tm-yellow)",
-  wealth: "var(--tm-orange-light)",
-  vitality: "var(--tm-red)",
-  charisma: "var(--tm-blue-gray)",
-};
-
 interface RecapModalProps {
-  stats: any;
+  stats: Season | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -66,11 +58,11 @@ export default function RecapModal({ stats, isOpen, onClose }: RecapModalProps) 
                   transition={{ delay: 0.2 }}
                 >
                   <Trophy className="mx-auto text-tm-yellow mb-2" size={48} />
-                  <h2 className="text-3xl font-black text-tm-yellow tracking-tighter uppercase italic">
+                  <h2 className="text-3xl font-display font-bold text-tm-yellow tracking-tight uppercase">
                     {stats.monthName} Season Recap
                   </h2>
                 </motion.div>
-                <p className="text-tm-blue-gray font-bold uppercase tracking-[0.2em] text-xs">
+                <p className="text-tm-blue-gray font-mono font-semibold uppercase tracking-[0.12em] text-xs">
                   Season Accomplishments
                 </p>
               </div>
@@ -88,8 +80,8 @@ export default function RecapModal({ stats, isOpen, onClose }: RecapModalProps) 
                       <Trophy className="text-tm-yellow" size={24} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-tm-blue-gray uppercase tracking-widest">Final XP</p>
-                      <p className="text-2xl font-black text-white">{stats.xp} XP</p>
+                      <p className="text-caption font-mono font-semibold text-tm-blue-gray uppercase tracking-[0.12em]">Final XP</p>
+                      <p className="text-2xl font-display font-bold text-white">{stats.xp} XP</p>
                     </div>
                   </div>
 
@@ -98,8 +90,8 @@ export default function RecapModal({ stats, isOpen, onClose }: RecapModalProps) 
                       <TrendingUp className="text-tm-orange-dark" size={24} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-tm-blue-gray uppercase tracking-widest">Highest Level</p>
-                      <p className="text-2xl font-black text-white">Level {stats.level}</p>
+                      <p className="text-caption font-mono font-semibold text-tm-blue-gray uppercase tracking-[0.12em]">Highest Level</p>
+                      <p className="text-2xl font-display font-bold text-white">Level {stats.level}</p>
                     </div>
                   </div>
                 </motion.div>
@@ -114,7 +106,7 @@ export default function RecapModal({ stats, isOpen, onClose }: RecapModalProps) 
                   <div className="p-6 rounded-3xl bg-tm-yellow/5 border border-tm-yellow/10">
                     <div className="flex items-center gap-3 mb-2">
                       <TopIcon className="text-tm-yellow" size={20} />
-                      <span className="text-xs font-black uppercase text-tm-yellow tracking-widest">Dominant Stat</span>
+                      <span className="text-xs font-mono font-semibold uppercase text-tm-yellow tracking-[0.12em]">Dominant Stat</span>
                     </div>
                     <p className="text-sm text-white/80 leading-relaxed italic">
                       You dominated <span className="text-tm-yellow font-bold uppercase">{stats.topStat}</span> this month. Your dedication to your craft is showing.
@@ -124,7 +116,7 @@ export default function RecapModal({ stats, isOpen, onClose }: RecapModalProps) 
                   <div className="p-6 rounded-3xl bg-tm-red/5 border border-tm-red/10">
                     <div className="flex items-center gap-3 mb-2">
                       <WeakIcon className="text-tm-red" size={20} />
-                      <span className="text-xs font-black uppercase text-tm-red tracking-widest">Neglected Area</span>
+                      <span className="text-xs font-mono font-semibold uppercase text-tm-red tracking-[0.12em]">Neglected Area</span>
                     </div>
                     <p className="text-sm text-white/80 leading-relaxed italic">
                       <span className="text-tm-red font-bold uppercase">{stats.weakStat}</span> was neglected. Balance is key to becoming a true Master.

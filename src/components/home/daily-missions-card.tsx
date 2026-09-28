@@ -5,9 +5,10 @@ import StrikeText from "@/components/ui/strike-text";
 import HabitIconRender from "@/components/HabitIconRender";
 import { XP_VALUES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import type { HabitWithLogs } from "@/lib/types";
 import WidgetCard from "./widget-card";
 
-function getFrequencyLabel(freq: number[]) {
+function getFrequencyLabel(freq: number[] | null) {
   if (!freq || freq.length === 0) return "Daily";
   if (freq.length === 7) return "Daily";
   if (freq.length === 6 && !freq.includes(0)) return "Weekdays + Sat";
@@ -18,7 +19,7 @@ function getFrequencyLabel(freq: number[]) {
 }
 
 interface DailyMissionsCardProps {
-  habits: any[];
+  habits: HabitWithLogs[];
   loading: boolean;
   todayStr: string;
   weekday: number;
@@ -40,7 +41,7 @@ export default function DailyMissionsCard({ habits, loading, todayStr, weekday, 
       delay={0.2}
     >
       {habits.filter(h => !h.frequency || h.frequency.includes(weekday)).map(habit => {
-        const isDone = habit.logs.some((l: any) => l.date === todayStr && l.completed);
+        const isDone = habit.logs.some((l) => l.date === todayStr && l.completed);
         return (
           <motion.button
             key={habit.id}
@@ -66,12 +67,12 @@ export default function DailyMissionsCard({ habits, loading, todayStr, weekday, 
             />
             <div className="flex-1">
               <div className="flex items-center justify-between mb-0.5">
-                <p className={cn("font-black text-sm", isDone ? "text-tm-yellow" : "text-foreground/90")}>
+                <p className={cn("font-semibold text-sm", isDone ? "text-tm-yellow" : "text-foreground/90")}>
                   <StrikeText done={isDone}>{habit.name}</StrikeText>
                 </p>
-                <span className="text-tiny font-black text-tm-yellow bg-tm-yellow/10 px-1.5 py-0.5 rounded border border-tm-yellow/20">+{XP_VALUES.HABIT_CHECK} XP</span>
+                <span className="text-tiny font-mono font-semibold text-tm-yellow bg-tm-yellow/10 px-1.5 py-0.5 rounded border border-tm-yellow/20">+{XP_VALUES.HABIT_CHECK} XP</span>
               </div>
-              <p className="text-caption font-black text-tm-blue-gray/60 uppercase tracking-widest mt-0.5">{getFrequencyLabel(habit.frequency)}</p>
+              <p className="text-caption font-mono font-semibold text-tm-blue-gray/60 uppercase tracking-[0.12em] mt-0.5">{getFrequencyLabel(habit.frequency)}</p>
             </div>
           </motion.button>
         );

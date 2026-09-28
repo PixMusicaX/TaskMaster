@@ -10,7 +10,8 @@ import { getProfile } from "@/app/actions/gamification";
 import { cn } from "@/lib/utils";
 import { PageSkeleton } from "@/components/loader";
 import { SPRING } from "@/lib/motion";
-import TabularViewModal, { Column } from "@/components/TabularViewModal";
+import TabularViewModal from "@/components/TabularViewModal";
+import { parseNoteLines, type NoteRow, type Profile } from "@/lib/types";
 
 // The exiting label reads the latest direction via AnimatePresence's custom prop
 const DATE_SLIDE = {
@@ -25,20 +26,28 @@ export type NoteLine = {
   text: string;
 };
 
+// One-line preview of a note: bullet texts joined, or legacy plain text with line breaks flattened
+function noteSummary(content: string, empty: string) {
+  const lines = parseNoteLines(content);
+  const joined = lines
+    ? lines.map(l => l.text).filter(Boolean).join(" • ")
+    : content.replace(/\n/g, " • ").trim();
+  return joined || empty;
+}
+
 export default function NotesPage() {
   const [lines, setLines] = useState<NoteLine[]>([]);
   const [activeBulletPicker, setActiveBulletPicker] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [recentNotes, setRecentNotes] = useState<any[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
+  const [recentNotes, setRecentNotes] = useState<NoteRow[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isNoteLoading, setIsNoteLoading] = useState(false);
   const [mood, setMood] = useState("neutral");
   const [isTabularOpen, setIsTabularOpen] = useState(false);
-  const [allNotesForTable, setAllNotesForTable] = useState<any[]>([]);
+  const [allNotesForTable, setAllNotesForTable] = useState<NoteRow[]>([]);
   // Bumped when a note finishes loading, so the entry swaps in as one unit
   const [noteVersion, setNoteVersion] = useState(0);
 
@@ -62,7 +71,6 @@ export default function NotesPage() {
   useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
 
   const fetchNote = useCallback(async (date: Date) => {
-    setIsNoteLoading(true);
     const dateStr = format(date, "yyyy-MM-dd");
     try {
       const [data, profileData] = await Promise.all([
@@ -79,7 +87,7 @@ export default function NotesPage() {
           } else {
             throw new Error("Not an array");
           }
-        } catch (e) {
+        } catch {
           setLines(data.content.split("\n").map((text: string) => ({
             id: Math.random().toString(36).substring(2, 11),
             bullet: "○",
@@ -112,17 +120,12 @@ export default function NotesPage() {
   }, []);
 
   const autoSave = useCallback(async (date: Date, currentLines: NoteLine[], currentMood: string) => {
-    setIsSaving(true);
     const dateStr = format(date, "yyyy-MM-dd");
-    try {
-      const saved = await saveNote(dateStr, JSON.stringify(currentLines), currentMood);
-      setLastSaved(new Date());
-      setIsDirty(false);
-      mergeSavedNote(saved);
-      fetchProfile(); // Update intelligence stat
-    } finally {
-      setIsSaving(false);
-    }
+    const saved = await saveNote(dateStr, JSON.stringify(currentLines), currentMood);
+    setLastSaved(new Date());
+    setIsDirty(false);
+    mergeSavedNote(saved);
+    fetchProfile(); // Update intelligence stat
   }, [mergeSavedNote, fetchProfile]);
 
   useEffect(() => {
@@ -201,6 +204,7 @@ export default function NotesPage() {
     if (isDirtyRef.current) {
       await autoSave(selectedDateRef.current, linesRef.current, moodRef.current);
     }
+    setIsNoteLoading(true);
     setSelectedDate(newDate);
   }
 
@@ -246,14 +250,14 @@ export default function NotesPage() {
         <>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <h1 className="text-4xl font-black text-tm-purple-dark dark:text-tm-yellow">Daily Notes</h1>
+              <h1 className="text-4xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow">Daily Notes</h1>
               <p className="text-tm-blue-gray font-medium">Capture your thoughts, plans, and reflections.</p>
 
               {profile && (
-                <div className="flex gap-4 mt-4">
+                <div className="flex flex-wrap gap-2 mt-4">
                   <div className="flex items-center gap-2 bg-tm-yellow/10 px-3 py-1.5 rounded-xl border border-tm-yellow/20">
                     <Brain size={14} className="text-tm-yellow" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-tm-yellow">Intelligence: {profile.intelligence} XP</span>
+                    <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] whitespace-nowrap text-tm-yellow">Intelligence: {profile.intelligence} XP</span>
                   </div>
                 </div>
               )}
@@ -276,8 +280,8 @@ export default function NotesPage() {
                     exit="exit"
                     transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                   >
-                    <p className="text-caption font-black uppercase text-tm-blue-gray tracking-widest leading-none mb-1.5">{format(selectedDate, "EEEE")}</p>
-                    <p className="font-black text-lg sm:text-sm text-tm-purple-dark dark:text-tm-yellow tracking-tight leading-none">
+                    <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] leading-none mb-1.5">{format(selectedDate, "EEEE")}</p>
+                    <p className="font-bold text-lg sm:text-sm text-tm-purple-dark dark:text-tm-yellow tracking-tight leading-none">
                       {format(selectedDate, "MMMM d, yyyy")}
                     </p>
                   </motion.div>
@@ -304,7 +308,7 @@ export default function NotesPage() {
               <div className="border-b border-tm-blue-gray/10 p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-tm-blue-gray">
                   <CalendarIcon size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">{format(selectedDate, "MMMM d")} Entry</span>
+                  <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em]">{format(selectedDate, "MMMM d")} Entry</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex p-1 mr-2">
@@ -319,7 +323,7 @@ export default function NotesPage() {
                         whileTap={{ scale: 0.8 }}
                         className={cn(
                           "relative p-2 rounded-full transition-colors flex items-center justify-center w-9 h-9",
-                          mood === m.val ? m.color : "text-tm-blue-gray/40 hover:bg-white/5"
+                          mood === m.val ? m.color : "text-tm-blue-gray/70 hover:bg-white/5"
                         )}
                         title={m.val.toUpperCase()}
                         aria-pressed={mood === m.val}
@@ -343,15 +347,15 @@ export default function NotesPage() {
                   </div>
 
                   {isDirty ? (
-                    <span className="text-[10px] text-tm-blue-gray/60 font-bold italic flex items-center gap-1 animate-pulse">
+                    <span className="text-caption text-tm-blue-gray/60 font-bold italic flex items-center gap-1 animate-pulse">
                       Saving automatically...
                     </span>
                   ) : lastSaved ? (
-                    <span className="text-[10px] text-tm-blue-gray font-bold italic flex items-center gap-1">
+                    <span className="text-caption text-tm-blue-gray font-bold italic flex items-center gap-1">
                       <CheckCircle2 size={12} /> Saved {format(lastSaved, "HH:mm")}
                     </span>
                   ) : (
-                    <span className="text-[10px] text-tm-blue-gray/40 font-bold italic flex items-center gap-1">
+                    <span className="text-caption text-tm-blue-gray/70 font-bold italic flex items-center gap-1">
                       Auto-save on
                     </span>
                   )}
@@ -366,7 +370,7 @@ export default function NotesPage() {
                         <div className="tm-skeleton h-4" style={{ width: `${w}%` }} />
                       </div>
                     ))}
-                    <p className="text-caption font-black uppercase tracking-widest text-tm-blue-gray pt-2">Consulting the Archives...</p>
+                    <p className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray pt-2">Consulting the Archives...</p>
                   </div>
                 ) : null}
                 <motion.div
@@ -449,7 +453,7 @@ export default function NotesPage() {
                 {lines.length === 0 && (
                   <button
                     onClick={() => setLines([{ id: Math.random().toString(36).substr(2, 9), bullet: "○", text: "" }])}
-                    className="text-tm-blue-gray/40 italic hover:text-tm-yellow transition-colors"
+                    className="text-tm-blue-gray/70 italic hover:text-tm-yellow transition-colors"
                   >
                     + Add your first note...
                   </button>
@@ -468,17 +472,9 @@ export default function NotesPage() {
                   const existingNote = recentNotes.find(n => n.date === dateStr);
                   const isSelected = isSameDay(day, selectedDate);
                   const cardMood = existingNote?.mood || "neutral";
-                  const noteContent = (() => {
-                    if (!existingNote) return "...but nothing happened.";
-                    try {
-                      const parsed = JSON.parse(existingNote.content);
-                      const joined = parsed.map((l: any) => l.text).filter(Boolean).join(" • ");
-                      return joined || "...but nothing happened.";
-                    } catch (e) {
-                      const joined = existingNote.content.replace(/\n/g, " • ").trim();
-                      return joined || "...but nothing happened.";
-                    }
-                  })();
+                  const noteContent = existingNote
+                    ? noteSummary(existingNote.content, "...but nothing happened.")
+                    : "...but nothing happened.";
 
                   return (
                     <motion.button
@@ -493,7 +489,7 @@ export default function NotesPage() {
                       )}
                     >
                       <div className="flex justify-between items-start w-full">
-                        <p className="text-[10px] font-black text-tm-blue-gray uppercase tracking-widest">{format(day, "EEE, MMM d")}</p>
+                        <p className="text-caption font-mono font-semibold text-tm-blue-gray uppercase tracking-[0.12em]">{format(day, "EEE, MMM d")}</p>
                         {existingNote?.mood && (
                           <span className="text-sm opacity-80 group-hover:opacity-100 transition-all">
                             {existingNote.mood === "good" ? "😇" : existingNote.mood === "bad" ? "😢" : "😐"}
@@ -502,7 +498,7 @@ export default function NotesPage() {
                       </div>
                       <p className={cn(
                         "text-sm line-clamp-1 mt-1 font-medium h-5 w-full",
-                        existingNote ? "text-foreground" : "text-tm-blue-gray/40 italic"
+                        existingNote ? "text-foreground" : "text-tm-blue-gray/70 italic"
                       )}>
                         {noteContent}
                       </p>
@@ -524,7 +520,7 @@ export default function NotesPage() {
           <div className="flex justify-center pt-12">
             <button
               onClick={() => setIsTabularOpen(true)}
-              className="flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-tm-blue-gray hover:text-tm-yellow font-black uppercase tracking-widest text-xs transition-all group"
+              className="flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-tm-blue-gray hover:text-tm-yellow font-mono font-semibold uppercase tracking-[0.12em] text-xs transition-all group"
             >
               <Search size={16} className="group-hover:scale-110 transition-transform" />
               View All Notes in Tabular Format
@@ -535,20 +531,10 @@ export default function NotesPage() {
             title="Notes Archive"
             isOpen={isTabularOpen}
             onClose={() => setIsTabularOpen(false)}
-            data={allNotesForTable.map(n => {
-              let contentText = "";
-              try {
-                const parsed = JSON.parse(n.content);
-                contentText = parsed.map((l: any) => l.text).filter(Boolean).join(" • ");
-              } catch (e) {
-                contentText = n.content.replace(/\n/g, " • ").trim();
-              }
-              if (!contentText) contentText = "...but nothing happened";
-              return {
-                ...n,
-                contentText
-              };
-            })}
+            data={allNotesForTable.map(n => ({
+              ...n,
+              contentText: noteSummary(n.content, "...but nothing happened"),
+            }))}
             columns={[
               {
                 header: "Date", key: "date", render: (val) => {
@@ -565,7 +551,7 @@ export default function NotesPage() {
                   return (
                     <span className="font-mono text-tm-blue-gray whitespace-nowrap">
                       <span className="sm:hidden flex flex-col leading-tight">
-                        <span className="text-[10px] opacity-50">{year}</span>
+                        <span className="text-caption opacity-50">{year}</span>
                         <span>{shortDate}</span>
                       </span>
                       <span className="hidden sm:inline">{full}</span>

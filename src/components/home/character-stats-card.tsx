@@ -1,8 +1,9 @@
 import { Crown } from "lucide-react";
 import CharacterStatsRadar from "@/components/character-stats-radar";
+import type { Profile } from "@/lib/types";
 import InsightCard, { Pill } from "./insight-card";
 
-export default function CharacterStatsCard({ profile }: { profile: any }) {
+export default function CharacterStatsCard({ profile }: { profile: Profile | null }) {
   const stats = {
     strength: profile?.strength || 0,
     intelligence: profile?.intelligence || 0,

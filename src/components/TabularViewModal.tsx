@@ -1,32 +1,34 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Search, Filter } from "lucide-react";
-import GlassCard from "./glass-card";
+import { X, Search } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-export interface Column {
-  header: string;
-  key: string;
-  render?: (value: any, row: any) => React.ReactNode;
-  wrap?: boolean;
-  className?: string;
-}
+// One column per row field; `render` receives that field's value with its real type
+export type Column<T> = {
+  [K in keyof T & string]: {
+    header: string;
+    key: K;
+    render?: (value: T[K], row: T) => React.ReactNode;
+    wrap?: boolean;
+    className?: string;
+  }
+}[keyof T & string];
 
-interface TabularViewModalProps {
+interface TabularViewModalProps<T> {
   title: string;
   isOpen: boolean;
   onClose: () => void;
-  data: any[];
-  columns: Column[];
+  data: T[];
+  columns: Column<T>[];
 }
 
-export default function TabularViewModal({ title, isOpen, onClose, data, columns }: TabularViewModalProps) {
+export default function TabularViewModal<T extends object>({ title, isOpen, onClose, data, columns }: TabularViewModalProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredData = data.filter(row => {
-    const searchInAny = (val: any): boolean => {
+    const searchInAny = (val: unknown): boolean => {
       if (val === null || val === undefined) return false;
       if (typeof val === 'string' || typeof val === 'number') {
         return String(val).toLowerCase().includes(searchTerm.toLowerCase());
@@ -74,10 +76,10 @@ export default function TabularViewModal({ title, isOpen, onClose, data, columns
                     <X size={24} />
                   </button>
                   <div>
-                    <h2 className="text-3xl font-black text-tm-yellow tracking-tighter uppercase italic leading-none">
+                    <h2 className="text-3xl font-display font-bold text-tm-yellow tracking-tight uppercase leading-none">
                       {title}
                     </h2>
-                    <p className="text-[10px] font-black text-tm-blue-gray uppercase tracking-widest mt-2">Comprehensive Data Archive</p>
+                    <p className="text-caption font-mono font-semibold text-tm-blue-gray uppercase tracking-[0.12em] mt-2">Comprehensive Data Archive</p>
                   </div>
                 </div>
 
@@ -104,7 +106,7 @@ export default function TabularViewModal({ title, isOpen, onClose, data, columns
                             <th
                               key={col.key}
                               className={cn(
-                                "px-3 md:px-6 py-4 md:py-5 text-left text-[10px] font-black text-tm-blue-gray uppercase tracking-widest border-b border-white/10",
+                                "px-3 md:px-6 py-4 md:py-5 text-left text-caption font-mono font-semibold text-tm-blue-gray uppercase tracking-[0.12em] border-b border-white/10",
                                 col.wrap ? "w-full" : "w-auto",
                                 col.className
                               )}
@@ -150,19 +152,19 @@ export default function TabularViewModal({ title, isOpen, onClose, data, columns
               <div className="p-6 bg-white/5 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 px-8">
                 <div className="flex gap-6">
                   <div className="flex flex-col">
-                    <span className="text-[8px] font-black text-tm-blue-gray uppercase tracking-widest">Entry Count</span>
-                    <span className="text-xl font-black text-white">{filteredData.length}</span>
+                    <span className="text-micro font-mono font-semibold text-tm-blue-gray uppercase tracking-[0.12em]">Entry Count</span>
+                    <span className="text-xl font-bold text-white">{filteredData.length}</span>
                   </div>
                   <div className="w-[1px] h-8 bg-white/10 self-center" />
                   <div className="flex flex-col">
-                    <span className="text-[8px] font-black text-tm-blue-gray uppercase tracking-widest">Archive Status</span>
-                    <span className="text-sm font-black text-tm-yellow uppercase tracking-tighter italic">Live Sync Active</span>
+                    <span className="text-micro font-mono font-semibold text-tm-blue-gray uppercase tracking-[0.12em]">Archive Status</span>
+                    <span className="text-sm font-semibold text-tm-yellow uppercase tracking-tighter italic">Live Sync Active</span>
                   </div>
                 </div>
                 
                 <button
                   onClick={onClose}
-                  className="w-full md:w-auto px-10 py-4 bg-tm-yellow text-tm-purple-dark font-black uppercase text-sm rounded-2xl shadow-xl shadow-tm-yellow/10 hover:scale-105 active:scale-95 transition-all"
+                  className="w-full md:w-auto px-10 py-4 bg-tm-yellow text-tm-purple-dark font-semibold uppercase text-sm rounded-2xl shadow-xl shadow-tm-yellow/10 hover:scale-105 active:scale-95 transition-all"
                 >
                   Return to Dashboard
                 </button>

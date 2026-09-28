@@ -40,7 +40,7 @@ export async function syncRecurringEvents() {
 
   // Build every target instance up front, then check existence with a single query
   const candidates = recurringEvents.flatMap((sourceEvent) => {
-    const [_, month, day] = sourceEvent.date.split("-");
+    const [, month, day] = sourceEvent.date.split("-");
     return years
       .map((year) => ({ sourceEvent, year, targetDate: `${year}-${month}-${day}` }))
       // Don't overwrite the source event itself if it's in this year
@@ -61,7 +61,8 @@ export async function syncRecurringEvents() {
     if (existingKeys.has(key) || seen.has(key)) return [];
     seen.add(key);
     // Create a copy for the future year
-    const { id, createdAt, ...eventData } = sourceEvent;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- drop DB-generated fields before re-inserting
+      const { id, createdAt, ...eventData } = sourceEvent;
     return [{
       ...eventData,
       date: targetDate,
@@ -100,7 +101,7 @@ export async function addEvent(data: {
   return newEvent;
 }
 
-export async function updateEvent(id: string, data: any) {
+export async function updateEvent(id: string, data: Partial<typeof event.$inferInsert>) {
   const [existing] = await db.select().from(event).where(eq(event.id, id));
   if (existing?.isApi) return;
   const [updatedEvent] = await db.update(event)
@@ -122,7 +123,7 @@ export async function toggleEventCompletion(id: string, completed: boolean) {
   const [existing] = await db.select().from(event).where(eq(event.id, id));
   if (!existing) return null;
 
-  const updateData: any = { completed };
+  const updateData: Partial<typeof event.$inferInsert> = { completed };
   
   // If a task is being marked complete, update its date to today
   // so it correctly shows up in the history for the day it was actually completed.
@@ -150,7 +151,7 @@ export async function deleteEvent(id: string) {
 
   if (existing.repeatsYearly) {
     // If it's a recurring event, delete all instances across years
-    const [_, month, day] = existing.date.split("-");
+    const [, month, day] = existing.date.split("-");
     const deleted = await db.delete(event).where(
       and(
         eq(event.title, existing.title),
@@ -180,7 +181,7 @@ export async function syncMonthlyHolidays(testDateStr?: string) {
     return { success: false, message: "No API key" };
   }
 
-  let runDate = testDateStr ? new Date(testDateStr) : new Date();
+  const runDate = testDateStr ? new Date(testDateStr) : new Date();
   
   // Only run if it's the first day of the month or we are testing a specific date
   const isFirstOfMonth = runDate.getDate() === 1;

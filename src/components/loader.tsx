@@ -14,7 +14,7 @@ export function SkeletonRows({ rows = 3, className, caption }: { rows?: number; 
         </div>
       ))}
       {caption && (
-        <p className="text-caption font-black uppercase text-tm-blue-gray tracking-[0.2em] text-center pt-1">{caption}</p>
+        <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] text-center pt-1">{caption}</p>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import CompletionCheck from "@/components/ui/completion-check";
 import StrikeText from "@/components/ui/strike-text";
 import { SkeletonRows } from "@/components/loader";
 import { cn } from "@/lib/utils";
+import type { PrepTipRow, Relief, SmartMissionRow } from "@/lib/types";
 import WidgetCard from "./widget-card";
 import { ReliefTypeIcon } from "./icons";
 
@@ -11,16 +12,16 @@ interface AttentionCardProps {
   charisma?: number;
   aiLoading: boolean;
   missingInfo: string[];
-  prepTip: any;
+  prepTip: PrepTipRow | null;
   prepLoading: boolean;
   updatingPrep: boolean;
   onPrepToggle: () => void;
   onRegeneratePrep: () => void;
-  smartMission: any;
+  smartMission: SmartMissionRow | null;
   updatingSmart: boolean;
   onSmartToggle: () => void;
   onRegenerateSmart: () => void;
-  relief: any;
+  relief: Relief | null;
   updatingRelief: Set<string>;
   onReliefToggle: (index: number) => void;
 }
@@ -35,13 +36,13 @@ export default function AttentionCard(props: AttentionCardProps) {
       subtitle={charisma !== undefined && (
         <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10 w-fit backdrop-blur-md">
           <Users size={12} className="text-tm-blue-gray" />
-          <span className="text-caption font-black uppercase tracking-[0.15em] text-tm-blue-gray">Charisma: <span className="text-tm-yellow">{charisma} XP</span></span>
+          <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">Charisma: <span className="text-tm-yellow">{charisma} XP</span></span>
         </div>
       )}
       aside={
         <div className="flex flex-col items-end">
           <TrendingUp className="text-tm-yellow opacity-50 mb-1" size={24} />
-          <span className="text-micro font-black text-tm-yellow/40 uppercase tracking-widest">Active Focus</span>
+          <span className="text-micro font-mono font-semibold text-tm-yellow/40 uppercase tracking-[0.12em]">Active Focus</span>
         </div>
       }
       loading={aiLoading}
@@ -61,14 +62,14 @@ export default function AttentionCard(props: AttentionCardProps) {
           <p className="text-xs text-tm-blue-gray leading-relaxed">You left some gaps in your journey <span className="text-tm-yellow">yesterday</span>. Mend them to restore flow:</p>
           <div className="flex flex-wrap gap-2">
             {missingInfo.map(item => (
-              <span key={item} className="px-3 py-1 bg-tm-orange-dark/80 text-white text-tiny font-black uppercase rounded-lg shadow-lg">
+              <span key={item} className="px-3 py-1 bg-tm-orange-dark/80 text-white text-tiny font-mono font-semibold uppercase rounded-lg shadow-lg tracking-[0.12em]">
                 {item}
               </span>
             ))}
           </div>
           <Link
             href={missingInfo[0] === "Note" ? "/notes" : "/habits"}
-            className="flex items-center justify-center gap-2 w-full py-3 bg-foreground/10 hover:bg-tm-yellow text-foreground hover:text-tm-purple-dark text-caption font-black uppercase rounded-xl transition-all border border-foreground/10"
+            className="flex items-center justify-center gap-2 w-full py-3 bg-foreground/10 hover:bg-tm-yellow text-foreground hover:text-tm-purple-dark text-caption font-mono font-semibold uppercase rounded-xl transition-all border border-foreground/10 tracking-[0.12em]"
           >
             Mend History <Plus size={14} />
           </Link>
@@ -87,7 +88,7 @@ export default function AttentionCard(props: AttentionCardProps) {
           </div>
           <button
             onClick={onRegeneratePrep}
-            className="px-6 py-2 bg-tm-orange-dark/20 hover:bg-tm-orange-dark/40 text-tm-orange-dark text-tiny font-black uppercase rounded-xl transition-all border border-tm-orange-dark/20 flex items-center gap-2"
+            className="px-6 py-2 bg-tm-orange-dark/20 hover:bg-tm-orange-dark/40 text-tm-orange-dark text-tiny font-mono font-semibold uppercase rounded-xl transition-all border border-tm-orange-dark/20 flex items-center gap-2 tracking-[0.12em]"
           >
             <RotateCw size={12} /> Try Again
           </button>
@@ -120,10 +121,10 @@ export default function AttentionCard(props: AttentionCardProps) {
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-micro font-black uppercase text-tm-purple-dark dark:text-tm-yellow tracking-[0.2em]">Preparation Tip</span>
-                <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-micro font-black text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">+{prepTip.xpReward} XP</span>
+                <span className="text-micro font-mono font-semibold uppercase text-tm-purple-dark dark:text-tm-yellow tracking-[0.12em]">Preparation Tip</span>
+                <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-micro font-mono font-semibold text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">+{prepTip.xpReward} XP</span>
               </div>
-              <h3 className="text-base font-black text-foreground/90 leading-tight">
+              <h3 className="text-base font-semibold text-foreground/90 leading-tight">
                 <StrikeText done={prepTip.completed}>{prepTip.title}</StrikeText>
               </h3>
               {!prepTip.completed && prepTip.description && (
@@ -166,23 +167,23 @@ export default function AttentionCard(props: AttentionCardProps) {
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-micro font-black uppercase text-tm-yellow tracking-[0.2em]">Smart Mission</span>
+                <span className="text-micro font-mono font-semibold uppercase text-tm-yellow tracking-[0.12em]">Smart Mission</span>
                 <div className="flex items-center gap-2">
                   {!smartMission.completed && (
                     <button
                       onClick={onRegenerateSmart}
-                      className="text-micro font-black text-tm-yellow/50 hover:text-tm-yellow uppercase tracking-widest flex items-center gap-1 transition-all"
+                      className="text-micro font-mono font-semibold text-tm-yellow/50 hover:text-tm-yellow uppercase tracking-[0.12em] flex items-center gap-1 transition-all"
                     >
                       <RotateCw size={8} className={cn(aiLoading && "animate-spin")} /> Reload
                     </button>
                   )}
-                  <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-micro font-black text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">
+                  <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-micro font-mono font-semibold text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">
                     +{smartMission.xpReward} XP
                   </span>
                 </div>
               </div>
 
-              <h3 className="text-base font-black text-foreground/90 leading-tight">
+              <h3 className="text-base font-semibold text-foreground/90 leading-tight">
                 <StrikeText done={smartMission.completed}>{smartMission.title}</StrikeText>
               </h3>
 
@@ -226,13 +227,13 @@ export default function AttentionCard(props: AttentionCardProps) {
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-micro font-black uppercase text-tm-blue-gray tracking-[0.2em]">Relief Recommendation</span>
-                <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-micro font-black text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">
+                <span className="text-micro font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">Relief Recommendation</span>
+                <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-micro font-mono font-semibold text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">
                   +{relief.xpReward} XP
                 </span>
               </div>
 
-              <h3 className="text-base font-black text-foreground/90 leading-tight">
+              <h3 className="text-base font-semibold text-foreground/90 leading-tight">
                 <StrikeText done={relief.completed}>{relief.title}</StrikeText>
               </h3>
 

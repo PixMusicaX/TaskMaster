@@ -10,7 +10,7 @@ export async function generatePruneArchive() {
   cutoffDate.setFullYear(cutoffDate.getFullYear() - 5);
   const cutoffStr = cutoffDate.toISOString().split("T")[0];
 
-  const archiveData: any[] = [];
+  const archiveData: Record<string, unknown>[] = [];
   
   const oldEvents = await db.select().from(event).where(lt(event.date, cutoffStr));
   oldEvents.forEach(e => archiveData.push({ table: 'event', ...e }));

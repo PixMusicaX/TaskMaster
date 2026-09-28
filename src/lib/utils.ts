@@ -10,7 +10,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function getSpecialDayColors(title: string = "") {
+// Every special day currently shares one colour set
+export function getSpecialDayColors() {
   return { 
     bg: "bg-tm-orange-dark", 
     text: "text-tm-orange-dark", 

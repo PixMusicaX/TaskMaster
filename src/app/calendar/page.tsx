@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import GlassCard from "@/components/glass-card";
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Brain, Coins, HeartPulse, Users, Lock, RotateCw, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Coins, RotateCw, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent, getAllEvents } from "@/app/actions/events";
@@ -14,19 +14,20 @@ import { PageSkeleton } from "@/components/loader";
 import CompletionCheck from "@/components/ui/completion-check";
 import StrikeText from "@/components/ui/strike-text";
 import { SPRING } from "@/lib/motion";
-import TabularViewModal, { Column } from "@/components/TabularViewModal";
+import TabularViewModal from "@/components/TabularViewModal";
+import type { EventRow, MoodEntry, Profile, ReliefRow } from "@/lib/types";
 import { Search } from "lucide-react";
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [events, setEvents] = useState<any[]>([]);
-  const [reliefs, setReliefs] = useState<any[]>([]);
-  const [moods, setMoods] = useState<any[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [reliefs, setReliefs] = useState<ReliefRow[]>([]);
+  const [moods, setMoods] = useState<MoodEntry[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [editingEvent, setEditingEvent] = useState<EventRow | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newType, setNewType] = useState("task");
   const [newTier, setNewTier] = useState("main");
@@ -36,7 +37,7 @@ export default function CalendarPage() {
   const [newDateStr, setNewDateStr] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isTabularOpen, setIsTabularOpen] = useState(false);
   const [isPickingMonth, setIsPickingMonth] = useState(false);
-  const [allEventsForTable, setAllEventsForTable] = useState<any[]>([]);
+  const [allEventsForTable, setAllEventsForTable] = useState<EventRow[]>([]);
 
   const [updatingEvents, setUpdatingEvents] = useState<Set<string>>(new Set());
 
@@ -80,7 +81,7 @@ export default function CalendarPage() {
     } finally {
       if (showLoader) setIsLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, currentDate]);
 
   const initialLoad = useRef(true);
 
@@ -114,7 +115,7 @@ export default function CalendarPage() {
     return () => clearInterval(interval);
   }, [events]);
 
-  function openEdit(event: any) {
+  function openEdit(event: EventRow) {
     if (event.isApi) return;
     setEditingEvent(event);
     setNewTitle(event.title);
@@ -228,6 +229,8 @@ export default function CalendarPage() {
       return 0;
     });
 
+  const selectedLocation = reliefs.find(r => r.date === format(selectedDate, "yyyy-MM-dd"))?.location;
+
   return (
     <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-7xl mx-auto space-y-8">
       {isLoading ? (
@@ -236,18 +239,18 @@ export default function CalendarPage() {
         <>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <h1 className="text-4xl font-black text-tm-purple-dark dark:text-tm-yellow">Calendar</h1>
+              <h1 className="text-4xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow">Calendar</h1>
               <p className="text-tm-blue-gray font-medium">Plan your weeks and months ahead.</p>
 
               {profile && (
-                <div className="flex gap-4 mt-4">
+                <div className="flex flex-wrap gap-2 mt-4">
                   <div className="flex items-center gap-2 bg-tm-orange-dark/10 px-3 py-1.5 rounded-xl border border-tm-orange-dark/20">
                     <Swords size={14} className="text-tm-orange-dark" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-tm-orange-dark">Strength: {profile.strength} XP</span>
+                    <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] whitespace-nowrap text-tm-orange-dark">Strength: {profile.strength} XP</span>
                   </div>
                   <div className="flex items-center gap-2 bg-tm-orange-light/10 px-3 py-1.5 rounded-xl border border-tm-orange-light/20">
                     <Coins size={14} className="text-tm-orange-light" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-tm-orange-light">Wealth: {profile.wealth} XP</span>
+                    <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] whitespace-nowrap text-tm-orange-light">Wealth: {profile.wealth} XP</span>
                   </div>
                 </div>
               )}
@@ -313,7 +316,7 @@ export default function CalendarPage() {
 
                     {newType === "event" && (
                       <div className="flex flex-col gap-2">
-                        <p className="text-[10px] font-black uppercase text-tm-blue-gray tracking-widest px-1">Quest Tier</p>
+                        <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] px-1">Quest Tier</p>
                         <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
                           {[
                             { id: "side", label: "Side", color: "bg-tm-yellow", text: "text-tm-purple-dark" },
@@ -343,7 +346,7 @@ export default function CalendarPage() {
                     />
                     <div className={cn("grid gap-4", newType !== "special_day" ? "grid-cols-2" : "grid-cols-1")}>
                       <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
-                        <p className="text-[10px] font-black uppercase text-tm-blue-gray mb-1">Date</p>
+                        <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray mb-1 tracking-[0.12em]">Date</p>
                         <input
                           type="date"
                           value={newDateStr}
@@ -353,7 +356,7 @@ export default function CalendarPage() {
                       </div>
                       {newType !== "special_day" && (
                         <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
-                          <p className="text-[10px] font-black uppercase text-tm-blue-gray mb-1">Time</p>
+                          <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray mb-1 tracking-[0.12em]">Time</p>
                           <input
                             type="time"
                             value={newTime}
@@ -431,7 +434,7 @@ export default function CalendarPage() {
                             newDate.setMonth(parseInt(e.target.value) - 1);
                             setCurrentDate(newDate);
                           }}
-                          className="appearance-none bg-tm-yellow/10 border border-tm-yellow/30 rounded-xl px-4 py-2 text-sm font-black uppercase tracking-widest outline-none focus:border-tm-yellow transition-all cursor-pointer pr-10 text-tm-purple-dark dark:text-tm-yellow hover:bg-tm-yellow/20"
+                          className="appearance-none bg-tm-yellow/10 border border-tm-yellow/30 rounded-xl px-4 py-2 text-sm font-semibold uppercase tracking-widest outline-none focus:border-tm-yellow transition-all cursor-pointer pr-10 text-tm-purple-dark dark:text-tm-yellow hover:bg-tm-yellow/20"
                         >
                           {Array.from({ length: 12 }, (_, i) => (
                             <option key={i} value={(i + 1).toString().padStart(2, '0')} className="bg-tm-purple-dark text-white font-sans uppercase">
@@ -450,7 +453,7 @@ export default function CalendarPage() {
                             newDate.setFullYear(parseInt(e.target.value));
                             setCurrentDate(newDate);
                           }}
-                          className="appearance-none bg-tm-yellow/10 border border-tm-yellow/30 rounded-xl px-4 py-2 text-sm font-black uppercase tracking-widest outline-none focus:border-tm-yellow transition-all cursor-pointer pr-10 text-tm-purple-dark dark:text-tm-yellow hover:bg-tm-yellow/20"
+                          className="appearance-none bg-tm-yellow/10 border border-tm-yellow/30 rounded-xl px-4 py-2 text-sm font-semibold uppercase tracking-widest outline-none focus:border-tm-yellow transition-all cursor-pointer pr-10 text-tm-purple-dark dark:text-tm-yellow hover:bg-tm-yellow/20"
                         >
                           {Array.from({ length: 101 }, (_, i) => {
                             const year = new Date().getFullYear() - 50 + i;
@@ -470,7 +473,7 @@ export default function CalendarPage() {
                   ) : (
                     <h2 
                       onClick={() => setIsPickingMonth(true)}
-                      className="text-2xl font-black text-tm-purple-dark dark:text-tm-yellow cursor-pointer hover:opacity-70 transition-opacity flex items-center gap-2 group"
+                      className="text-2xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow cursor-pointer hover:opacity-70 transition-opacity flex items-center gap-2 group"
                     >
                       {format(currentDate, "MMMM yyyy")}
                       <ChevronDown size={18} className="opacity-0 group-hover:opacity-100 transition-all" />
@@ -503,7 +506,7 @@ export default function CalendarPage() {
 
                 <div className="grid grid-cols-7 border-b border-tm-blue-gray/10 bg-tm-blue-gray/5">
                   {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                    <div key={day} className="py-3 text-center text-[10px] font-black uppercase tracking-widest text-tm-blue-gray/60">
+                    <div key={day} className="py-3 text-center text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray/60">
                       {day}
                     </div>
                   ))}
@@ -564,12 +567,12 @@ export default function CalendarPage() {
 
                         <div className="flex flex-col gap-1 mt-1 overflow-hidden">
                           {dayEvents.slice(0, 3).map((event) => {
-                            const sdColors = event.type === "special_day" ? getSpecialDayColors(event.title) : null;
+                            const sdColors = event.type === "special_day" ? getSpecialDayColors() : null;
                             return (
                               <div
                                 key={event.id}
                                 className={cn(
-                                  "px-1.5 py-0.5 rounded text-[8px] font-bold truncate border-l-2",
+                                  "px-1.5 py-0.5 rounded text-micro font-bold truncate border-l-2",
                                   event.type === "special_day"
                                     ? `${sdColors?.bg}/20 ${sdColors?.text} ${sdColors?.border}`
                                     : event.type === "task"
@@ -582,7 +585,7 @@ export default function CalendarPage() {
                             )
                           })}
                           {dayEvents.length > 3 && (
-                            <div className="text-[8px] font-black text-tm-blue-gray text-center">+{dayEvents.length - 3} more</div>
+                            <div className="text-micro font-mono font-semibold text-tm-blue-gray text-center">+{dayEvents.length - 3} more</div>
                           )}
                         </div>
                       </button>
@@ -605,7 +608,7 @@ export default function CalendarPage() {
                           newDate.setMonth(parseInt(e.target.value) - 1);
                           setCurrentDate(newDate);
                         }}
-                        className="appearance-none bg-tm-yellow/10 border border-tm-yellow/20 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none focus:border-tm-yellow text-tm-purple-dark dark:text-tm-yellow pr-8"
+                        className="appearance-none bg-tm-yellow/10 border border-tm-yellow/20 rounded-lg px-3 py-2 text-caption font-mono font-semibold uppercase tracking-[0.12em] outline-none focus:border-tm-yellow text-tm-purple-dark dark:text-tm-yellow pr-8"
                       >
                         {Array.from({ length: 12 }, (_, i) => (
                           <option key={i} value={(i + 1).toString().padStart(2, '0')} className="bg-tm-purple-dark text-white">
@@ -624,7 +627,7 @@ export default function CalendarPage() {
                           newDate.setFullYear(parseInt(e.target.value));
                           setCurrentDate(newDate);
                         }}
-                        className="appearance-none bg-tm-yellow/10 border border-tm-yellow/20 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest outline-none focus:border-tm-yellow text-tm-purple-dark dark:text-tm-yellow pr-8"
+                        className="appearance-none bg-tm-yellow/10 border border-tm-yellow/20 rounded-lg px-3 py-2 text-caption font-mono font-semibold uppercase tracking-[0.12em] outline-none focus:border-tm-yellow text-tm-purple-dark dark:text-tm-yellow pr-8"
                       >
                         {Array.from({ length: 101 }, (_, i) => {
                           const year = new Date().getFullYear() - 50 + i;
@@ -644,7 +647,7 @@ export default function CalendarPage() {
                 ) : (
                   <h2 
                     onClick={() => setIsPickingMonth(true)}
-                    className="text-xl font-black text-tm-purple-dark dark:text-tm-yellow flex items-center gap-1.5 cursor-pointer"
+                    className="text-xl font-bold text-tm-purple-dark dark:text-tm-yellow flex items-center gap-1.5 cursor-pointer"
                   >
                     {format(currentDate, "MMMM yyyy")}
                     <ChevronDown size={16} className="text-tm-blue-gray/50" />
@@ -658,7 +661,7 @@ export default function CalendarPage() {
 
               <div className="grid grid-cols-7 gap-1">
                 {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-                  <div key={i} className="text-center text-caption font-black text-tm-blue-gray/40 pb-2">{d}</div>
+                  <div key={i} className="text-center text-caption font-black text-tm-blue-gray/70 pb-2">{d}</div>
                 ))}
               </div>
               <motion.div
@@ -677,7 +680,7 @@ export default function CalendarPage() {
                   const hasEvent = dayEvents.some(e => e.type === "event");
                   const specialDays = dayEvents.filter(e => e.type === "special_day");
                   const hasSpecialDay = specialDays.length > 0;
-                  const sdColor = hasSpecialDay ? getSpecialDayColors(specialDays[0].title) : null;
+                  const sdColor = hasSpecialDay ? getSpecialDayColors() : null;
 
                   return (
                     <button
@@ -713,18 +716,18 @@ export default function CalendarPage() {
               <div className="flex items-center justify-between pl-2">
                 <div>
                   <h3 className="text-xl font-bold tracking-tight">{format(selectedDate, "MMMM d")}</h3>
-                  <p className="text-xs font-black uppercase text-tm-blue-gray tracking-widest">{format(selectedDate, "EEEE")}</p>
-                  {reliefs.find(r => r.date === format(selectedDate, "yyyy-MM-dd"))?.location && (
+                  <p className="text-xs font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">{format(selectedDate, "EEEE")}</p>
+                  {selectedLocation && (
                     <div className="flex items-center gap-1.5 mt-1 text-tm-blue-gray/60">
                       <MapPin size={10} className="text-tm-orange-light" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">
-                        {reliefs.find(r => r.date === format(selectedDate, "yyyy-MM-dd")).location}
+                      <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em]">
+                        {selectedLocation}
                       </span>
                     </div>
                   )}
                 </div>
                 {selectedEvents.length > 0 && (
-                  <span className="bg-tm-yellow/20 text-tm-yellow px-3 py-1 rounded-full text-[10px] font-black uppercase">
+                  <span className="whitespace-nowrap bg-tm-yellow/20 text-tm-yellow px-3 py-1 rounded-full text-caption font-mono font-semibold uppercase tracking-[0.12em]">
                     {selectedEvents.length} items
                   </span>
                 )}
@@ -746,7 +749,7 @@ export default function CalendarPage() {
                   </motion.div>
                 ) :
                   selectedEvents.map((event) => {
-                    const sdColors = event.type === "special_day" ? getSpecialDayColors(event.title) : null;
+                    const sdColors = event.type === "special_day" ? getSpecialDayColors() : null;
                     return (
                       <motion.div
                         layout
@@ -810,7 +813,7 @@ export default function CalendarPage() {
                           {event.description && (
                             <p className="text-xs text-tm-blue-gray line-clamp-2">{event.description}</p>
                           )}
-                          <div className="flex items-center justify-between gap-4 text-[10px] font-black uppercase text-tm-blue-gray">
+                          <div className="flex items-center justify-between gap-4 text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">
                             <div className="flex items-center gap-4">
                               <div className="flex items-center gap-1.5">
                                 <Clock size={12} /> <span>{event.startTime ? format(new Date(event.startTime), "HH:mm") : "All Day"}</span>
@@ -831,7 +834,7 @@ export default function CalendarPage() {
                               </span>
                             </div>
                             {event.notification && (
-                              <div className="flex items-center gap-1 text-tm-orange-dark">
+                              <div className="flex items-center gap-1 text-tm-orange-light">
                                 <Bell size={12} fill="currentColor" className="opacity-50" />
                                 <span>Alert On</span>
                               </div>
@@ -849,7 +852,7 @@ export default function CalendarPage() {
           <div className="flex justify-center pt-8">
             <button
               onClick={() => setIsTabularOpen(true)}
-              className="flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-tm-blue-gray hover:text-tm-yellow font-black uppercase tracking-widest text-xs transition-all group"
+              className="flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-tm-blue-gray hover:text-tm-yellow font-mono font-semibold uppercase tracking-[0.12em] text-xs transition-all group"
             >
               <Search size={16} className="group-hover:scale-110 transition-transform" />
               View All Items in Tabular Format
@@ -871,7 +874,7 @@ export default function CalendarPage() {
                   return (
                     <span className="font-mono text-tm-blue-gray whitespace-nowrap">
                       <span className="sm:hidden flex flex-col leading-tight">
-                        <span className="text-[10px] opacity-50">{year}</span>
+                        <span className="text-caption opacity-50">{year}</span>
                         <span>{shortDate}</span>
                       </span>
                       <span className="hidden sm:inline">{base}</span>
@@ -895,7 +898,7 @@ export default function CalendarPage() {
                 header: "Type", key: "type", render: (val, row) => (
                   <div className="flex items-center justify-center">
                     <span className={cn(
-                      "px-2 py-0.5 rounded text-[10px] font-black uppercase whitespace-nowrap",
+                      "px-2 py-0.5 rounded text-caption font-mono font-semibold uppercase whitespace-nowrap tracking-[0.12em]",
                       val === "task" ? "bg-tm-yellow/10 text-tm-yellow" : "bg-tm-orange-light/10 text-tm-orange-light"
                     )}>
                       <span className="sm:inline hidden">{val?.replace("_", " ")}</span>
@@ -910,7 +913,7 @@ export default function CalendarPage() {
                     return (
                       <div className="flex items-center justify-center">
                         <span className={cn(
-                          "px-2 py-0.5 rounded text-[10px] font-black uppercase whitespace-nowrap",
+                          "px-2 py-0.5 rounded text-caption font-mono font-semibold uppercase whitespace-nowrap tracking-[0.12em]",
                           val ? "bg-green-500/20 text-green-500" : "bg-tm-blue-gray/20 text-tm-blue-gray"
                         )}>
                           <span className="sm:inline hidden">{val ? "Completed" : "Pending"}</span>
@@ -924,7 +927,7 @@ export default function CalendarPage() {
                   return (
                     <div className="flex items-center justify-center">
                       <span className={cn(
-                        "px-2 py-0.5 rounded text-[10px] font-black uppercase whitespace-nowrap",
+                        "px-2 py-0.5 rounded text-caption font-mono font-semibold uppercase whitespace-nowrap tracking-[0.12em]",
                         isUpcoming ? "bg-tm-orange-light/10 text-tm-orange-light" : "bg-tm-blue-gray/10 text-tm-blue-gray"
                       )}>
                         <span className="sm:inline hidden">{isUpcoming ? "Upcoming" : "Passed"}</span>

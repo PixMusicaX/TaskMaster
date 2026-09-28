@@ -4,11 +4,12 @@ import StrikeText from "@/components/ui/strike-text";
 import { SkeletonRows } from "@/components/loader";
 import { formatReliefTemp } from "@/lib/weather";
 import { cn } from "@/lib/utils";
+import type { Relief, ReliefAlternative } from "@/lib/types";
 import InsightCard from "./insight-card";
 import { ReliefTypeIcon } from "./icons";
 
 interface TavernCardProps {
-  relief: any;
+  relief: Relief | null;
   loading: boolean;
   updating: Set<string>;
   onToggle: (index: number) => void;
@@ -24,7 +25,7 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
       iconClassName="text-tm-blue-gray"
       title="Tavern"
       subtitle={relief && (
-        <div className="flex items-center gap-3 text-caption font-black uppercase text-tm-blue-gray/60 tracking-[0.2em]">
+        <div className="flex items-center gap-3 text-caption font-mono font-semibold uppercase text-tm-blue-gray/60 tracking-[0.12em]">
           <span className={cn("flex items-center gap-1.5", relief.isCached ? "text-tm-orange-light/80" : "")}><MapPin size={12} className={relief.isCached ? "text-tm-orange-light" : "text-tm-yellow/40"} /> {relief.location}</span>
           <span className="w-1 h-1 rounded-full bg-white/10" />
           <span className="flex items-center gap-1.5"><CloudSun size={12} className="text-tm-yellow/40" /> {formatReliefTemp(relief.temp)}°C {relief.weather}</span>
@@ -49,7 +50,7 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
           <div className="flex flex-col gap-6">
             {/* Primary Suggestion */}
             <div className="relative">
-              <div className="absolute -top-3 left-4 px-2 bg-tm-purple-dark border border-tm-yellow/20 rounded text-micro font-black uppercase text-tm-yellow tracking-[0.2em] z-20">
+              <div className="absolute -top-3 left-4 px-2 bg-tm-purple-dark border border-tm-yellow/20 rounded text-micro font-mono font-semibold uppercase text-tm-yellow tracking-[0.12em] z-20">
                 Primary Path
               </div>
               <button
@@ -76,13 +77,13 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
                   />
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-caption font-black uppercase text-tm-yellow tracking-[0.3em] flex items-center gap-2">
+                      <span className="text-caption font-mono font-semibold uppercase text-tm-yellow tracking-[0.12em] flex items-center gap-2">
                         <ReliefTypeIcon type={relief.type} size={12} />
                         {relief.type || 'Suggestion'}
                       </span>
                       <span className="text-xs font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">+{reward} XP</span>
                     </div>
-                    <h4 className="text-xl font-black leading-tight tracking-tight">
+                    <h4 className="text-xl font-bold leading-tight tracking-tight">
                       <StrikeText done={relief.completed}>{relief.title}</StrikeText>
                     </h4>
                   </div>
@@ -94,11 +95,11 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
             {Array.isArray(relief.alternatives) && relief.alternatives.length > 0 && (
               <div className="flex flex-col gap-5">
                 <div className="flex items-center gap-4">
-                  <p className="text-caption font-black uppercase text-tm-blue-gray/30 tracking-[0.4em] shrink-0">Alternative Channels</p>
+                  <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray/60 tracking-[0.12em] shrink-0">Alternative Channels</p>
                   <div className="h-px flex-1 bg-white/[0.03]" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {relief.alternatives.map((alt: any, i: number) => {
+                  {(relief.alternatives as ReliefAlternative[]).map((alt, i) => {
                     const key = `${relief.id}-${i + 1}`;
                     const isAltCompleted = i === 0 ? relief.alt1Completed : relief.alt2Completed;
                     return (
@@ -124,11 +125,11 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
                             checkClassName="text-tm-purple-dark"
                             idle={<ReliefTypeIcon type={alt.type} size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
                           />
-                          <span className="text-tiny font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/10">+{reward} XP</span>
+                          <span className="text-tiny font-mono font-semibold text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/10">+{reward} XP</span>
                         </div>
                         <div className="relative z-10">
-                          <span className="text-micro font-black uppercase text-tm-blue-gray/40 tracking-widest block mb-0.5">{alt.type}</span>
-                          <h5 className="text-sm font-black leading-snug line-clamp-2"><StrikeText done={isAltCompleted}>{alt.title}</StrikeText></h5>
+                          <span className="text-micro font-mono font-semibold uppercase text-tm-blue-gray/70 tracking-[0.12em] block mb-0.5">{alt.type}</span>
+                          <h5 className="text-sm font-semibold leading-snug line-clamp-2"><StrikeText done={isAltCompleted}>{alt.title}</StrikeText></h5>
                         </div>
                       </button>
                     );
@@ -139,7 +140,7 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
           </div>
         ) : (
           <div className="text-center py-12 opacity-50">
-            <p className="text-caption font-black uppercase text-tm-blue-gray animate-pulse">Syncing Hub...</p>
+            <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray animate-pulse tracking-[0.12em]">Syncing Hub...</p>
           </div>
         )}
       </div>
