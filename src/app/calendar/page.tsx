@@ -7,7 +7,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInte
 import { motion, AnimatePresence } from "framer-motion";
 import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent, getAllEvents } from "@/app/actions/events";
 import { getProfile } from "@/app/actions/gamification";
-import { getRecentNotes } from "@/app/actions/notes";
+import { getMoodsByDateRange } from "@/app/actions/notes";
 import { getReliefHistory } from "@/app/actions/relief";
 import { cn, getSpecialDayColors } from "@/lib/utils";
 import { PremiumLoader } from "@/components/loader";
@@ -58,7 +58,7 @@ export default function CalendarPage() {
       const [eventsData, profileData, notesData, reliefData] = await Promise.all([
         getEventsByDateRange(startDate, endDate),
         getProfile(format(currentDate, "yyyy-MM-dd")),
-        getRecentNotes(60),
+        getMoodsByDateRange(format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd")),
         getReliefHistory(format(startDate, "yyyy-MM-dd"))
       ]);
       setEvents(eventsData);

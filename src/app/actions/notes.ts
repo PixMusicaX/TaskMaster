@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { note } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { invalidateSeasonSnapshots } from "./gamification";
 
 export async function getNoteByDate(date: string) {
@@ -30,6 +30,12 @@ export async function saveNote(date: string, content: string, mood: string = "ne
   revalidatePath("/notes");
   revalidatePath("/");
   return savedNote;
+}
+
+// Moods for every note in [startDate, endDate] (YYYY-MM-DD), for calendar views
+export async function getMoodsByDateRange(startDate: string, endDate: string) {
+  return await db.select({ date: note.date, mood: note.mood }).from(note)
+    .where(and(gte(note.date, startDate), lte(note.date, endDate)));
 }
 
 export async function getRecentNotes(limit: number = 7) {
