@@ -226,6 +226,11 @@
   --color-tm-purple-dark: var(--tm-purple-dark);
   --color-tm-red: var(--tm-red);
 
+  /* Micro type scale for HUD labels (replaces text-[8px]/[9px]/[10px]) */
+  --text-micro: 0.5rem;
+  --text-tiny: 0.5625rem;
+  --text-caption: 0.625rem;
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

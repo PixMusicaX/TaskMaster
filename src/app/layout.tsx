@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { themeInitScript } from "@/lib/theme-init";
 import Navbar from "@/components/navbar";
 import SwipeNav from "@/components/swipe-nav";
 
@@ -41,6 +42,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased overflow-x-clip`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-full flex flex-col transition-colors duration-300 overflow-x-clip">
         <ThemeProvider>
           <div className="overflow-x-clip w-full relative flex flex-col flex-1 min-h-full">

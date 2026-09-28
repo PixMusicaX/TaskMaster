@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Home, CheckSquare, FileText, Calendar, Moon, Sun, Info, Shield, History } from "lucide-react";
 import { useTheme } from "./theme-provider";
 import { cn } from "@/lib/utils";
+import { SPRING } from "@/lib/motion";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -129,7 +130,7 @@ export default function Navbar() {
                   <motion.div
                     layoutId="bubble"
                     className="absolute inset-0 bg-tm-yellow/20 dark:bg-tm-yellow/10 rounded-full -z-10"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    transition={SPRING.bubble}
                   />
                 )}
               </Link>

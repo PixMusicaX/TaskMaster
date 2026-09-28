@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { MotionConfig } from "framer-motion";
 
 type Rank = "Novice" | "Squire" | "Vanguard" | "Veteran" | "Knight" | "Champion" | "Sentinel" | "Paladin" | "Grandmaster" | "Hero";
 
@@ -13,28 +14,20 @@ interface ThemeContextType {
 
 const ThemeContext = React.createContext<ThemeContextType | null>(null);
 
+function currentPeriod() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = React.useState<"light" | "dark">("light");
   const [rank, setRankState] = React.useState<Rank>("Novice");
 
   React.useEffect(() => {
-    const savedRank = localStorage.getItem("rank") as Rank | null;
-    
-    // THEME LOGIC: Always follow the clock on reload, no persistence.
-    const hour = new Date().getHours();
-    const isNight = hour < 6 || hour >= 18;
-    const initialTheme: "light" | "dark" = isNight ? "dark" : "light";
-
-    setTheme(initialTheme);
-    document.documentElement.classList.toggle("dark", initialTheme === "dark");
-
-    // Rank still persists as it represents character progression
-    if (savedRank) {
-      setRankState(savedRank);
-      document.documentElement.setAttribute("data-rank", savedRank);
-    } else {
-      document.documentElement.setAttribute("data-rank", "Novice");
-    }
+    // The init script has already applied both to <html>; mirror them into state
+    const root = document.documentElement;
+    setTheme(root.classList.contains("dark") ? "dark" : "light");
+    setRankState((root.getAttribute("data-rank") as Rank | null) ?? "Novice");
   }, []);
 
   const toggleTheme = () => {
@@ -47,12 +40,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setRank = (newRank: Rank) => {
     setRankState(newRank);
     localStorage.setItem("rank", newRank);
+    localStorage.setItem("rank_period", currentPeriod());
     document.documentElement.setAttribute("data-rank", newRank);
   };
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, rank, setRank }}>
-      {children}
+      <MotionConfig reducedMotion="user">
+        {children}
+      </MotionConfig>
     </ThemeContext.Provider>
   );
 }

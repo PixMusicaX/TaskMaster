@@ -1,0 +1,144 @@
+import { Check, CloudSun, Coffee, MapPin, RotateCw, Sparkles } from "lucide-react";
+import { PremiumLoader } from "@/components/loader";
+import { formatReliefTemp } from "@/lib/weather";
+import { cn } from "@/lib/utils";
+import InsightCard from "./insight-card";
+import { ReliefTypeIcon } from "./icons";
+
+interface TavernCardProps {
+  relief: any;
+  loading: boolean;
+  updating: Set<string>;
+  onToggle: (index: number) => void;
+  onRegenerate: () => void;
+}
+
+export default function TavernCard({ relief, loading, updating, onToggle, onRegenerate }: TavernCardProps) {
+  const reward = relief?.xpReward === 5 ? 10 : relief?.xpReward;
+
+  return (
+    <InsightCard
+      icon={Coffee}
+      iconClassName="text-tm-blue-gray"
+      title="Tavern"
+      subtitle={relief && (
+        <div className="flex items-center gap-3 text-caption font-black uppercase text-tm-blue-gray/60 tracking-[0.2em]">
+          <span className={cn("flex items-center gap-1.5", relief.isCached ? "text-tm-orange-light/80" : "")}><MapPin size={12} className={relief.isCached ? "text-tm-orange-light" : "text-tm-yellow/40"} /> {relief.location}</span>
+          <span className="w-1 h-1 rounded-full bg-white/10" />
+          <span className="flex items-center gap-1.5"><CloudSun size={12} className="text-tm-yellow/40" /> {formatReliefTemp(relief.temp)}°C {relief.weather}</span>
+        </div>
+      )}
+      aside={!relief?.completed && relief && (
+        <button
+          onClick={onRegenerate}
+          className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 text-tm-blue-gray hover:text-tm-yellow hover:border-tm-yellow/50 transition-all shadow-lg active:scale-95"
+          title="Regenerate Hub"
+        >
+          <RotateCw size={18} className={cn(loading && "animate-spin")} />
+        </button>
+      )}
+      delay={0.8}
+      className="border-tm-blue-gray/10 bg-white/5"
+    >
+      <div className={cn("flex-1 flex flex-col justify-center relative z-10", loading && "items-center")}>
+        {loading ? (
+          <div className="flex flex-col items-center">
+            <PremiumLoader />
+            <p className="text-caption font-black uppercase text-tm-yellow animate-pulse -mt-16">Scanning for relief...</p>
+          </div>
+        ) : relief ? (
+          <div className="flex flex-col gap-6">
+            {/* Primary Suggestion */}
+            <div className="relative">
+              <div className="absolute -top-3 left-4 px-2 bg-tm-purple-dark border border-tm-yellow/20 rounded text-micro font-black uppercase text-tm-yellow tracking-[0.2em] z-20">
+                Primary Path
+              </div>
+              <button
+                onClick={updating.has(`${relief.id}-0`) ? undefined : () => onToggle(0)}
+                disabled={updating.has(`${relief.id}-0`)}
+                className={cn(
+                  "w-full text-left p-6 rounded-[2rem] border transition-all relative overflow-hidden group/card shadow-2xl",
+                  updating.has(`${relief.id}-0`) && "opacity-50 pointer-events-none",
+                  relief.completed
+                    ? "bg-tm-yellow/10 border-tm-yellow/40 shadow-inner opacity-50 grayscale-[0.5]"
+                    : "bg-white/5 border-white/10 hover:border-tm-yellow/30 hover:bg-white/10"
+                )}
+              >
+                <div className="flex items-start gap-5">
+                  <div className={cn(
+                    "w-8 h-8 rounded-2xl border-2 flex items-center justify-center transition-all mt-1 shadow-lg",
+                    relief.completed ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/30 group-hover/card:border-tm-yellow/50"
+                  )}>
+                    {relief.completed ? <Check size={18} className="text-tm-purple-dark" /> : <Sparkles size={14} className="text-tm-yellow" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-caption font-black uppercase text-tm-yellow tracking-[0.3em] flex items-center gap-2">
+                        <ReliefTypeIcon type={relief.type} size={12} />
+                        {relief.type || 'Suggestion'}
+                      </span>
+                      <span className="text-xs font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">+{reward} XP</span>
+                    </div>
+                    <h4 className={cn("text-xl font-black leading-tight tracking-tight", relief.completed && "line-through opacity-50")}>
+                      {relief.title}
+                    </h4>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Alternatives Section */}
+            {Array.isArray(relief.alternatives) && relief.alternatives.length > 0 && (
+              <div className="flex flex-col gap-5">
+                <div className="flex items-center gap-4">
+                  <p className="text-caption font-black uppercase text-tm-blue-gray/30 tracking-[0.4em] shrink-0">Alternative Channels</p>
+                  <div className="h-px flex-1 bg-white/[0.03]" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {relief.alternatives.map((alt: any, i: number) => {
+                    const key = `${relief.id}-${i + 1}`;
+                    const isAltCompleted = i === 0 ? relief.alt1Completed : relief.alt2Completed;
+                    return (
+                      <button
+                        key={i}
+                        onClick={updating.has(key) ? undefined : () => onToggle(i + 1)}
+                        disabled={updating.has(key)}
+                        className={cn(
+                          "flex flex-col gap-3 p-5 rounded-[1.5rem] border transition-all text-left group/alt relative overflow-hidden",
+                          updating.has(key) && "opacity-50 pointer-events-none",
+                          isAltCompleted
+                            ? "bg-tm-yellow/5 border-tm-yellow/10 opacity-40 grayscale"
+                            : "bg-white/[0.02] border-white/5 hover:border-tm-yellow/20 hover:bg-white/[0.05] shadow-lg"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-3 relative z-10">
+                          <div className={cn(
+                            "w-8 h-8 rounded-xl border flex items-center justify-center transition-all shrink-0",
+                            isAltCompleted ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/20 group-hover/alt:border-tm-yellow/40"
+                          )}>
+                            {isAltCompleted
+                              ? <Check size={16} className="text-tm-purple-dark" />
+                              : <ReliefTypeIcon type={alt.type} size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
+                          </div>
+                          <span className="text-tiny font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/10">+{reward} XP</span>
+                        </div>
+                        <div className="relative z-10">
+                          <span className="text-micro font-black uppercase text-tm-blue-gray/40 tracking-widest block mb-0.5">{alt.type}</span>
+                          <h5 className={cn("text-sm font-black leading-snug line-clamp-2", isAltCompleted && "line-through opacity-50")}>{alt.title}</h5>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-12 opacity-50">
+            <p className="text-caption font-black uppercase text-tm-blue-gray animate-pulse">Syncing Hub...</p>
+          </div>
+        )}
+      </div>
+    </InsightCard>
+  );
+}
