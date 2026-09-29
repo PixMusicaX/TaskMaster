@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { RPG_TITLES } from "@/lib/constants";
-import { eraForRank } from "@/lib/eras";
+import { eraAt, MAX_ERA } from "@/lib/eras";
+import { useEra } from "@/components/theme-provider";
+import { useEraStanding, type EraStanding } from "@/components/progress/era-standing";
 import { cn } from "@/lib/utils";
 import type { Profile } from "@/lib/types";
 import InsightCard, { Pill } from "./insight-card";
@@ -13,7 +15,9 @@ export default function ClassStatusCard({ profile }: { profile: Profile | null }
   const progress = profile ? profile.levelProgress / profile.nextLevelXP : 0;
   const rankIndex = Math.max(0, RPG_TITLES.findLastIndex(t => level >= t.minLevel));
   const rank = RPG_TITLES[rankIndex].title;
-  const era = eraForRank(rank);
+  const standing = useEraStanding();
+  const themeEra = useEra();
+  const era = standing ? eraAt(standing.index) : themeEra;
 
   return (
     <InsightCard
@@ -62,7 +66,10 @@ export default function ClassStatusCard({ profile }: { profile: Profile | null }
             </div>
             <div className="flex items-center gap-2.5 px-3 py-2 rounded-2xl bg-tm-blue-gray/5 border border-tm-blue-gray/10">
               <span className="tm-era-badge text-sm">{era.numeral}</span>
-              <span className="text-sm font-semibold text-foreground">Era of {era.name}</span>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-foreground leading-tight">Era of {era.name}</p>
+                {standing && profile && <EraHint standing={standing} xp={profile.xp} />}
+              </div>
             </div>
             {profile && (
               <p className="text-xs text-tm-blue-gray font-medium">
@@ -78,8 +85,18 @@ export default function ClassStatusCard({ profile }: { profile: Profile | null }
   );
 }
 
-// The current rank and the next two on one track, with the player's level marked on it.
-// Ranks that open a new era carry that era's numeral.
+// How to move in the era system from here (eras follow pace against last month; see lib/eras.ts)
+function EraHint({ standing, xp }: { standing: EraStanding; xp: number }) {
+  const ahead = standing.index > standing.startIndex;
+  const text = ahead
+    ? `Ahead of ${standing.lastMonthName}'s pace`
+    : standing.startIndex >= MAX_ERA
+      ? "Final era"
+      : `Pass ${standing.lastMonthName}'s pace for Era ${eraAt(standing.startIndex + 1).numeral} (${Math.max(0, standing.lastMonthPaceXP - xp + 1).toLocaleString()} XP)`;
+  return <p className="text-caption font-bold text-tm-blue-gray">{text}</p>;
+}
+
+// The current rank and the next two on one track, with the player's level marked on it
 function RankLadder({ level, rankIndex }: { level: number; rankIndex: number }) {
   const start = Math.min(rankIndex, RPG_TITLES.length - 3);
   const steps = RPG_TITLES.slice(start, start + 3);
@@ -87,7 +104,6 @@ function RankLadder({ level, rankIndex }: { level: number; rankIndex: number }) 
   const max = steps[steps.length - 1].minLevel;
   const at = (lvl: number) => Math.min(1, Math.max(0, (lvl - min) / (max - min)));
   const next = RPG_TITLES[rankIndex + 1];
-  const currentEra = eraForRank(RPG_TITLES[rankIndex].title);
 
   return (
     <div className="space-y-3">
@@ -127,8 +143,6 @@ function RankLadder({ level, rankIndex }: { level: number; rankIndex: number }) 
 
       <div className="relative h-10 mx-3">
         {steps.map((step, i) => {
-          const stepEra = eraForRank(step.title);
-          const opensEra = stepEra.id !== currentEra.id && stepEra.ranks[0] === step.title;
           return (
             <div
               key={step.title}
@@ -139,7 +153,6 @@ function RankLadder({ level, rankIndex }: { level: number; rankIndex: number }) 
               style={i === steps.length - 1 ? undefined : { left: `${at(step.minLevel) * 100}%` }}
             >
               <span className={cn("text-sm font-semibold flex items-center gap-1.5", level >= step.minLevel ? "text-foreground" : "text-tm-blue-gray")}>
-                {opensEra && <span className="tm-era-badge text-caption">{stepEra.numeral}</span>}
                 {step.title}
               </span>
               <span className="text-caption font-mono font-semibold text-tm-blue-gray/70">Lv {step.minLevel}</span>

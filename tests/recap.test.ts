@@ -58,6 +58,9 @@ describe("getSeasonRecap", () => {
     expect(r.previous).toMatchObject({ monthName: "July", xp: 40 });
     expect(r.seasonRank).toBe(2);
     expect(r.seasonsCompared).toBe(3);
+    // June (first season) ends II; July beats June, ends III; August falls short of July,
+    // so it starts and ends at III and September starts one lower, at II
+    expect(r.era).toEqual({ start: 2, end: 2, next: 1 });
   });
 
   it("handles a month with nothing in it", async () => {
@@ -78,6 +81,7 @@ const base: SeasonRecap = {
   habits: { checks: 90, top: { name: "Gym", icon: null, checks: 20, scheduledDays: 22, bestStreak: 9 } },
   tasksDone: 40, quests: { done: 6, epic: 1 }, missionsDone: 30,
   nextSeason: { monthName: "September", daysInMonth: 30 },
+  era: { start: 1, end: 2, next: 2 },
 };
 
 describe("recapHeadline", () => {

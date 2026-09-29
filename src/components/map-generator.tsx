@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "./theme-provider";
 import { useMounted } from "@/lib/use-mounted";
 import type { NoteRow, Profile } from "@/lib/types";
+import { getDevMapReroll, getDevMapStatus, subscribeDevMap } from "@/lib/dev-map";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type BiomeKey =
@@ -925,6 +926,9 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
   const [isFullscreen, setIsFullscreen] = useState(false);
   // The config uses random rolls, so build it only in the browser to keep hydration stable
   const mounted = useMounted();
+  // Dev tools can force the status and reroll the terrain (always null / 0 in production)
+  const devStatus = useSyncExternalStore(subscribeDevMap, getDevMapStatus, () => null);
+  const devReroll = useSyncExternalStore(subscribeDevMap, getDevMapReroll, () => 0);
 
   const mapConfig = useMemo(() => {
     if (!mounted) return null;
@@ -953,6 +957,7 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
     let performance: "low" | "balanced" | "peak" = "balanced";
     if (performanceScore > 60) performance = "peak";
     else if (performanceScore < 40) performance = "low";
+    if (devStatus) performance = devStatus;
 
     // Prioritize the global rank (which supports manual overrides) over calculated level
     const currentTitle = rank || "Novice";
@@ -981,7 +986,7 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
       .slice(0, 5);
 
     // High sensitivity seed: changes completely with even 1 XP + random session offset
-    const seed = (level * 7777) + (profile?.xp || 0) + (performance.length * 123) + randomOffset;
+    const seed = (level * 7777) + (profile?.xp || 0) + (performance.length * 123) + randomOffset + devReroll * 9973;
 
     const finalParams: MapParams = {
       seed,
@@ -1003,7 +1008,7 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
       performanceState: performance,
       nextStops: nextStops as { name: string; biome: BiomeKey }[],
     };
-  }, [mounted, profile, moodData, rank, completionScore, randomOffset, luck]);
+  }, [mounted, profile, moodData, rank, completionScore, randomOffset, luck, devStatus, devReroll]);
 
   useEffect(() => {
     if (!mapConfig || !canvasRef.current) return;
@@ -1071,7 +1076,7 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
               mapConfig.performanceState === "peak" ? "text-tm-yellow" :
               mapConfig.performanceState === "low" ? "text-tm-orange-dark" : "text-tm-blue-gray"
             )}>
-              Status: {mapConfig.performanceState} / {Math.round(mapConfig.performanceScore)}
+              Status: {mapConfig.performanceState} / {Math.round(mapConfig.performanceScore)}{devStatus && " (dev)"}
             </span>
         </div>
 

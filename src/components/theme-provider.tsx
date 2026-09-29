@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { MotionConfig } from "framer-motion";
-import { ERAS, eraForRank, type Era } from "@/lib/eras";
+import { ERAS, eraById, type Era, type EraId } from "@/lib/eras";
 
 export type Rank = "Novice" | "Squire" | "Vanguard" | "Veteran" | "Knight" | "Champion" | "Sentinel" | "Paladin" | "Grandmaster" | "Hero";
 type Theme = "light" | "dark";
@@ -13,6 +13,7 @@ interface ThemeContextType {
   rank: Rank;
   setRank: (rank: Rank) => void;
   era: Era;
+  setEra: (era: EraId) => void;
 }
 
 const ThemeContext = React.createContext<ThemeContextType | null>(null);
@@ -32,10 +33,12 @@ const subscribe = (listener: () => void) => {
 const notify = () => listeners.forEach(l => l());
 const readTheme = (): Theme => (document.documentElement.classList.contains("dark") ? "dark" : "light");
 const readRank = (): Rank => (document.documentElement.getAttribute("data-rank") as Rank | null) ?? "Novice";
+const readEra = (): string => document.documentElement.getAttribute("data-era") ?? "forge";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = React.useSyncExternalStore(subscribe, readTheme, () => "light" as Theme);
   const rank = React.useSyncExternalStore(subscribe, readRank, () => "Novice" as Rank);
+  const eraId = React.useSyncExternalStore(subscribe, readEra, () => "forge");
 
   const toggleTheme = () => {
     // No localStorage.setItem for theme - we don't want to remember it!
@@ -47,14 +50,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("rank", newRank);
     localStorage.setItem("rank_period", currentPeriod());
     document.documentElement.setAttribute("data-rank", newRank);
-    document.documentElement.setAttribute("data-era", eraForRank(newRank).id);
+    document.documentElement.style.setProperty("--tm-rank-label", JSON.stringify(newRank));
     notify();
   };
 
-  const era = eraForRank(rank);
+  // The era comes from pace against last month (see lib/eras.ts), not from rank
+  const setEra = (newEra: EraId) => {
+    localStorage.setItem("era", newEra);
+    localStorage.setItem("era_period", currentPeriod());
+    document.documentElement.setAttribute("data-era", newEra);
+    document.documentElement.style.setProperty("--tm-era-label", JSON.stringify(eraById(newEra).numeral));
+    document.documentElement.style.setProperty("--tm-era-name", JSON.stringify(eraById(newEra).name));
+    notify();
+  };
+
+  const era = eraById(eraId);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, rank, setRank, era }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, rank, setRank, era, setEra }}>
       <MotionConfig reducedMotion="user">
         {children}
       </MotionConfig>

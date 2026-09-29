@@ -40,6 +40,12 @@
   50% { transform: scale(1.12, 1.2) rotate(2deg); }
 }
 
+/* Rank name and era numeral from CSS variables the <head> script sets before first paint,
+   so these labels are right even before the app hydrates (see lib/theme-init.ts) */
+.tm-rank-label::before { content: var(--tm-rank-label, "Novice"); }
+.tm-era-label::before { content: var(--tm-era-label, "I"); }
+.tm-era-name::before { content: var(--tm-era-name, "Forge"); }
+
 @media (prefers-reduced-motion: reduce) {
   .tm-skeleton::after, .tm-pop-in, .tm-flame {
     animation: none !important;

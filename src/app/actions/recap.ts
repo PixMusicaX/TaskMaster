@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { event, habit, habitLog, note, preparationTip, reliefRecommendation, smartMission } from "@/db/schema";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { eachDayOfInterval, endOfMonth, format, getDaysInMonth, startOfMonth, subMonths } from "date-fns";
-import { getSeasonHistory } from "./gamification";
+import { getSeasonTimeline } from "./gamification";
 import { noteTextLines } from "@/lib/types";
 
 // Everything the season-end recap shows about last month, compared with the seasons before it
@@ -15,9 +15,9 @@ export async function getSeasonRecap(clientDateStr: string) {
   const from = format(monthStart, "yyyy-MM-dd");
   const to = format(monthEnd, "yyyy-MM-dd");
 
-  const [seasons, notes, logs, events, habits, missions, tips, reliefs] = await Promise.all([
-    // [this month, last month, the month before, ...] — 13 so last month is ranked against a year
-    getSeasonHistory(13, clientDateStr),
+  const [timeline, notes, logs, events, habits, missions, tips, reliefs] = await Promise.all([
+    // [this month, last month, the month before, ...] — at least 13 so last month is ranked against a year
+    getSeasonTimeline(clientDateStr, 13),
     db.select({ date: note.date, content: note.content, mood: note.mood }).from(note)
       .where(and(gte(note.date, from), lte(note.date, to))),
     db.select({ habitId: habitLog.habitId, habitName: habitLog.habitName, habitIcon: habitLog.habitIcon, date: habitLog.date })
@@ -33,8 +33,8 @@ export async function getSeasonRecap(clientDateStr: string) {
       .from(reliefRecommendation).where(and(gte(reliefRecommendation.date, from), lte(reliefRecommendation.date, to))),
   ]);
 
-  const [, season, previous] = seasons;
-  const pastSeasons = seasons.slice(1).filter(s => s.xp > 0);
+  const [, season, previous] = timeline.seasons;
+  const pastSeasons = timeline.seasons.slice(1, 13).filter(s => s.xp > 0);
   const seasonRank = season.xp > 0 ? pastSeasons.filter(s => s.xp > season.xp).length + 1 : null;
 
   // Per-day activity, for active days and the busiest day
@@ -80,6 +80,8 @@ export async function getSeasonRecap(clientDateStr: string) {
     topStat: season.topStat,
     weakStat: season.weakStat,
     stats: season.stats,
+    // Era the season started and ended in, and where the new season starts (see lib/eras.ts)
+    era: { start: season.eraStart, end: season.eraEnd ?? season.eraStart, next: timeline.currentStart },
     previous: previous ? { monthName: previous.monthName, xp: previous.xp, level: previous.level, title: previous.title } : null,
     // 1 = best of the seasons on record in the last year (only seasons with XP count)
     seasonRank,

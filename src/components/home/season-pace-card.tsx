@@ -21,8 +21,9 @@ const pct = (value: number, max: number) => `${Math.min(100, (value / max) * 100
 const FINAL_RANK = RPG_TITLES[RPG_TITLES.length - 1];
 export const METER_MAX_XP = (FINAL_RANK.minLevel - 1) * LEVEL_UP_XP;
 
-// What it takes to finish above last month's final total, spread over the days left (today included)
-export function raceGoal(current: number, pace: SeasonPace, daysLeft: number) {
+// What it takes to finish above last month's final total, spread over the days left (today included).
+// `detail` is the daily rate, shown after the value on wide screens and under it on phones.
+export function raceGoal(current: number, pace: SeasonPace, daysLeft: number): { label: string; value: string; detail?: string } {
   const perDay = (xp: number) => Math.ceil(xp / (daysLeft + 1)).toLocaleString();
   if (pace.lastMonthTotalXP <= 0) {
     return { label: "Daily average", value: `${Math.round(current / pace.dayOfMonth).toLocaleString()} XP a day` };
@@ -31,10 +32,27 @@ export function raceGoal(current: number, pace: SeasonPace, daysLeft: number) {
   if (needed <= 0) {
     return { label: `${pace.lastMonthName} beaten`, value: `By ${(1 - needed).toLocaleString()} XP` };
   }
-  return {
-    label: `To beat ${pace.lastMonthName}`,
-    value: daysLeft === 0 ? `${needed.toLocaleString()} XP today` : `${needed.toLocaleString()} XP · ${perDay(needed)} XP/day`,
-  };
+  if (daysLeft === 0) {
+    return { label: `To beat ${pace.lastMonthName}`, value: `${needed.toLocaleString()} XP today` };
+  }
+  return { label: `To beat ${pace.lastMonthName}`, value: `${needed.toLocaleString()} XP`, detail: `${perDay(needed)} XP/day` };
+}
+
+// Phones: each box is one row, label left and value right. Wider screens: two boxes side by side.
+function StatBox({ label, value, detail }: { label: string; value: string; detail?: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-4 py-3 sm:p-3 sm:block rounded-2xl bg-tm-blue-gray/5 border border-tm-blue-gray/10">
+      <p className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray/70">{label}</p>
+      <p className="text-right sm:text-left sm:mt-1">
+        <span className="block sm:inline text-sm font-semibold text-foreground">{value}</span>
+        {detail && (
+          <span className="block sm:inline text-xs sm:text-sm font-medium sm:font-semibold text-tm-blue-gray sm:text-foreground">
+            <span className="hidden sm:inline"> · </span>{detail}
+          </span>
+        )}
+      </p>
+    </div>
+  );
 }
 
 export default function SeasonPaceCard({ profile, pace, className }: { profile: Profile | null; pace: SeasonPace | null; className?: string }) {
@@ -69,8 +87,8 @@ function PaceBody({ profile, pace }: { profile: Profile; pace: SeasonPace }) {
   const goal = raceGoal(current, pace, daysLeft);
 
   return (
-    <div className="flex-1 flex flex-col gap-6 relative z-10">
-      <div className="flex items-end justify-between gap-4 flex-wrap">
+    <div className="flex-1 flex flex-col gap-5 sm:gap-6 relative z-10">
+      <div className="flex items-end justify-between gap-x-4 gap-y-2 flex-wrap">
         <p className="text-4xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow leading-none">
           {current.toLocaleString()} <span className="text-base text-tm-blue-gray">XP</span>
         </p>
@@ -95,17 +113,9 @@ function PaceBody({ profile, pace }: { profile: Profile; pace: SeasonPace }) {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="p-3 rounded-2xl bg-tm-blue-gray/5 border border-tm-blue-gray/10">
-          <p className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray/70">{goal.label}</p>
-          <p className="text-sm font-semibold text-foreground mt-1">{goal.value}</p>
-        </div>
-        <div className="p-3 rounded-2xl bg-tm-blue-gray/5 border border-tm-blue-gray/10">
-          <p className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray/70">Season ends</p>
-          <p className="text-sm font-semibold text-foreground mt-1">
-            {daysLeft === 0 ? "Today" : `In ${daysLeft} day${daysLeft === 1 ? "" : "s"}`}
-          </p>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+        <StatBox {...goal} />
+        <StatBox label="Season ends" value={daysLeft === 0 ? "Today" : `In ${daysLeft} day${daysLeft === 1 ? "" : "s"}`} />
       </div>
 
       {weakStat in STAT_BOOSTS && (
@@ -183,17 +193,21 @@ function SeasonMeter({ current, pace, overflow }: { current: number; pace: Seaso
           </>
         )}
       </div>
-      <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray/70">
+      <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-micro sm:text-caption font-mono font-semibold uppercase tracking-[0.08em] sm:tracking-[0.12em] text-tm-blue-gray/70">
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {pace && (
             <>
               <span className="flex items-center gap-1.5">
                 <span className="w-0.5 h-3 bg-tm-purple-dark dark:bg-white rounded-full" />
-                {pace.lastMonthName} day {pace.dayOfMonth}: {pace.lastMonthPaceXP.toLocaleString()}
+                <span className="sm:hidden">{pace.lastMonthName.slice(0, 3)} d{pace.dayOfMonth}</span>
+                <span className="hidden sm:inline">{pace.lastMonthName} day {pace.dayOfMonth}:</span>
+                {" "}{pace.lastMonthPaceXP.toLocaleString()}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-3 border-l-2 border-dashed border-tm-blue-gray/60" />
-                Final: {pace.lastMonthTotalXP.toLocaleString()}
+                <span className="sm:hidden">Final</span>
+                <span className="hidden sm:inline">Final:</span>
+                {" "}{pace.lastMonthTotalXP.toLocaleString()}
               </span>
             </>
           )}

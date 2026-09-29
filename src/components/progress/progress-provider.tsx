@@ -4,21 +4,26 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { flushSync } from "react-dom";
 import { usePathname } from "next/navigation";
 import { format, subMonths } from "date-fns";
-import { getProfile } from "@/app/actions/gamification";
+import { getEraProgress, getProfile } from "@/app/actions/gamification";
 import { getSeasonRecap } from "@/app/actions/recap";
 import RecapModal from "@/components/RecapModal";
-import { DEV_TOOLS_ENABLED, DEV_XP_EVENT, withDevXp } from "@/lib/dev-xp";
+import { DEV_ERA_EVENT, DEV_TOOLS_ENABLED, DEV_XP_EVENT, getDevEraOverride, withDevXp } from "@/lib/dev-xp";
 import type { SeasonRecap } from "@/lib/types";
 import { diffProfiles, rankForLevel, type ProfileSnapshot, type ProgressDiff } from "@/lib/progress";
+import { ERAS, eraAt, liveEraIndex } from "@/lib/eras";
 import { initSfx, sfx } from "@/lib/sfx";
 import { currentPeriod, useTheme, type Rank } from "@/components/theme-provider";
 import XpBurstLayer, { type XpBurst } from "./xp-burst-layer";
 import LevelUpToast from "./level-up-toast";
 import RankUpCeremony, { type Ceremony } from "./rank-up-ceremony";
 import SeasonToast, { type Season } from "./season-toast";
+import EraToast, { type EraShift } from "./era-toast";
+import { EraStandingContext, type EraStanding } from "./era-standing";
 import DevTools from "./dev-tools";
 
 type Profile = Awaited<ReturnType<typeof getProfile>>;
+type EraProgress = Awaited<ReturnType<typeof getEraProgress>>;
+
 
 interface ProgressContextType {
   profile: Profile | null;
@@ -29,6 +34,7 @@ interface ProgressContextType {
   setManual: (manual: boolean) => void;
   // Opens last season's recap on demand (the dev tools use this to preview it)
   openRecap: () => void;
+  era: EraStanding | null;
 }
 
 const ProgressContext = createContext<ProgressContextType | null>(null);
@@ -45,6 +51,15 @@ function findXpTarget() {
   return null;
 }
 
+// Centre of the text field that has focus, if it's on screen
+function focusedFieldPoint() {
+  const el = document.activeElement;
+  if (!(el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement)) return null;
+  const r = el.getBoundingClientRect();
+  if (r.width === 0 || r.bottom < 0 || r.top > window.innerHeight) return null;
+  return { x: r.left + Math.min(r.width / 2, 120), y: r.top + r.height / 2 };
+}
+
 // Radial palette wipe via the View Transitions API, where supported
 function withRankWipe(apply: () => void) {
   const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } };
@@ -57,7 +72,7 @@ function withRankWipe(apply: () => void) {
 
 export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { rank, setRank } = useTheme();
+  const { rank, setRank, era: themeEra, setEra } = useTheme();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [pulse, setPulse] = useState(0);
@@ -68,25 +83,68 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const [season, setSeason] = useState<Season | null>(null);
   const [recap, setRecap] = useState<SeasonRecap | null>(null);
   const [recapOpen, setRecapOpen] = useState(false);
+  const [eraShift, setEraShift] = useState<EraShift | null>(null);
+  const [eraStanding, setEraStanding] = useState<EraStanding | null>(null);
 
   const prevRef = useRef<ProfileSnapshot | null>(null);
   const requestRef = useRef(0);
   const lastTapRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const ceremonyRef = useRef<Ceremony | null>(null);
+  // This season's starting era and last month's pace, fetched once a day
+  const eraProgressRef = useRef<{ day: string; data: EraProgress } | null>(null);
   // Latest theme values for the stable refresh callback
   const rankRef = useRef(rank);
   const setRankRef = useRef(setRank);
+  const eraIdRef = useRef(themeEra.id);
+  const setEraRef = useRef(setEra);
   useEffect(() => {
     rankRef.current = rank;
     setRankRef.current = setRank;
+    eraIdRef.current = themeEra.id;
+    setEraRef.current = setEra;
   });
+
+  // Place the player in an era for this XP; with `announce`, a change gets a toast and the palette
+  // wipe once the XP motes have landed
+  const placeEra = useCallback((xp: number, announceAfterMs: number | null) => {
+    const progress = eraProgressRef.current?.data;
+    const forced = getDevEraOverride(); // dev tools only; always null in production
+    if (!progress && forced === null) return;
+    const index = forced ?? liveEraIndex(progress!.startIndex, xp, progress!.lastMonthPaceXP);
+    if (progress) {
+      setEraStanding({ index, startIndex: progress.startIndex, lastMonthName: progress.lastMonthName, lastMonthPaceXP: progress.lastMonthPaceXP });
+    }
+
+    const current = ERAS.findIndex(e => e.id === eraIdRef.current);
+    if (index === current) return;
+    const next = eraAt(index);
+    if (announceAfterMs === null) {
+      setEraRef.current(next.id);
+      return;
+    }
+    setTimeout(() => {
+      withRankWipe(() => setEraRef.current(next.id));
+      setEraShift({ era: next, up: index > current, lastMonthName: progress?.lastMonthName ?? "last month" });
+      if (index > current) sfx.levelUp(); else sfx.undo();
+    }, announceAfterMs);
+  }, []);
+
+  const ensureEraProgress = useCallback(async () => {
+    const day = format(new Date(), "yyyy-MM-dd");
+    if (eraProgressRef.current?.day === day) return;
+    const data = await getEraProgress(day);
+    eraProgressRef.current = { day, data };
+    // Place silently against the latest known XP (the profile may have loaded first)
+    placeEra(prevRef.current ? prevRef.current.xp : 0, null);
+  }, [placeEra]);
 
   // Plays the effects for a change; returns true when motes are flying to the XP bar
   const announce = useCallback((diff: ProgressDiff): boolean => {
     const tap = lastTapRef.current && Date.now() - lastTapRef.current.t < 8000 ? lastTapRef.current : null;
     lastTapRef.current = null;
     const target = findXpTarget();
-    const origin = tap ?? target ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    // Typing (e.g. a note autosave) has no tap, so start from the field being typed in
+    const origin = tap ?? focusedFieldPoint() ?? target ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
     const flying = diff.xpDelta > 0 && !!target;
     if (diff.xpDelta !== 0) {
@@ -123,19 +181,30 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     const diff = withEffects ? diffProfiles(prevRef.current, data) : null;
     prevRef.current = data;
     // Gained XP shows on the bar once the motes reach it (unless a newer load took over)
-    if (diff && announce(diff)) {
+    const flying = diff ? announce(diff) : false;
+    if (flying) {
       setTimeout(() => { if (id === requestRef.current) setProfile(data); }, XP_LANDING_MS);
     } else {
       setProfile(data);
     }
+    // Rank-ups have their own ceremony; era shifts follow the XP landing
+    placeEra(data.xp, diff ? (flying ? XP_LANDING_MS : 0) + (diff.rankUp ? 7500 : 400) : null);
 
-    const manual = !!localStorage.getItem("rank_manually_set");
+    // A manual rank pick only lasts for the month it was made in (older flags, including the
+    // pre-v6 "true", are dropped so the rank syncs again instead of sticking at Novice)
+    const flag = localStorage.getItem("rank_manually_set");
+    const manual = flag === currentPeriod();
+    if (flag && !manual) localStorage.removeItem("rank_manually_set");
     setIsManual(manual);
     if (manual || diff?.rankUp || ceremonyRef.current) return;
 
+    // Also re-save when the stored rank isn't stamped with this month (e.g. saved before v6),
+    // so the next load starts on the right rank instead of Novice
     const target = rankForLevel(data.level) as Rank;
-    if (target !== rankRef.current) setRankRef.current(target);
-  }, [announce]);
+    if (target !== rankRef.current || localStorage.getItem("rank_period") !== currentPeriod()) {
+      setRankRef.current(target);
+    }
+  }, [announce, placeEra]);
 
   const finishCeremony = useCallback(() => {
     const done = ceremonyRef.current;
@@ -193,21 +262,26 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const onUpdate = () => load(true);
+    // A forced era plays the same toast and wipe as a real crossing
+    const onDevEra = () => placeEra(prevRef.current ? prevRef.current.xp : 0, 0);
     window.addEventListener("profile-updated", onUpdate);
     window.addEventListener(DEV_XP_EVENT, onUpdate);
+    window.addEventListener(DEV_ERA_EVENT, onDevEra);
     return () => {
       window.removeEventListener("profile-updated", onUpdate);
       window.removeEventListener(DEV_XP_EVENT, onUpdate);
+      window.removeEventListener(DEV_ERA_EVENT, onDevEra);
     };
-  }, [load]);
+  }, [load, placeEra]);
 
   // Refresh on navigation (e.g. an event's XP lands once its time passes)
   useEffect(() => {
     load(prevRef.current !== null);
-  }, [pathname, load]);
+    ensureEraProgress().catch(err => console.error("Era progress failed:", err));
+  }, [pathname, load, ensureEraProgress]);
 
   const setManual = useCallback((manual: boolean) => {
-    if (manual) localStorage.setItem("rank_manually_set", "true");
+    if (manual) localStorage.setItem("rank_manually_set", currentPeriod());
     else localStorage.removeItem("rank_manually_set");
     setIsManual(manual);
     if (!manual) load(false);
@@ -216,6 +290,7 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(() => { load(true); }, [load]);
   const closeSeason = useCallback(() => setSeason(null), []);
   const closeRecap = useCallback(() => setRecapOpen(false), []);
+  const closeEraShift = useCallback(() => setEraShift(null), []);
   const openRecap = useCallback(() => {
     getSeasonRecap(format(new Date(), "yyyy-MM-dd")).then(data => {
       setRecap(data);
@@ -224,11 +299,14 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ProgressContext.Provider value={{ profile, pulse, isManual, refresh, setManual, openRecap }}>
-      {children}
+    <ProgressContext.Provider value={{ profile, pulse, isManual, refresh, setManual, openRecap, era: eraStanding }}>
+      <EraStandingContext.Provider value={eraStanding}>
+        {children}
+      </EraStandingContext.Provider>
       <XpBurstLayer bursts={bursts} />
       <LevelUpToast level={levelToast} />
       <SeasonToast season={season} onDone={closeSeason} />
+      <EraToast shift={eraShift} onDone={closeEraShift} />
       <RankUpCeremony ceremony={ceremony} onDone={finishCeremony} />
       <RecapModal recap={recap} isOpen={recapOpen} onClose={closeRecap} />
       {DEV_TOOLS_ENABLED && <DevTools />}

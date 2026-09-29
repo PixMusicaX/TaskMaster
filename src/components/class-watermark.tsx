@@ -3,13 +3,19 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { RankCrest } from "@/lib/rank-icons";
 import { useTheme } from "./theme-provider";
+import { useMounted } from "@/lib/use-mounted";
 
 export default function ClassWatermark() {
   const { rank } = useTheme();
+  // The pre-rendered HTML can't know the rank, so draw nothing until hydrated rather than
+  // showing the Novice crest and cross-fading to the real one on every load
+  const mounted = useMounted();
+  if (!mounted) return null;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center opacity-10 dark:opacity-[0.06]">
-      <AnimatePresence mode="wait">
+      {/* No entrance on load; only real rank changes animate */}
+      <AnimatePresence mode="wait" initial={false}>
         {/* Opacity/scale only: animating blur on a full-screen layer is too costly on phones */}
         <motion.div
           key={rank}

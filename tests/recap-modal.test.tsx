@@ -17,6 +17,7 @@ const recap: SeasonRecap = {
   habits: { checks: 90, top: { name: "Gym", icon: null, checks: 20, scheduledDays: 22, bestStreak: 9 } },
   tasksDone: 40, quests: { done: 6, epic: 1 }, missionsDone: 30,
   nextSeason: { monthName: "September", daysInMonth: 30 },
+  era: { start: 1, end: 2, next: 2 },
 };
 
 describe("RecapModal", () => {
@@ -31,6 +32,8 @@ describe("RecapModal", () => {
     expect(screen.getByText("29/31")).toBeTruthy();
     expect(screen.getByText("Gym on 20 of 22 scheduled days, best run 9 in a row")).toBeTruthy();
     expect(screen.getByText("To top August in September: 3,726 XP")).toBeTruthy();
+    expect(screen.getByText("Ended in the Era of Order")).toBeTruthy();
+    expect(screen.getByText("September starts at Era III · Order, one higher")).toBeTruthy();
   });
 
   it("closes from the button, the close icon and Escape", () => {

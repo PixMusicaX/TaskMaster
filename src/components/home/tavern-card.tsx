@@ -18,6 +18,7 @@ interface TavernCardProps {
 
 export default function TavernCard({ relief, loading, updating, onToggle, onRegenerate }: TavernCardProps) {
   const reward = relief?.xpReward === 5 ? 10 : relief?.xpReward;
+  const canRegenerate = !!relief && !relief.completed;
 
   return (
     <InsightCard
@@ -25,16 +26,17 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
       iconClassName="text-tm-blue-gray"
       title="Tavern"
       subtitle={relief && (
-        <div className="flex items-center gap-3 text-caption font-mono font-semibold uppercase text-tm-blue-gray/60 tracking-[0.12em]">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption font-mono font-semibold uppercase text-tm-blue-gray/60 tracking-[0.12em]">
           <span className={cn("flex items-center gap-1.5", relief.isCached ? "text-tm-orange-light/80" : "")}><MapPin size={12} className={relief.isCached ? "text-tm-orange-light" : "text-tm-yellow/40"} /> {relief.location}</span>
           <span className="w-1 h-1 rounded-full bg-white/10" />
           <span className="flex items-center gap-1.5"><CloudSun size={12} className="text-tm-yellow/40" /> {formatReliefTemp(relief.temp)}°C {relief.weather}</span>
         </div>
       )}
-      aside={!relief?.completed && relief && (
+      aside={canRegenerate && (
+        // Phones get a full-width button at the bottom instead (below)
         <button
           onClick={onRegenerate}
-          className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 text-tm-blue-gray hover:text-tm-yellow hover:border-tm-yellow/50 transition-all shadow-lg active:scale-95"
+          className="hidden sm:flex w-10 h-10 shrink-0 items-center justify-center bg-white/5 rounded-2xl border border-white/10 text-tm-blue-gray hover:text-tm-yellow hover:border-tm-yellow/50 transition-all shadow-lg active:scale-95"
           title="Regenerate Hub"
         >
           <RotateCw size={18} className={cn(loading && "animate-spin")} />
@@ -144,6 +146,17 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
           </div>
         )}
       </div>
+
+      {canRegenerate && (
+        <button
+          onClick={onRegenerate}
+          disabled={loading}
+          className="sm:hidden relative z-10 w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-tm-blue-gray/5 border border-tm-blue-gray/15 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray active:scale-[0.98] transition disabled:opacity-50"
+        >
+          <RotateCw size={14} className={cn(loading && "animate-spin")} />
+          {loading ? "Finding new suggestions..." : "New suggestions"}
+        </button>
+      )}
     </InsightCard>
   );
 }

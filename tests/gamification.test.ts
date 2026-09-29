@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
-import { getProfile, getSeasonHistory, getSeasonPace, invalidateSeasonSnapshots } from "@/app/actions/gamification";
+import { getProfile, getSeasonHistory, getSeasonPace, getSeasonTimeline, getEraProgress, invalidateSeasonSnapshots } from "@/app/actions/gamification";
 import { saveNote } from "@/app/actions/notes";
 import { toggleHabitLog } from "@/app/actions/habits";
 import { seasonSnapshot } from "@/db/schema";
@@ -144,5 +144,46 @@ describe("getSeasonPace", () => {
   it("reports zero when last month has no activity", async () => {
     setToday("2026-09-05");
     expect(await getSeasonPace("2026-09-05")).toMatchObject({ lastMonthPaceXP: 0, lastMonthTotalXP: 0 });
+  });
+});
+
+describe("getSeasonTimeline", () => {
+  beforeEach(() => setToday("2026-09-28"));
+
+  it("covers every month since the first activity, with eras, newest first", async () => {
+    await insertNote("2026-06-10", noteLines("a"));           // June: 10 XP
+    await insertNote("2026-07-10", noteLines("a", "b", "c")); // July: 30 XP, beats June
+    await insertNote("2026-08-10", noteLines("a"));           // August: 10 XP, falls short
+
+    const { seasons, currentStart } = await getSeasonTimeline("2026-09-28");
+    expect(seasons.map(s => s.monthName)).toEqual(["September", "August", "July", "June"]);
+    expect(seasons.map(s => [s.eraStart, s.eraEnd])).toEqual([[1, null], [2, 2], [1, 2], [0, 1]]);
+    expect(currentStart).toBe(1);
+  });
+
+  it("starts at Era I with no history", async () => {
+    const { seasons, currentStart } = await getSeasonTimeline("2026-09-28");
+    expect(seasons).toHaveLength(1);
+    expect(currentStart).toBe(0);
+  });
+
+  it("can pad the timeline to a minimum length", async () => {
+    const { seasons } = await getSeasonTimeline("2026-09-28", 13);
+    expect(seasons).toHaveLength(13);
+  });
+});
+
+describe("getEraProgress", () => {
+  beforeEach(() => setToday("2026-09-28"));
+
+  it("places you one era up while ahead of last month's pace", async () => {
+    await insertNote("2026-08-10", noteLines("a", "b")); // August: 20 XP by day 28 → season starts at II
+    await insertNote("2026-09-02", noteLines("a"));       // September: 10 XP, behind
+    expect(await getEraProgress("2026-09-28")).toEqual({
+      startIndex: 1, lastMonthName: "August", lastMonthPaceXP: 20, index: 1,
+    });
+
+    await insertNote("2026-09-03", noteLines("a", "b"));  // September: 30 XP, ahead
+    expect((await getEraProgress("2026-09-28")).index).toBe(2);
   });
 });

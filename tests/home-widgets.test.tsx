@@ -3,6 +3,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import SeasonPaceCard, { raceGoal } from "@/components/home/season-pace-card";
 import ClassStatusCard from "@/components/home/class-status-card";
+import { EraStandingContext, type EraStanding } from "@/components/progress/era-standing";
 import ChronicleCard from "@/components/home/chronicle-card";
 import type { HistoryDay } from "@/app/actions/history";
 import type { Profile, SeasonPace } from "@/lib/types";
@@ -40,7 +41,8 @@ describe("SeasonPaceCard", () => {
   it("shows what it takes to beat last month", () => {
     render(<SeasonPaceCard profile={profile(3260)} pace={{ ...pace, lastMonthPaceXP: 3275, lastMonthTotalXP: 3725 }} />);
     expect(screen.getByText("To beat August")).toBeTruthy();
-    expect(screen.getByText("466 XP · 156 XP/day")).toBeTruthy();
+    expect(screen.getByText("466 XP")).toBeTruthy();
+    expect(screen.getByText("156 XP/day")).toBeTruthy();
   });
 
   it("scales the meter to the final rank, marking last month's pace and final", () => {
@@ -116,7 +118,7 @@ describe("raceGoal", () => {
     expect(raceGoal(100, pace, 0)).toEqual({ label: "To beat August", value: "161 XP today" });
   });
   it("treats a tie as not yet beaten", () => {
-    expect(raceGoal(260, pace, 2).value).toBe("1 XP · 1 XP/day");
+    expect(raceGoal(260, pace, 2)).toEqual({ label: "To beat August", value: "1 XP", detail: "1 XP/day" });
   });
   it("falls back to a daily average without a previous month", () => {
     expect(raceGoal(280, { ...pace, lastMonthTotalXP: 0 }, 2)).toEqual({ label: "Daily average", value: "10 XP a day" });
@@ -124,16 +126,36 @@ describe("raceGoal", () => {
 });
 
 describe("ClassStatusCard", () => {
-  it("shows the level, class, era and the path to the next ranks", () => {
+  const withStanding = (standing: EraStanding, ui: React.ReactNode) =>
+    render(<EraStandingContext.Provider value={standing}>{ui}</EraStandingContext.Provider>);
+
+  it("shows the level, class and the path to the next ranks", () => {
     render(<ClassStatusCard profile={profile(3260, { level: 33, levelProgress: 60, nextLevelXP: 100, topStat: "vitality" })} />);
     expect(screen.getByText("33")).toBeTruthy();
     expect(screen.getByText("60/100 XP")).toBeTruthy();
     expect(screen.getAllByText("Sentinel").length).toBeGreaterThan(0);
-    expect(screen.getByText("Era of Arcane")).toBeTruthy();
     expect(screen.getByText("2 levels to Paladin")).toBeTruthy();
-    // Next era's first rank is on the path, marked with its numeral
     expect(screen.getByText("Grandmaster")).toBeTruthy();
-    expect(screen.getByText("V")).toBeTruthy();
+    // Without era data it shows the theme's era, with no hint
+    expect(screen.getByText("Era of Forge")).toBeTruthy();
+  });
+
+  it("shows the pace-based era and how to reach the next one", () => {
+    withStanding(
+      { index: 1, startIndex: 1, lastMonthName: "August", lastMonthPaceXP: 3275 },
+      <ClassStatusCard profile={profile(3260, { level: 33 })} />
+    );
+    expect(screen.getByText("Era of Steel")).toBeTruthy();
+    expect(screen.getByText("Pass August's pace for Era III (16 XP)")).toBeTruthy();
+  });
+
+  it("says when you're ahead of last month's pace", () => {
+    withStanding(
+      { index: 2, startIndex: 1, lastMonthName: "August", lastMonthPaceXP: 3275 },
+      <ClassStatusCard profile={profile(3300, { level: 34 })} />
+    );
+    expect(screen.getByText("Era of Order")).toBeTruthy();
+    expect(screen.getByText("Ahead of August's pace")).toBeTruthy();
   });
 
   it("marks the final rank", () => {

@@ -4,8 +4,9 @@ import { db, client } from "@/db";
 import { habitLog, event, note, smartMission, reliefRecommendation, seasonSnapshot, preparationTip } from "@/db/schema";
 import type { StatName, Stats } from "@/lib/types";
 import { XP_VALUES, RPG_TITLES, LEVEL_UP_XP } from "@/lib/constants";
-import { startOfMonth, endOfMonth, endOfDay, format, subMonths, addDays, min, getDaysInMonth } from "date-fns";
-import { and, or, gte, lte, eq, inArray } from "drizzle-orm";
+import { startOfMonth, endOfMonth, endOfDay, format, subMonths, addDays, min, getDaysInMonth, differenceInCalendarMonths, parseISO } from "date-fns";
+import { and, or, gte, lte, eq, inArray, min as minOf } from "drizzle-orm";
+import { liveEraIndex, seasonEras } from "@/lib/eras";
 
 export async function getStatsForPeriod(startDate: Date, endDate: Date, referenceDate: Date = new Date()) {
   try {
@@ -210,9 +211,12 @@ async function getSnapshotForPeriod(startDate: Date, endDate: Date) {
   await ensureSeasonSnapshotTable();
 
   const existingRows = await db.select().from(seasonSnapshot).where(eq(seasonSnapshot.period, period)).limit(1);
-  const existing = existingRows[0];
-  if (existing) {
-    return {
+  if (existingRows[0]) return snapshotToSeason(existingRows[0]);
+  return computeSnapshot(startDate, endDate);
+}
+
+function snapshotToSeason(existing: typeof seasonSnapshot.$inferSelect) {
+  return {
       xp: existing.xp,
       level: existing.level,
       title: existing.title,
@@ -230,11 +234,13 @@ async function getSnapshotForPeriod(startDate: Date, endDate: Date) {
         intelligence: existing.intelligence,
         wealth: existing.wealth,
         vitality: existing.vitality,
-        charisma: existing.charisma,
-      },
-    };
-  }
+      charisma: existing.charisma,
+    },
+  };
+}
 
+async function computeSnapshot(startDate: Date, endDate: Date) {
+  const period = format(startDate, "yyyy-MM");
   const stats = await getStatsForPeriod(startDate, endDate);
   await db.insert(seasonSnapshot).values({
     period,
@@ -259,12 +265,20 @@ export async function getSeasonHistory(monthsCount: number = 6, clientDateStr?: 
   const currentMonthStart = startOfMonth(now);
   const periods = Array.from({ length: monthsCount }).map((_, i) => subMonths(now, i));
 
-  // Past months are frozen in SeasonSnapshot; only the current month is computed live
+  // Past months are frozen in SeasonSnapshot (read in one query); only the current month and
+  // months never snapshotted are computed
+  const pastPeriods = periods.filter(d => startOfMonth(d) < currentMonthStart).map(d => format(d, "yyyy-MM"));
+  await ensureSeasonSnapshotTable();
+  const saved = pastPeriods.length
+    ? await db.select().from(seasonSnapshot).where(inArray(seasonSnapshot.period, pastPeriods))
+    : [];
+  const byPeriod = new Map(saved.map(row => [row.period, row]));
+
   const promises = periods.map(async (date) => {
     const start = startOfMonth(date);
-    return start < currentMonthStart
-      ? getSnapshotForPeriod(start, endOfMonth(date))
-      : getStatsForPeriod(start, endOfMonth(date), now);
+    if (start >= currentMonthStart) return getStatsForPeriod(start, endOfMonth(date), now);
+    const row = byPeriod.get(format(start, "yyyy-MM"));
+    return row ? snapshotToSeason(row) : computeSnapshot(start, endOfMonth(date));
   });
 
   return await Promise.all(promises);
@@ -291,6 +305,49 @@ export async function getSeasonPace(clientDateStr?: string) {
     lastMonthName: format(lastMonthStart, "MMMM"),
     lastMonthPaceXP: pace.xp,
     lastMonthTotalXP: final.xp,
+  };
+}
+
+// Every season since the first recorded activity, newest first, with the era each started and
+// ended in (see lib/eras.ts). The current season has no end yet.
+export async function getSeasonTimeline(clientDateStr?: string, minMonths: number = 1) {
+  const now = clientDateStr ? new Date(clientDateStr) : new Date();
+  const [[notes], [logs], [events]] = await Promise.all([
+    db.select({ first: minOf(note.date) }).from(note),
+    db.select({ first: minOf(habitLog.date) }).from(habitLog).where(eq(habitLog.completed, true)),
+    db.select({ first: minOf(event.date) }).from(event).where(eq(event.isApi, false)),
+  ]);
+  const firsts = [notes?.first, logs?.first, events?.first].filter((d): d is string => !!d).sort();
+  const sinceFirst = firsts.length ? differenceInCalendarMonths(now, parseISO(firsts[0])) + 1 : 1;
+  const months = Math.min(120, Math.max(minMonths, sinceFirst));
+
+  const history = await getSeasonHistory(months, clientDateStr);
+  const finished = history.slice(1).reverse();
+  const eras = seasonEras(finished.map(s => s.xp));
+  const finishedWithEras = finished.map((season, i) => ({
+    ...season,
+    eraStart: eras.seasons[i].start,
+    eraEnd: eras.seasons[i].end as number | null,
+  })).reverse();
+
+  return {
+    // Where the current season started
+    currentStart: eras.nextStart,
+    seasons: [{ ...history[0], eraStart: eras.nextStart, eraEnd: null as number | null }, ...finishedWithEras],
+  };
+}
+
+// What the dashboard needs to place you in an era live: this season's starting era and last
+// month's pace for today (XP comes from the profile as it changes)
+export async function getEraProgress(clientDateStr?: string) {
+  const [timeline, pace] = await Promise.all([getSeasonTimeline(clientDateStr), getSeasonPace(clientDateStr)]);
+  const current = timeline.seasons[0];
+  return {
+    startIndex: timeline.currentStart,
+    lastMonthName: pace.lastMonthName,
+    lastMonthPaceXP: pace.lastMonthPaceXP,
+    // Where you stand with this XP (the client recomputes it as XP changes)
+    index: liveEraIndex(timeline.currentStart, current.xp, pace.lastMonthPaceXP),
   };
 }
 

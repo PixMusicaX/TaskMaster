@@ -3,7 +3,10 @@
 import { useState, useSyncExternalStore } from "react";
 import { Wrench, X } from "lucide-react";
 import { LEVEL_UP_XP, RPG_TITLES } from "@/lib/constants";
-import { DEV_XP_EVENT, getDevXpOffset, setDevXpOffset } from "@/lib/dev-xp";
+import { DEV_ERA_EVENT, DEV_XP_EVENT, getDevEraOverride, getDevXpOffset, setDevEraOverride, setDevXpOffset } from "@/lib/dev-xp";
+import { ERAS } from "@/lib/eras";
+import { getDevMapStatus, rerollDevMap, setDevMapStatus, subscribeDevMap, type MapStatus } from "@/lib/dev-map";
+import { cn } from "@/lib/utils";
 import { useProgress } from "./progress-provider";
 
 const subscribe = (cb: () => void) => {
@@ -15,11 +18,20 @@ const subscribe = (cb: () => void) => {
 const xpForLevel = (level: number) => (level - 1) * LEVEL_UP_XP;
 const FINAL_RANK_XP = xpForLevel(RPG_TITLES[RPG_TITLES.length - 1].minLevel);
 
-// Development-only panel for spoofing XP (client-side, nothing is saved) to try the animations
+const subscribeEra = (cb: () => void) => {
+  window.addEventListener(DEV_ERA_EVENT, cb);
+  return () => window.removeEventListener(DEV_ERA_EVENT, cb);
+};
+
+const MAP_STATUSES: (MapStatus | null)[] = [null, "low", "balanced", "peak"];
+
+// Development-only panel for spoofing XP and the map (client-side, nothing is saved) to try the animations
 export default function DevTools() {
   const { profile, openRecap } = useProgress();
   const [open, setOpen] = useState(false);
   const offset = useSyncExternalStore(subscribe, getDevXpOffset, () => 0);
+  const mapStatus = useSyncExternalStore(subscribeDevMap, getDevMapStatus, () => null);
+  const eraOverride = useSyncExternalStore(subscribeEra, getDevEraOverride, () => null);
 
   if (!profile) return null;
 
@@ -38,11 +50,11 @@ export default function DevTools() {
   ];
 
   return (
-    <div className="fixed bottom-24 lg:bottom-4 left-4 z-[500] text-xs">
+    <div className="fixed bottom-24 lg:bottom-4 right-4 z-[500] flex flex-col items-end text-xs">
       {open ? (
         <div className="w-64 p-3 rounded-2xl bg-black/85 text-white shadow-2xl backdrop-blur-md space-y-3">
           <div className="flex items-center justify-between">
-            <span className="font-mono font-semibold uppercase tracking-[0.12em] text-yellow-300">Dev · XP spoof</span>
+            <span className="font-mono font-semibold uppercase tracking-[0.12em] text-yellow-300">Dev tools</span>
             <button onClick={() => setOpen(false)} aria-label="Close dev tools" className="p-1 rounded hover:bg-white/10"><X size={14} /></button>
           </div>
           <p className="font-mono text-white/70">
@@ -69,6 +81,49 @@ export default function DevTools() {
           >
             Reset to real XP
           </button>
+
+          <div className="space-y-1.5 pt-2 border-t border-white/10">
+            <p className="font-mono font-semibold uppercase tracking-[0.12em] text-white/60">Era</p>
+            <div className="grid grid-cols-6 gap-1">
+              {[null, ...ERAS.map((_, i) => i)].map(index => (
+                <button
+                  key={index ?? "auto"}
+                  onClick={() => setDevEraOverride(index)}
+                  aria-pressed={eraOverride === index}
+                  title={index === null ? "Follow the real pace rules" : `Era of ${ERAS[index].name}`}
+                  className={cn(
+                    "px-1 py-1.5 rounded-lg",
+                    eraOverride === index ? "bg-yellow-300 text-black font-semibold" : "bg-white/10 hover:bg-white/20",
+                    index !== null && "font-serif font-bold"
+                  )}
+                >
+                  {index === null ? "Auto" : ERAS[index].numeral}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5 pt-2 border-t border-white/10">
+            <p className="font-mono font-semibold uppercase tracking-[0.12em] text-white/60">Map status</p>
+            <div className="grid grid-cols-4 gap-1">
+              {MAP_STATUSES.map(status => (
+                <button
+                  key={status ?? "auto"}
+                  onClick={() => setDevMapStatus(status)}
+                  aria-pressed={mapStatus === status}
+                  className={cn(
+                    "px-1 py-1.5 rounded-lg capitalize",
+                    mapStatus === status ? "bg-yellow-300 text-black font-semibold" : "bg-white/10 hover:bg-white/20"
+                  )}
+                >
+                  {status ?? "Auto"}
+                </button>
+              ))}
+            </div>
+            <button onClick={rerollDevMap} className="w-full px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20">
+              Reroll map terrain
+            </button>
+          </div>
         </div>
       ) : (
         <button
@@ -76,7 +131,7 @@ export default function DevTools() {
           aria-label="Open dev tools"
           className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-black/80 text-yellow-300 font-mono font-semibold shadow-lg"
         >
-          <Wrench size={14} /> DEV{offset !== 0 && ` ${offset > 0 ? "+" : ""}${offset}`}
+          <Wrench size={14} /> DEV{offset !== 0 && ` ${offset > 0 ? "+" : ""}${offset}`}{eraOverride !== null && ` · era ${ERAS[eraOverride].numeral}`}{mapStatus && ` · map ${mapStatus}`}
         </button>
       )}
     </div>

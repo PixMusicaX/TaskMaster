@@ -35,4 +35,28 @@ describe("dev XP spoofing", () => {
     expect(withDevXp(profile)).toBe(profile);
     window.removeEventListener("dev-xp-changed", onChange);
   });
+
+  it("forces and clears an era in development only", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const { getDevEraOverride, setDevEraOverride } = await import("@/lib/dev-xp");
+    const onChange = vi.fn();
+    window.addEventListener("dev-era-changed", onChange);
+
+    expect(getDevEraOverride()).toBeNull();
+    setDevEraOverride(3);
+    expect(getDevEraOverride()).toBe(3);
+    setDevEraOverride(0);
+    expect(getDevEraOverride()).toBe(0);
+    setDevEraOverride(null);
+    expect(getDevEraOverride()).toBeNull();
+    expect(onChange).toHaveBeenCalledTimes(3);
+    window.removeEventListener("dev-era-changed", onChange);
+  });
+
+  it("ignores era overrides outside development", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const { getDevEraOverride, setDevEraOverride } = await import("@/lib/dev-xp");
+    setDevEraOverride(4);
+    expect(getDevEraOverride()).toBeNull();
+  });
 });

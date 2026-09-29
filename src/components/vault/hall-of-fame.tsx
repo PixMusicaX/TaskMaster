@@ -3,14 +3,14 @@
 import { Search, Trophy } from "lucide-react";
 import GlassCard from "@/components/glass-card";
 import { RankCrest } from "@/lib/rank-icons";
-import { eraForRank } from "@/lib/eras";
+import { eraAt } from "@/lib/eras";
 import { cn } from "@/lib/utils";
 import AnimatedNumber from "@/components/progress/animated-number";
-import type { Season } from "@/lib/types";
+import type { TimelineSeason } from "@/lib/types";
 import VaultSection from "./vault-section";
 
 interface HallOfFameProps {
-  seasons: Season[];
+  seasons: TimelineSeason[];
   loading: boolean;
   onViewAll: () => void;
 }
@@ -29,7 +29,7 @@ export default function HallOfFame({ seasons, loading, onViewAll }: HallOfFamePr
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {seasons.slice(0, 3).map((season, idx) => {
-              const era = eraForRank(season.title);
+              const era = eraAt(season.eraEnd ?? season.eraStart);
               const isBest = season.xp === best;
               return (
                 <GlassCard key={`${season.year}-${season.monthName}`} delay={idx * 0.1} className={cn("p-6 group", isBest && "border-tm-yellow/40")}>

@@ -28,6 +28,31 @@ export function setDevXpOffset(offset: number) {
   window.dispatchEvent(new Event(DEV_XP_EVENT));
 }
 
+// Forced era index (0 = I … 4 = V), or null to follow the real pace rules
+export const DEV_ERA_EVENT = "dev-era-changed";
+const ERA_KEY = "tm_dev_era";
+
+export function getDevEraOverride(): number | null {
+  if (!DEV_TOOLS_ENABLED || typeof window === "undefined") return null;
+  try {
+    const value = localStorage.getItem(ERA_KEY);
+    return value === null ? null : Number(value);
+  } catch {
+    return null;
+  }
+}
+
+export function setDevEraOverride(index: number | null) {
+  if (!DEV_TOOLS_ENABLED) return;
+  try {
+    if (index === null) localStorage.removeItem(ERA_KEY);
+    else localStorage.setItem(ERA_KEY, String(index));
+  } catch {
+    // Storage blocked: the override just won't persist
+  }
+  window.dispatchEvent(new Event(DEV_ERA_EVENT));
+}
+
 // The profile as it would look with the offset applied (level, progress and title follow the XP)
 export function withDevXp<T extends { xp: number; level: number; levelProgress: number; title: string }>(profile: T): T {
   const offset = getDevXpOffset();

@@ -9,11 +9,14 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
 import { useProgress } from "@/components/progress/progress-provider";
 import AnimatedNumber from "@/components/progress/animated-number";
+import { useMounted } from "@/lib/use-mounted";
 
 // Current rank crest with a level ring, season stats, and the five-era path
 export default function VaultHero() {
   const { rank, era } = useTheme();
   const { profile } = useProgress();
+  // The crest can't be pre-rendered with the right rank; it springs in once hydrated
+  const mounted = useMounted();
   const eraIndex = ERAS.findIndex(e => e.id === era.id);
   const progress = profile ? profile.levelProgress / profile.nextLevelXP : 0;
   const daysLeft = differenceInDays(endOfMonth(new Date()), new Date());
@@ -31,7 +34,7 @@ export default function VaultHero() {
             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
           />
         </svg>
-        <motion.div
+        {mounted && <motion.div
           key={rank}
           initial={{ scale: 0.6, opacity: 0, rotate: -20 }}
           animate={{ scale: 1, opacity: 1, rotate: 0 }}
@@ -39,14 +42,14 @@ export default function VaultHero() {
           className="absolute inset-4 rounded-full bg-tm-purple-dark text-tm-yellow flex items-center justify-center shadow-[0_0_40px_-8px_var(--tm-yellow)]"
         >
           <RankCrest rank={rank} size={56} strokeWidth={1.5} />
-        </motion.div>
+        </motion.div>}
       </div>
 
       <div className="space-y-2">
         <p className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">The Vault</p>
-        <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tight text-tm-purple-dark dark:text-tm-yellow uppercase">{rank}</h1>
+        <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tight text-tm-purple-dark dark:text-tm-yellow uppercase"><span className="tm-rank-label" aria-label={rank} /></h1>
         <p className="flex items-center justify-center gap-2 text-sm font-bold text-tm-blue-gray">
-          <span className="tm-era-badge">{era.numeral}</span> Era of {era.name}
+          <span className="tm-era-badge tm-era-label" /> Era of <span className="tm-era-name" />
         </p>
       </div>
 

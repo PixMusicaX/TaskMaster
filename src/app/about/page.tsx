@@ -10,13 +10,14 @@ import HallOfFame from "@/components/vault/hall-of-fame";
 import Chronicle, { type ChronicleKind } from "@/components/vault/chronicle";
 import SettingsPanel from "@/components/vault/settings-panel";
 import VaultSection from "@/components/vault/vault-section";
-import { getSeasonHistory } from "@/app/actions/gamification";
+import { getSeasonTimeline } from "@/app/actions/gamification";
+import { eraAt } from "@/lib/eras";
 import { getSmartMissionHistory, toggleSmartMission } from "@/app/actions/smart-missions";
 import { getReliefHistory, toggleReliefRecommendation } from "@/app/actions/relief";
 import { getPreparationTipHistory, togglePreparationTip } from "@/app/actions/preparation";
 import { generatePruneArchive, deletePrunedData } from "@/app/actions/prune";
 import { cn } from "@/lib/utils";
-import type { PrepTipRow, ReliefRow, Season, SmartMissionRow } from "@/lib/types";
+import type { PrepTipRow, ReliefRow, SmartMissionRow, TimelineSeason } from "@/lib/types";
 
 const flip = <T extends { id: string; completed: boolean }>(list: T[], id: string) =>
   list.map(item => item.id === id ? { ...item, completed: !item.completed } : item);
@@ -38,7 +39,7 @@ function renderDate(val: string) {
 }
 
 export default function AboutPage() {
-  const [seasonHistory, setSeasonHistory] = useState<Season[]>([]);
+  const [seasonHistory, setSeasonHistory] = useState<TimelineSeason[]>([]);
   const [missionHistory, setMissionHistory] = useState<SmartMissionRow[]>([]);
   const [reliefHistory, setReliefHistory] = useState<ReliefRow[]>([]);
   const [preparationHistory, setPreparationHistory] = useState<PrepTipRow[]>([]);
@@ -105,13 +106,13 @@ export default function AboutPage() {
   useEffect(() => {
     async function loadData() {
       const oneYearAgo = format(subDays(new Date(), 365), "yyyy-MM-dd");
-      const [seasons, missions, relief, prep] = await Promise.all([
-        getSeasonHistory(50),
+      const [timeline, missions, relief, prep] = await Promise.all([
+        getSeasonTimeline(format(new Date(), "yyyy-MM-dd")),
         getSmartMissionHistory(oneYearAgo),
         getReliefHistory(oneYearAgo),
         getPreparationTipHistory(oneYearAgo)
       ]);
-      setSeasonHistory(seasons.filter(s => s.xp > 0));
+      setSeasonHistory(timeline.seasons.filter(s => s.xp > 0));
       setMissionHistory(missions);
       setReliefHistory(relief);
       setPreparationHistory(prep);
@@ -262,7 +263,7 @@ export default function AboutPage() {
       {/* Footer */}
       <div className="pt-12 text-center border-t border-tm-blue-gray/10">
         <p className="text-xs font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">
-          Version 6.0.0 • TaskMaster • By Pinaki AKA PiX
+          Version 6.1.0 • TaskMaster • By Pinaki AKA PiX
         </p>
       </div>
 
@@ -271,13 +272,14 @@ export default function AboutPage() {
         title="Hall of Fame"
         isOpen={openTable === "seasons"}
         onClose={closeTable}
-        data={seasonHistory}
+        data={seasonHistory.map(s => ({ ...s, era: eraAt(s.eraEnd ?? s.eraStart).numeral }))}
         columns={[
           { header: "Year", key: "year" },
           { header: "Month", key: "monthName" },
           { header: "XP", key: "xp" },
           { header: "Level", key: "level" },
-          { header: "Title", key: "title" }
+          { header: "Title", key: "title" },
+          { header: "Era", key: "era" }
         ]}
       />
 

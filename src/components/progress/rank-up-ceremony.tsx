@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { RankCrest } from "@/lib/rank-icons";
-import { eraForRank } from "@/lib/eras";
 
 export interface Ceremony {
   from: string;
@@ -20,12 +19,9 @@ export default function RankUpCeremony({ ceremony, onDone }: { ceremony: Ceremon
     return () => { clearTimeout(timer); window.removeEventListener("keydown", onKey); };
   }, [ceremony, onDone]);
 
-  const newEra = ceremony ? eraForRank(ceremony.to) : null;
-  const eraChanged = ceremony && newEra && eraForRank(ceremony.from).id !== newEra.id;
-
   return (
     <AnimatePresence>
-      {ceremony && newEra && (
+      {ceremony && (
         <motion.div
           className="fixed inset-0 z-[400] flex items-center justify-center bg-black/75 px-6"
           initial={{ opacity: 0 }}
@@ -82,18 +78,6 @@ export default function RankUpCeremony({ ceremony, onDone }: { ceremony: Ceremon
             >
               {ceremony.to}
             </motion.h2>
-
-            {eraChanged && (
-              <motion.div
-                className="relative mt-5 flex items-center gap-3 px-4 py-2 rounded-full border border-tm-yellow/40 bg-tm-yellow/10"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.2 }}
-              >
-                <span className="font-serif font-bold text-tm-yellow">{newEra.numeral}</span>
-                <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-white/90">New Era · {newEra.name}</span>
-              </motion.div>
-            )}
 
             <motion.p
               className="relative mt-10 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-white/40"

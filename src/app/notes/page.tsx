@@ -126,6 +126,8 @@ export default function NotesPage() {
     setIsDirty(false);
     mergeSavedNote(saved);
     fetchProfile(); // Update intelligence stat
+    // Lines with text earn XP; the progress layer plays the burst and sound when the total moves
+    window.dispatchEvent(new CustomEvent("profile-updated"));
   }, [mergeSavedNote, fetchProfile]);
 
   useEffect(() => {

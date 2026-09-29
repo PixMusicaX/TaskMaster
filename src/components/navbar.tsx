@@ -28,9 +28,7 @@ const navItems = [
 function EraBadge({ className }: { className?: string }) {
   const { era } = useTheme();
   return (
-    <span className={cn("tm-era-badge", className)} title={`Era ${era.numeral} · ${era.name}`} aria-label={`Era ${era.numeral}, ${era.name}`}>
-      {era.numeral}
-    </span>
+    <span className={cn("tm-era-badge tm-era-label", className)} title={`Era ${era.numeral} · ${era.name}`} aria-label={`Era ${era.numeral}, ${era.name}`} />
   );
 }
 
@@ -100,7 +98,7 @@ export default function Navbar() {
               TaskMaster
             </span>
             <div className="hidden md:flex items-center gap-1.5 leading-none mt-1">
-              <span className="text-tm-orange-dark text-caption font-mono font-semibold uppercase tracking-[0.12em]">[{rank}]</span>
+              <span className="text-tm-orange-dark text-caption font-mono font-semibold uppercase tracking-[0.12em]">[<span className="tm-rank-label" aria-label={rank} />]</span>
               <EraBadge className="text-caption" />
               <span className="text-tiny text-tm-blue-gray font-mono font-semibold uppercase tracking-[0.12em] border-l border-white/10 pl-1.5 ml-0.5">
                 {daysLeft === 1 ? "1 DAY LEFT" : `${daysLeft} DAYS LEFT`}
@@ -274,7 +272,7 @@ export default function Navbar() {
           aria-controls="season-panel"
           className="px-5 py-2.5 bg-white/90 dark:bg-tm-purple-dark/90 backdrop-blur-xl border border-tm-blue-gray/10 dark:border-white/10 rounded-full shadow-2xl flex items-center gap-2.5 overflow-hidden whitespace-nowrap"
         >
-          <span className="text-tm-orange-dark dark:text-tm-yellow text-caption font-mono font-semibold uppercase tracking-[0.12em]">{rank}</span>
+          <span className="tm-rank-label text-tm-orange-dark dark:text-tm-yellow text-caption font-mono font-semibold uppercase tracking-[0.12em]" aria-label={rank} />
           <EraBadge className="text-caption" />
           {profile && (
             <>

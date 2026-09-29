@@ -1,7 +1,7 @@
 // Shared data shapes, derived from the schema and server actions so they can't drift.
 import type { event, note, smartMission, reliefRecommendation, preparationTip } from "@/db/schema";
 import type { getHabits } from "@/app/actions/habits";
-import type { getProfile, getSeasonHistory, getSeasonPace } from "@/app/actions/gamification";
+import type { getProfile, getSeasonHistory, getSeasonPace, getSeasonTimeline } from "@/app/actions/gamification";
 import type { getMoodsByDateRange } from "@/app/actions/notes";
 import type { getSeasonRecap } from "@/app/actions/recap";
 
@@ -16,6 +16,7 @@ export type HabitLog = HabitWithLogs["logs"][number];
 export type Profile = Awaited<ReturnType<typeof getProfile>>;
 export type Season = Awaited<ReturnType<typeof getSeasonHistory>>[number];
 export type SeasonPace = Awaited<ReturnType<typeof getSeasonPace>>;
+export type TimelineSeason = Awaited<ReturnType<typeof getSeasonTimeline>>["seasons"][number];
 export type SeasonRecap = Awaited<ReturnType<typeof getSeasonRecap>>;
 export type MoodEntry = Awaited<ReturnType<typeof getMoodsByDateRange>>[number];
 

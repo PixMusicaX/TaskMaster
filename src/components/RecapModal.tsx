@@ -7,7 +7,7 @@ import {
   Flame, Zap, NotebookPen, Smile, Crown, Target, TrendingUp, TrendingDown, type LucideIcon,
 } from "lucide-react";
 import AnimatedNumber from "@/components/progress/animated-number";
-import { eraForRank } from "@/lib/eras";
+import { eraAt } from "@/lib/eras";
 import { nextSeasonGoal, recapHeadline, recapInsights, type InsightKind } from "@/lib/recap";
 import { cn } from "@/lib/utils";
 import type { SeasonRecap, StatName } from "@/lib/types";
@@ -87,7 +87,8 @@ export default function RecapModal({ recap, isOpen, onClose }: RecapModalProps) 
 }
 
 function RecapBody({ recap, onClose }: { recap: SeasonRecap; onClose: () => void }) {
-  const era = eraForRank(recap.title);
+  const endEra = eraAt(recap.era.end);
+  const nextEra = eraAt(recap.era.next);
   const insights = recapInsights(recap);
   const goal = nextSeasonGoal(recap);
   const change = recap.previous && recap.previous.xp > 0 ? recap.xp - recap.previous.xp : null;
@@ -109,9 +110,20 @@ function RecapBody({ recap, onClose }: { recap: SeasonRecap; onClose: () => void
           {recap.monthName} {recap.year} · Season recap
         </p>
         <h2 className="text-3xl font-display font-bold leading-tight text-foreground">{recapHeadline(recap)}</h2>
-        <div className="flex items-center gap-2 text-sm font-semibold text-tm-blue-gray">
-          <span className="tm-era-badge text-sm">{era.numeral}</span>
-          <span>Reached <span className="text-foreground">{recap.title}</span> · Level {recap.level}</span>
+        <p className="text-sm font-semibold text-tm-blue-gray">
+          Reached <span className="text-foreground">{recap.title}</span> · Level {recap.level}
+        </p>
+      </motion.div>
+
+      {/* Era: where the season ended and where the next one starts */}
+      <motion.div variants={item} className="flex items-center gap-3 p-4 rounded-2xl bg-tm-blue-gray/5 border border-tm-blue-gray/10">
+        <span className="tm-era-badge text-lg">{endEra.numeral}</span>
+        <div className="text-sm min-w-0">
+          <p className="font-semibold text-foreground">Ended in the Era of {endEra.name}</p>
+          <p className="text-tm-blue-gray">
+            {recap.nextSeason.monthName} starts at Era {nextEra.numeral} · {nextEra.name}
+            {recap.era.next > recap.era.start ? ", one higher" : recap.era.next < recap.era.start ? ", one lower" : ""}
+          </p>
         </div>
       </motion.div>
 
