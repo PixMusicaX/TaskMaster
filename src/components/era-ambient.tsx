@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { AmbientLayer, ParticleKind } from "@/lib/eras";
 import { useEra } from "./theme-provider";
+import { useMounted } from "@/lib/use-mounted";
 
 const PALETTE_VARS = ["--tm-yellow", "--tm-orange-light", "--tm-red", "--tm-blue-gray", "--tm-orange-dark"];
 
@@ -168,12 +169,15 @@ function Layer({ layer }: { layer: AmbientLayer }) {
 export default function EraAmbient() {
   const era = useEra();
   const { layers, particles } = era.ambient;
+  // The pre-rendered HTML can't know the saved era, so it would show Era I's layers and then
+  // cross-fade on every load. Draw the era layers only once hydrated (the grain is era-neutral).
+  const mounted = useMounted();
 
   return (
     <div className="tm-ambient" aria-hidden>
       <div className="tm-grain" />
       <AnimatePresence>
-        <motion.div
+        {mounted && <motion.div
           key={era.id}
           className="absolute inset-0"
           initial={{ opacity: 0 }}
@@ -183,7 +187,7 @@ export default function EraAmbient() {
         >
           {layers.map(layer => <Layer key={layer} layer={layer} />)}
           {particles && <ParticleCanvas {...particles} />}
-        </motion.div>
+        </motion.div>}
       </AnimatePresence>
     </div>
   );

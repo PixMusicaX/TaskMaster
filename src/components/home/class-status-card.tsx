@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { RPG_TITLES } from "@/lib/constants";
 import { eraAt, MAX_ERA } from "@/lib/eras";
-import { useEra } from "@/components/theme-provider";
 import { useEraStanding, type EraStanding } from "@/components/progress/era-standing";
 import { cn } from "@/lib/utils";
 import type { Profile } from "@/lib/types";
@@ -16,8 +15,8 @@ export default function ClassStatusCard({ profile }: { profile: Profile | null }
   const rankIndex = Math.max(0, RPG_TITLES.findLastIndex(t => level >= t.minLevel));
   const rank = RPG_TITLES[rankIndex].title;
   const standing = useEraStanding();
-  const themeEra = useEra();
-  const era = standing ? eraAt(standing.index) : themeEra;
+  // Until the pace data loads, show the saved era via the CSS labels set before first paint
+  const era = standing ? eraAt(standing.index) : null;
 
   return (
     <InsightCard
@@ -65,9 +64,11 @@ export default function ClassStatusCard({ profile }: { profile: Profile | null }
               <p className="text-3xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow leading-tight">{rank}</p>
             </div>
             <div className="flex items-center gap-2.5 px-3 py-2 rounded-2xl bg-tm-blue-gray/5 border border-tm-blue-gray/10">
-              <span className="tm-era-badge text-sm">{era.numeral}</span>
+              {era ? <span className="tm-era-badge text-sm">{era.numeral}</span> : <span className="tm-era-badge tm-era-label text-sm" />}
               <div className="text-left">
-                <p className="text-sm font-semibold text-foreground leading-tight">Era of {era.name}</p>
+                <p className="text-sm font-semibold text-foreground leading-tight">
+                  Era of {era ? era.name : <span className="tm-era-name" data-testid="saved-era-name" />}
+                </p>
                 {standing && profile && <EraHint standing={standing} xp={profile.xp} />}
               </div>
             </div>

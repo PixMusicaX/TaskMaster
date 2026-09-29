@@ -136,8 +136,9 @@ describe("ClassStatusCard", () => {
     expect(screen.getAllByText("Sentinel").length).toBeGreaterThan(0);
     expect(screen.getByText("2 levels to Paladin")).toBeTruthy();
     expect(screen.getByText("Grandmaster")).toBeTruthy();
-    // Without era data it shows the theme's era, with no hint
-    expect(screen.getByText("Era of Forge")).toBeTruthy();
+    // Without era data it shows the saved era through the CSS labels, with no hint
+    expect(screen.getByTestId("saved-era-name")).toBeTruthy();
+    expect(screen.queryByText(/pace/)).toBeNull();
   });
 
   it("shows the pace-based era and how to reach the next one", () => {
