@@ -27,11 +27,11 @@ export function AskEmblem({ onAsk, active }: { onAsk: () => void; active: boolea
         tabIndex={active ? undefined : -1}
         aria-label="Ask The Taskmaster"
         className={cn(
-          "group relative w-[46%] aspect-square rounded-full overflow-hidden flex items-center justify-center bg-tm-purple-dark border border-tm-yellow/40 text-tm-yellow shadow-[0_0_40px_rgba(242,194,48,0.25)] hover:shadow-[0_0_56px_rgba(242,194,48,0.45)] active:scale-95 transition",
+          "group relative w-[46%] aspect-square rounded-full overflow-hidden flex items-center justify-center bg-white dark:bg-tm-purple-dark border border-tm-yellow/40 text-tm-yellow shadow-[0_0_40px_rgba(242,194,48,0.25)] hover:shadow-[0_0_56px_rgba(242,194,48,0.45)] active:scale-95 transition",
           active && "pointer-events-auto"
         )}
       >
-        <Image src="/logo.png" alt="" width={240} height={240} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+        <Image src="/logo.png" alt="" width={240} height={240} className="w-full h-full object-cover invert hue-rotate-180 dark:invert-0 dark:hue-rotate-0 group-hover:scale-105 transition-transform duration-700" />
         <span className="absolute inset-0 bg-gradient-to-r from-tm-yellow/0 via-tm-yellow/20 to-tm-yellow/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
       </button>
     </div>

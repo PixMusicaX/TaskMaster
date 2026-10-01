@@ -621,11 +621,11 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     cancelAnimationFrame(scrollAnim.current);
     const from = window.scrollY;
     const far = Math.abs(y - from);
-    const duration = ride ? Math.min(2400, Math.max(900, far * 0.4)) : Math.min(2800, Math.max(1500, far * 2.8));
+    const duration = ride ? Math.min(2400, Math.max(900, far * 0.4)) : Math.min(3400, Math.max(1900, far * 3.4));
     const began = performance.now();
     const frame = (now: number) => {
       const t = Math.min(1, (now - began) / duration);
-      window.scrollTo(0, from + (y - from) * easeInOut(t));
+      window.scrollTo(0, Math.round(from + (y - from) * easeInOut(t)));
       scrollAnim.current = t < 1 ? requestAnimationFrame(frame) : 0;
     };
     scrollAnim.current = requestAnimationFrame(frame);
@@ -719,8 +719,19 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       if (step(direction) || e.key === "ArrowLeft" || e.key === "ArrowRight") e.preventDefault();
     };
 
+    // While the stage is pinned, hold it with position: fixed rather than sticky. Mobile Safari
+    // lays sticky elements out a frame behind a scroll driven from script, which shows as the
+    // whole stage trembling up and down during a step; a fixed element is never moved at all.
+    const pin = () => {
+      const box = el.getBoundingClientRect();
+      const pinned = box.top <= 0 && box.bottom >= window.innerHeight;
+      ["position", "left", "right"].forEach(prop => stage.style.setProperty(prop, pinned ? (prop === "position" ? "fixed" : "0") : ""));
+    };
+    pin();
+
     let settle: ReturnType<typeof setTimeout> | undefined;
     const onScroll = () => {
+      pin();
       clearTimeout(settle);
       settle = setTimeout(() => {
         if (scrollAnim.current || touchY !== null) return;
@@ -731,6 +742,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       }, SETTLE_AFTER);
     };
 
+    window.addEventListener("resize", pin);
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -740,6 +752,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       clearTimeout(settle);
       cancelAnimationFrame(scrollAnim.current);
       scrollAnim.current = 0;
+      ["position", "left", "right"].forEach(prop => stage.style.removeProperty(prop));
+      window.removeEventListener("resize", pin);
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", onScroll);
