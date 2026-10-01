@@ -917,7 +917,29 @@ const BIOME_MATRIX: Record<string, Record<"low" | "balanced" | "peak", { name: s
   }
 };
 
-export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { profile: Profile | null; moodData: Pick<NoteRow, "mood">[]; completionScore?: number }) {
+// What the growth saga shows around the map when it draws it in its orbit
+export interface MapInfo {
+  name: string;
+  realm: string;
+  icon: string;
+  status: "low" | "balanced" | "peak";
+  score: number;
+  stops: { name: string; icon: string }[];
+}
+
+interface WorldMapWidgetProps {
+  profile: Profile | null;
+  moodData: Pick<NoteRow, "mood">[];
+  completionScore?: number;
+  // "orbit" is just the map as a round button filling its parent, for the growth saga's compass;
+  // the parent shows the name and next stops itself, from onInfo
+  variant?: "card" | "orbit";
+  // Orbit only: whether the map can be tapped right now
+  interactive?: boolean;
+  onInfo?: (info: MapInfo | null) => void;
+}
+
+export function WorldMapWidget({ profile, moodData, completionScore = 0, variant = "card", interactive = true, onInfo }: WorldMapWidgetProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { rank } = useTheme();
   // Rolled once per session so the map only changes when its inputs do
@@ -1034,9 +1056,52 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
     drawOverlay(ctx, p, W, H, h);
   }, [mapConfig]);
 
+  useEffect(() => {
+    onInfo?.(mapConfig && {
+      name: mapConfig.name,
+      realm: BIOMES[mapConfig.biome].label,
+      icon: BIOMES[mapConfig.biome].icon,
+      status: mapConfig.performanceState,
+      score: Math.round(mapConfig.performanceScore),
+      stops: mapConfig.nextStops.map(stop => ({ name: stop.name, icon: BIOMES[stop.biome].icon })),
+    });
+  }, [mapConfig, onInfo]);
+
   if (!mapConfig) return null;
 
   const pal = BIOMES[mapConfig.biome];
+
+  const popup = (
+    <AnimatePresence>
+      {isFullscreen && (
+        <MapPopupModal
+          mapConfig={mapConfig}
+          onClose={() => setIsFullscreen(false)}
+        />
+      )}
+    </AnimatePresence>
+  );
+
+  if (variant === "orbit") {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setIsFullscreen(true)}
+          tabIndex={interactive ? undefined : -1}
+          aria-label={`Open the map of ${mapConfig.name}`}
+          className={cn(
+            "group/map absolute inset-0 rounded-full overflow-hidden border-2 border-tm-yellow/50 shadow-2xl cursor-pointer",
+            interactive && "pointer-events-auto"
+          )}
+        >
+          <canvas ref={canvasRef} className="w-full h-full object-cover transition-transform duration-1000 group-hover/map:scale-110" style={{ imageRendering: "pixelated" }} />
+          <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,transparent_55%,rgba(0,0,0,0.45)_100%)] pointer-events-none" />
+        </button>
+        {popup}
+      </>
+    );
+  }
 
   return (
     <>
@@ -1091,15 +1156,7 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0 }: { pro
       </div>
       </div>
 
-      {/* Map Popup Modal */}
-      <AnimatePresence>
-        {isFullscreen && mapConfig && (
-          <MapPopupModal
-            mapConfig={mapConfig}
-            onClose={() => setIsFullscreen(false)}
-          />
-        )}
-      </AnimatePresence>
+      {popup}
     </>
   );
 }

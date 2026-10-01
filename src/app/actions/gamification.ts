@@ -308,6 +308,16 @@ export async function getSeasonPace(clientDateStr?: string) {
   };
 }
 
+// This season's XP as it stood when today began, so the dashboard can tell how much was earned today
+export async function getSeasonXPBeforeToday(clientDateStr?: string) {
+  const now = clientDateStr ? new Date(clientDateStr) : new Date();
+  const dayOfMonth = clientDateStr ? Number(clientDateStr.slice(8, 10)) : now.getDate();
+  if (dayOfMonth <= 1) return 0;
+  const monthStart = startOfMonth(now);
+  const yesterdayEnd = endOfDay(addDays(monthStart, dayOfMonth - 2));
+  return (await getStatsForPeriod(monthStart, yesterdayEnd, yesterdayEnd)).xp;
+}
+
 // Every season since the first recorded activity, newest first, with the era each started and
 // ended in (see lib/eras.ts). The current season has no end yet.
 export async function getSeasonTimeline(clientDateStr?: string, minMonths: number = 1) {

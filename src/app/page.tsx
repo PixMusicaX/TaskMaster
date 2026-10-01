@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import { MessageSquare } from "lucide-react";
+
 import { format, subDays, addDays } from "date-fns";
 import Clock from "@/components/clock";
 import { getHabits, toggleHabitLog } from "@/app/actions/habits";
 import { getEventsByDateRange, toggleEventCompletion, getDashboardTasks, syncMonthlyHolidays } from "@/app/actions/events";
-import { getProfile, getSeasonPace } from "@/app/actions/gamification";
+import { getProfile, getSeasonPace, getSeasonXPBeforeToday } from "@/app/actions/gamification";
 import { DEV_XP_EVENT, withDevXp } from "@/lib/dev-xp";
 import { getOnThisDay, type HistoryDay } from "@/app/actions/history";
 import { getNoteByDate, getRecentNotes } from "@/app/actions/notes";
@@ -22,13 +22,15 @@ import DailyMissionsCard from "@/components/home/daily-missions-card";
 import ActiveQuestsCard from "@/components/home/active-quests-card";
 import AttentionCard from "@/components/home/attention-card";
 import CharacterStatsCard from "@/components/home/character-stats-card";
-import ClassStatusCard from "@/components/home/class-status-card";
 import FutureSightCard from "@/components/home/future-sight-card";
 import StressMetricsCard from "@/components/home/stress-metrics-card";
 import TavernCard from "@/components/home/tavern-card";
 import MapCard from "@/components/home/map-card";
 import SeasonPaceCard from "@/components/home/season-pace-card";
 import ChronicleCard from "@/components/home/chronicle-card";
+import HeroQuote from "@/components/home/hero-quote";
+import GrowthSaga from "@/components/home/growth-saga";
+import { useScrollDissolve } from "@/lib/scroll-fx";
 
 type ReliefFetcher = typeof getReliefRecommendation;
 
@@ -93,6 +95,7 @@ export default function Home() {
   const [moodData, setMoodData] = useState<NoteRow[]>([]);
   const [futureEvents, setFutureEvents] = useState<EventRow[]>([]);
   const [seasonPace, setSeasonPace] = useState<SeasonPace | null>(null);
+  const [xpBeforeToday, setXpBeforeToday] = useState<number | null>(null);
   const [onThisDay, setOnThisDay] = useState<HistoryDay[]>([]);
   const [completionScore, setCompletionScore] = useState(0);
   const [missingInfo, setMissingInfo] = useState<string[]>([]);
@@ -120,6 +123,9 @@ export default function Home() {
   const quoteAuthor = quoteParts.length > 1 ? quoteParts.slice(1).join(" - ") : "";
 
   const specialDays = tasks.filter(isTimedSpecialDay);
+
+  const heroRef = useRef<HTMLDivElement>(null);
+  useScrollDissolve(heroRef);
 
   const refreshProfile = useCallback(async () => {
     setProfile(withDevXp(await getProfile(todayStr)));
@@ -182,6 +188,7 @@ export default function Home() {
       });
 
       getSeasonPace(todayStr).then(setSeasonPace);
+      getSeasonXPBeforeToday(todayStr).then(setXpBeforeToday);
       getOnThisDay(todayStr).then(setOnThisDay);
 
       // 4. Calculate 7-day Completion Stats
@@ -357,11 +364,13 @@ export default function Home() {
     setReliefLoading(false);
   }
 
+  const tavern = { relief, loading: reliefLoading, updating: updatingRelief, onToggle: handleReliefToggle, onRegenerate: handleRegenerateRelief };
+
   return (
     <div className="min-h-full bg-transparent text-foreground selection:bg-tm-yellow selection:text-tm-purple-dark">
       <section className="relative min-h-screen flex flex-col items-center pt-28 pb-32 px-6 gap-12">
         {/* Central Hero: Clock */}
-        <div className="flex flex-col items-center text-center gap-2 z-10">
+        <div ref={heroRef} className="flex flex-col items-center text-center gap-2 z-10">
           <Clock />
 
           {specialDays.length > 0 && (
@@ -376,9 +385,7 @@ export default function Home() {
           )}
         </div>
 
-        <p className="text-sm text-center md:text-base font-medium text-tm-blue-gray italic opacity-80 max-w-xl mx-auto -mt-8 mb-12">
-          &ldquo;{quoteText}&rdquo;{quoteAuthor ? ` - ${quoteAuthor}` : ""}
-        </p>
+        <HeroQuote text={quoteText} author={quoteAuthor} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-6xl">
           <DailyMissionsCard
@@ -429,58 +436,36 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="min-h-screen p-6 md:p-12 flex flex-col items-center justify-center gap-12">
-        <div className="text-center space-y-4">
-          <h2 className="text-4xl md:text-6xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow tracking-tight">Growth Analytics</h2>
-          <p className="text-tm-blue-gray max-w-2xl mx-auto font-medium">
-            Visualizing your progress towards becoming the master of your tasks.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
-          <CharacterStatsCard profile={profile} />
-          <ClassStatusCard profile={profile} />
-        </div>
-
-        {/* Chronicle only appears when past years have something on today's date */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
-          <SeasonPaceCard profile={profile} pace={seasonPace} className={onThisDay.length === 0 ? "lg:col-span-2" : undefined} />
-          {onThisDay.length > 0 && <ChronicleCard days={onThisDay} todayStr={todayStr} />}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
-          <FutureSightCard events={futureEvents} />
-          <StressMetricsCard moodData={moodData} />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
-          <TavernCard
-            relief={relief}
-            loading={reliefLoading}
-            updating={updatingRelief}
-            onToggle={handleReliefToggle}
-            onRegenerate={handleRegenerateRelief}
-          />
-          <MapCard profile={profile} moodData={moodData} completionScore={completionScore} />
-        </div>
-
-        {/* Taskmaster Summon Button */}
-        <div className="w-full max-w-6xl flex justify-center mt-8">
-          <button
-            onClick={() => setShowTaskmaster(true)}
-            className="group relative px-8 py-4 bg-tm-purple-dark border border-tm-yellow/30 rounded-[2rem] hover:bg-tm-purple-dark/80 transition-all shadow-[0_0_30px_rgba(242,194,48,0.15)] hover:shadow-[0_0_40px_rgba(242,194,48,0.3)] flex items-center gap-4 overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-tm-yellow/0 via-tm-yellow/10 to-tm-yellow/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-            <div className="w-10 h-10 rounded-xl bg-tm-yellow/20 flex items-center justify-center relative z-10">
-              <MessageSquare className="text-tm-yellow" size={20} />
-            </div>
-            <div className="text-left relative z-10">
-              <p className="text-xs font-mono font-semibold text-tm-yellow tracking-[0.12em] uppercase">Need Guidance?</p>
-              <p className="text-lg font-bold text-white italic tracking-tight">Ask The Taskmaster</p>
-            </div>
-          </button>
-        </div>
+      <section className="px-6 pt-12 text-center space-y-4">
+        <h2 className="text-4xl md:text-6xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow tracking-tight">Growth Analytics</h2>
+        <p className="text-tm-blue-gray max-w-2xl mx-auto font-medium">
+          Visualizing your progress towards becoming the master of your tasks.
+        </p>
       </section>
+
+      {/* Chronicle only appears when past years have something on today's date */}
+      <GrowthSaga
+        profile={profile}
+        moodData={moodData}
+        pace={seasonPace}
+        xpBeforeToday={xpBeforeToday}
+        onThisDay={onThisDay}
+        futureEvents={futureEvents}
+        todayStr={todayStr}
+        tavern={tavern}
+        completionScore={completionScore}
+        onAsk={() => setShowTaskmaster(true)}
+        panels={[
+          // The sequence draws most of the analytics itself; those cards stand in when motion is reduced
+          { id: "stats", label: "Character Stats", node: <CharacterStatsCard profile={profile} />, staticOnly: true },
+          { id: "pace", label: "Season Pace", node: <SeasonPaceCard profile={profile} pace={seasonPace} />, staticOnly: true },
+          ...(onThisDay.length > 0 ? [{ id: "chronicle", label: "Chronicle", node: <ChronicleCard days={onThisDay} todayStr={todayStr} />, staticOnly: true }] : []),
+          { id: "future", label: "Future Sight", node: <FutureSightCard events={futureEvents} />, staticOnly: true },
+          { id: "stress", label: "Stress Metrics", node: <StressMetricsCard moodData={moodData} />, staticOnly: true },
+          { id: "tavern", label: "Tavern", node: <TavernCard {...tavern} />, staticOnly: true },
+          { id: "map", label: "The Map", node: <MapCard profile={profile} moodData={moodData} completionScore={completionScore} />, staticOnly: true },
+        ]}
+      />
 
       <TaskmasterDialog
         isOpen={showTaskmaster}

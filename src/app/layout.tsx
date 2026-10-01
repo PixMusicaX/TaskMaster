@@ -62,7 +62,8 @@ export default function RootLayout({
               <ClassWatermark />
               <SwipeNav />
               <Navbar />
-              <main className="flex-1 overflow-auto relative pb-24 lg:pb-0">
+              {/* Clip, not auto: a scroll container here would stop position: sticky from pinning to the viewport */}
+              <main className="flex-1 overflow-x-clip relative pb-24 lg:pb-0">
                 {children}
               </main>
             </div>

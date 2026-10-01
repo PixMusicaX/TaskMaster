@@ -51,3 +51,37 @@
     animation: none !important;
   }
 }
+
+/* Growth saga: a highlight that runs along the season XP gauge's fill once it overflows.
+   --fill is how much of the gauge is filled (0 to 1). */
+.tm-gauge-shimmer {
+  animation: tm-gauge-shimmer 2.4s ease-in-out infinite;
+}
+@keyframes tm-gauge-shimmer {
+  0% { stroke-dashoffset: 0.12; opacity: 0; }
+  15%, 80% { opacity: 0.7; }
+  100% { stroke-dashoffset: calc(0.12 - var(--fill, 1)); opacity: 0; }
+}
+
+/* Growth saga: a Future Sight day that holds several kinds of event cycles through their colours
+   (--c1 to --c4, with data-colors saying how many are set) */
+.tm-node-shimmer {
+  animation: tm-node-shimmer-2 2.4s ease-in-out infinite;
+}
+.tm-node-shimmer[data-colors="3"] { animation-name: tm-node-shimmer-3; animation-duration: 3.6s; }
+.tm-node-shimmer[data-colors="4"] { animation-name: tm-node-shimmer-4; animation-duration: 4.8s; }
+@keyframes tm-node-shimmer-2 {
+  0%, 100% { color: var(--c1); }
+  50% { color: var(--c2); }
+}
+@keyframes tm-node-shimmer-3 {
+  0%, 100% { color: var(--c1); }
+  33% { color: var(--c2); }
+  66% { color: var(--c3); }
+}
+@keyframes tm-node-shimmer-4 {
+  0%, 100% { color: var(--c1); }
+  25% { color: var(--c2); }
+  50% { color: var(--c3); }
+  75% { color: var(--c4); }
+}

@@ -87,7 +87,7 @@ export default function ClassStatusCard({ profile }: { profile: Profile | null }
 }
 
 // How to move in the era system from here (eras follow pace against last month; see lib/eras.ts)
-function EraHint({ standing, xp }: { standing: EraStanding; xp: number }) {
+export function EraHint({ standing, xp }: { standing: EraStanding; xp: number }) {
   const ahead = standing.index > standing.startIndex;
   const text = ahead
     ? `Ahead of ${standing.lastMonthName}'s pace`
