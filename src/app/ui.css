@@ -86,8 +86,8 @@
   75% { color: var(--c4); }
 }
 
-/* Growth saga backdrop (components/home/saga-cosmos.tsx): the sun's glow and rays, the planets'
-   orbits, and the wave that runs out on each scene change */
+/* Growth saga backdrop (components/home/saga-cosmos.tsx): the sun's glow and rays, the planets on
+   their orbits, and the wave that runs out on each scene change */
 .tm-cosmos-glow {
   background: radial-gradient(circle, color-mix(in srgb, var(--tm-yellow) 16%, transparent) 0%, color-mix(in srgb, var(--tm-orange-dark) 6%, transparent) 35%, transparent 65%);
 }
@@ -95,13 +95,14 @@
   background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--tm-yellow) 7%, transparent) 0deg 3deg, transparent 3deg 15deg);
   -webkit-mask-image: radial-gradient(circle, transparent 12%, black 22%, transparent 68%);
   mask-image: radial-gradient(circle, transparent 12%, black 22%, transparent 68%);
-  animation: tm-cosmos-turn 240s linear infinite;
 }
-.tm-cosmos-orbit {
-  animation: tm-cosmos-turn 90s linear infinite;
+/* Only the planet is animated, so its GPU layer is a few pixels across (--orbit is its ring's radius) */
+.tm-cosmos-planet {
+  animation: tm-cosmos-orbit 90s linear infinite;
 }
-@keyframes tm-cosmos-turn {
-  to { transform: rotate(360deg); }
+@keyframes tm-cosmos-orbit {
+  from { transform: rotate(0deg) translateX(var(--orbit)); }
+  to { transform: rotate(360deg) translateX(var(--orbit)); }
 }
 .tm-cosmos-wave {
   animation: tm-cosmos-wave 2.4s cubic-bezier(0.16, 1, 0.3, 1) both;

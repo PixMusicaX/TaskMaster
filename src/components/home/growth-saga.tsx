@@ -366,9 +366,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
           setChronStep(Math.min(Math.max(0, yearCount - 1), Math.max(0, Math.floor((t - CHRON_AT - 10) / YEAR_STEP))));
         },
       })
-        // The system spreads out from the sun as the stage arrives, and turns slowly with the scroll
-        .add("[data-saga=cosmos]", { opacity: [0, 1], scale: [0.5, 1], duration: 60, ease: "out(2)" }, 6)
-        .add("[data-saga=cosmos-spin]", { rotate: [0, 150], duration: length, ease: "linear" }, 0)
+        // The system fades in round the sun as the stage arrives (opacity only: it is screen-sized)
+        .add("[data-saga=cosmos]", { opacity: [0, 1], duration: 50 }, 6)
         // The emblem assembles while the stage rises into view
         .add("[data-saga=emblem]", { opacity: [0, 1], scale: [0.7, 1], duration: 30 }, 0)
         .add("[data-saga=core]", { opacity: [0, 1], scale: [0.5, 1], duration: 22 }, 12)
@@ -643,7 +642,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     if (!root.current) return false;
     const stops = stopsKey.split(",").map(Number);
     const { timeNow, yOf } = measure();
-    const target = direction > 0 ? stops.find(s => s > timeNow + 1) : stops.findLast(s => s < timeNow - 1);
+    const target = direction > 0 ? stops.find(s => s > timeNow + 1) : [...stops].reverse().find(s => s < timeNow - 1);
     if (target === undefined) return false;
     scrollToY(yOf(target));
     return true;
