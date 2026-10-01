@@ -37,6 +37,8 @@ const clockTheme = (): Theme => {
   const h = new Date().getHours();
   return h < 6 || h >= 18 ? "dark" : "light";
 };
+// The theme the app should be showing (null until the provider mounts)
+let wanted: Theme | null = null;
 const readRank =(): Rank => (document.documentElement.getAttribute("data-rank") as Rank | null) ?? "Novice";
 const readEra = (): string => document.documentElement.getAttribute("data-era") ?? "forge";
 
@@ -45,28 +47,48 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const rank = React.useSyncExternalStore(subscribe, readRank, () => "Novice" as Rank);
   const eraId = React.useSyncExternalStore(subscribe, readEra, () => "forge");
 
-  // The init script picks the theme on load; this keeps an open app in step when the clock
-  // crosses 6am/6pm. A manual toggle holds until the next crossing.
+  // The init script picks the theme on load. From then on `wanted` is the theme the app should be
+  // showing: the clock's, until a manual toggle, which holds until the clock next crosses 6am/6pm.
   React.useEffect(() => {
+    const root = document.documentElement;
     let last = clockTheme();
-    const sync = () => {
-      const now = clockTheme();
-      if (now === last) return;
-      last = now;
-      document.documentElement.classList.toggle("dark", now === "dark");
+    wanted = wanted ?? last;
+    const apply = () => {
+      if (root.classList.contains("dark") === (wanted === "dark")) return;
+      root.classList.toggle("dark", wanted === "dark");
       notify();
     };
+    const sync = () => {
+      const now = clockTheme();
+      if (now !== last) {
+        last = now;
+        wanted = now;
+      }
+      apply();
+    };
+    sync();
     const id = window.setInterval(sync, 60_000);
+    // A phone can resume a frozen page without a visibility change, so listen for every way back
     document.addEventListener("visibilitychange", sync);
+    window.addEventListener("pageshow", sync);
+    window.addEventListener("focus", sync);
+    // React owns <html>'s className and writes it back without "dark" whenever it re-renders the
+    // root (after a hydration mismatch, for one), so put the class back if it goes missing
+    const observer = new MutationObserver(apply);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
     return () => {
       window.clearInterval(id);
+      observer.disconnect();
       document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("pageshow", sync);
+      window.removeEventListener("focus", sync);
     };
   }, []);
 
   const toggleTheme = () => {
     // No localStorage.setItem for theme - we don't want to remember it!
-    document.documentElement.classList.toggle("dark", theme === "light");
+    wanted = theme === "light" ? "dark" : "light";
+    document.documentElement.classList.toggle("dark", wanted === "dark");
     notify();
   };
 
