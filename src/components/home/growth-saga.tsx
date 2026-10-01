@@ -18,6 +18,7 @@ import {
   chronicleYears, futureMarks, yearSweep,
 } from "./saga-time-scenes";
 import type { MapInfo } from "@/components/map-generator";
+import SagaCosmos from "./saga-cosmos";
 import { AskDetails, AskEmblem, AskTaskmasterButton, AskTitle } from "./saga-ask-scene";
 import { MapDetails, MapEmblem, MapTitle } from "./saga-map-scene";
 import { TavernDetails, TavernEmblem, TavernTitle, type TavernProps } from "./saga-tavern-scene";
@@ -348,7 +349,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
 
     const scope = createScope({ root: el }).add(() => {
       // A timeline only applies a tween's starting values once it reaches it, so hide the later beats up front
-      utils.set("[data-saga=core], [data-saga=era-core], [data-saga=reached], [data-saga=letter], [data-saga=caption], [data-saga=era-text], [data-saga=panel], [data-saga=shape], [data-saga=stat], [data-saga=mood], [data-saga=stats-title], [data-saga=mood-title], [data-saga=gauge], [data-saga=tick], [data-saga=pace-tilt], [data-saga=pace-core], [data-saga=pace-text], [data-saga=chron], [data-saga=chron-title], [data-saga=chron-node], [data-saga=chron-halo], [data-saga=chron-year], [data-saga=chron-entry], [data-saga=chron-items], [data-saga=future], [data-saga=future-title], [data-saga=future-node], [data-saga=future-core], [data-saga=future-row], [data-saga=tavern], [data-saga=tavern-title], [data-saga=tavern-row], [data-saga=map], [data-saga=map-title], [data-saga=map-disc], [data-saga=map-warp], [data-saga=map-row], [data-saga=ask], [data-saga=ask-title], [data-saga=ask-row]", { opacity: 0 });
+      utils.set("[data-saga=core], [data-saga=era-core], [data-saga=reached], [data-saga=letter], [data-saga=caption], [data-saga=era-text], [data-saga=panel], [data-saga=shape], [data-saga=stat], [data-saga=mood], [data-saga=stats-title], [data-saga=mood-title], [data-saga=gauge], [data-saga=tick], [data-saga=pace-tilt], [data-saga=pace-core], [data-saga=pace-text], [data-saga=chron], [data-saga=chron-title], [data-saga=chron-node], [data-saga=chron-halo], [data-saga=chron-year], [data-saga=chron-entry], [data-saga=chron-items], [data-saga=future], [data-saga=future-title], [data-saga=future-node], [data-saga=future-core], [data-saga=future-row], [data-saga=future-details], [data-saga=tavern], [data-saga=tavern-title], [data-saga=tavern-row], [data-saga=map], [data-saga=map-title], [data-saga=map-disc], [data-saga=map-warp], [data-saga=map-row], [data-saga=ask], [data-saga=ask-title], [data-saga=ask-row], [data-saga=cosmos]", { opacity: 0 });
       utils.set("[data-saga=arc], [data-saga=level], [data-saga=grid], [data-saga=axis], [data-saga=gauge-fill], [data-saga=race-arc], [data-saga=time-arc]", { strokeDashoffset: 1 });
       paceXpEl.textContent = "0";
       totalEl.textContent = "0";
@@ -365,6 +366,9 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
           setChronStep(Math.min(Math.max(0, yearCount - 1), Math.max(0, Math.floor((t - CHRON_AT - 10) / YEAR_STEP))));
         },
       })
+        // The system spreads out from the sun as the stage arrives, and turns slowly with the scroll
+        .add("[data-saga=cosmos]", { opacity: [0, 1], scale: [0.5, 1], duration: 60, ease: "out(2)" }, 6)
+        .add("[data-saga=cosmos-spin]", { rotate: [0, 150], duration: length, ease: "linear" }, 0)
         // The emblem assembles while the stage rises into view
         .add("[data-saga=emblem]", { opacity: [0, 1], scale: [0.7, 1], duration: 30 }, 0)
         .add("[data-saga=core]", { opacity: [0, 1], scale: [0.5, 1], duration: 22 }, 12)
@@ -434,7 +438,10 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         .add("[data-saga=future-hand]", { rotate: [0, 360], duration: FUTURE_SWEEP, ease: "linear" }, futureAt + 6)
         .add("[data-saga=future-hand]", { opacity: 0, duration: 8 }, futureAt + 6 + FUTURE_SWEEP)
         .add("[data-saga=future-core]", { opacity: [0, 1], scale: [0.5, 1], duration: 18 }, futureAt + 10)
-        .add("[data-saga=future-row]", { opacity: [0, 1], translateY: [16, 0], duration: 12, delay: stagger(4) }, futureAt + 24)
+        // The list can be long, so its rows come in close together, inside a block that fades as one;
+        // going backwards the block is gone even if the list is mid-scroll
+        .add("[data-saga=future-details]", { opacity: [0, 1], duration: 10 }, futureAt + 20)
+        .add("[data-saga=future-row]", { opacity: [0, 1], translateY: [16, 0], duration: 10, delay: stagger(1.2) }, futureAt + 22)
         // The Tavern: its three-seat ring turns in and the suggestions line up beneath it
         .add("[data-saga=future], [data-saga=future-title], [data-saga=future-details]", { opacity: 0, duration: 12, ease: "in(2)" }, tavernAt - 14)
         .add("[data-saga=tavern]", { opacity: [0, 1], scale: [0.85, 1], rotate: [-60, 0], duration: 20 }, tavernAt - 2)
@@ -770,6 +777,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       style={{ height: `${100 + length - APPROACH}svh` }}
     >
       <div className="sticky top-0 h-svh motion-safe:touch-none motion-reduce:static motion-reduce:h-auto flex flex-col motion-reduce:gap-8 px-4 md:px-6 pt-20 pb-32 lg:pb-16">
+        <SagaCosmos scenes={scenes} active={scene} />
+
         {/* Three rows, the outer two equal, so the orbit's centre is the centre of the screen and
             lines up with the rank crest behind the page */}
         <div className="absolute inset-0 motion-reduce:static grid grid-cols-1 grid-rows-[1fr_auto_1fr] justify-items-center px-4 pointer-events-none">
@@ -1082,9 +1091,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         {/* With reduced motion the scenes are not drawn, so the way to the Taskmaster is a plain button */}
         {reduced && <div className="flex justify-center"><AskTaskmasterButton onAsk={onAsk} /></div>}
 
-        {/* Where you are in the sequence: step with the arrows, tap a dot to jump, or leave for the top */}
-        <div className="absolute inset-x-0 bottom-24 lg:bottom-5 flex flex-col items-center gap-1 motion-reduce:hidden">
-          <span className={cn(CAPTION, "[@media(max-height:720px)]:hidden")}>{scenes[scene]?.label}</span>
+        {/* Where you are in the sequence: step with the arrows or tap a dot to jump */}
+        <div className="absolute inset-x-0 bottom-[5.5rem] lg:bottom-4 flex flex-col items-center motion-reduce:hidden">
           <div className="flex items-center">
             <button type="button" aria-label="Previous" onClick={() => step(-1)} className="p-2 text-tm-blue-gray hover:text-tm-yellow active:scale-90 transition">
               <ChevronLeft size={18} />
@@ -1097,11 +1105,20 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
             <button type="button" aria-label="Next" onClick={nextOrRestart} className="p-2 text-tm-blue-gray hover:text-tm-yellow active:scale-90 transition">
               <ChevronRight size={18} />
             </button>
-            <button type="button" aria-label="Back to top" title="Back to top" onClick={() => scrollToY(0, true)} className="ml-1 p-1.5 rounded-full border border-tm-blue-gray/25 text-tm-blue-gray hover:text-tm-yellow hover:border-tm-yellow/50 active:scale-90 transition">
-              <ArrowUp size={14} />
-            </button>
           </div>
+          <span className={cn(CAPTION, "-mt-1 [@media(max-height:720px)]:hidden")}>{scenes[scene]?.label}</span>
         </div>
+
+        {/* The quick way out, at the right edge of the screen */}
+        <button
+          type="button"
+          aria-label="Back to top"
+          title="Back to top"
+          onClick={() => scrollToY(0, true)}
+          className="absolute right-4 md:right-8 bottom-24 lg:bottom-6 p-2.5 rounded-full border border-tm-blue-gray/25 bg-background/60 text-tm-blue-gray hover:text-tm-yellow hover:border-tm-yellow/50 active:scale-90 transition motion-reduce:hidden"
+        >
+          <ArrowUp size={16} />
+        </button>
       </div>
     </section>
   );
