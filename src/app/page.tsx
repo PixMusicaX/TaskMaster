@@ -443,7 +443,6 @@ export default function Home() {
         </p>
       </section>
 
-      {/* Chronicle only appears when past years have something on today's date */}
       <GrowthSaga
         profile={profile}
         moodData={moodData}
@@ -455,16 +454,16 @@ export default function Home() {
         tavern={tavern}
         completionScore={completionScore}
         onAsk={() => setShowTaskmaster(true)}
-        panels={[
-          // The sequence draws most of the analytics itself; those cards stand in when motion is reduced
-          { id: "stats", label: "Character Stats", node: <CharacterStatsCard profile={profile} />, staticOnly: true },
-          { id: "pace", label: "Season Pace", node: <SeasonPaceCard profile={profile} pace={seasonPace} />, staticOnly: true },
-          ...(onThisDay.length > 0 ? [{ id: "chronicle", label: "Chronicle", node: <ChronicleCard days={onThisDay} todayStr={todayStr} />, staticOnly: true }] : []),
-          { id: "future", label: "Future Sight", node: <FutureSightCard events={futureEvents} />, staticOnly: true },
-          { id: "stress", label: "Stress Metrics", node: <StressMetricsCard moodData={moodData} />, staticOnly: true },
-          { id: "tavern", label: "Tavern", node: <TavernCard {...tavern} />, staticOnly: true },
-          { id: "map", label: "The Map", node: <MapCard profile={profile} moodData={moodData} completionScore={completionScore} />, staticOnly: true },
-        ]}
+        fallback={<>
+          <CharacterStatsCard profile={profile} />
+          <SeasonPaceCard profile={profile} pace={seasonPace} />
+          {/* Chronicle only appears when past years have something on today's date */}
+          {onThisDay.length > 0 && <ChronicleCard days={onThisDay} todayStr={todayStr} />}
+          <FutureSightCard events={futureEvents} />
+          <StressMetricsCard moodData={moodData} />
+          <TavernCard {...tavern} />
+          <MapCard profile={profile} moodData={moodData} completionScore={completionScore} />
+        </>}
       />
 
       <TaskmasterDialog

@@ -2,8 +2,8 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import SeasonPaceCard, { raceGoal } from "@/components/home/season-pace-card";
-import ClassStatusCard from "@/components/home/class-status-card";
-import { EraStandingContext, type EraStanding } from "@/components/progress/era-standing";
+import EraHint from "@/components/home/era-hint";
+import { dailyTarget } from "@/components/home/growth-saga";
 import ChronicleCard from "@/components/home/chronicle-card";
 import type { HistoryDay } from "@/app/actions/history";
 import type { Profile, SeasonPace } from "@/lib/types";
@@ -125,43 +125,32 @@ describe("raceGoal", () => {
   });
 });
 
-describe("ClassStatusCard", () => {
-  const withStanding = (standing: EraStanding, ui: React.ReactNode) =>
-    render(<EraStandingContext.Provider value={standing}>{ui}</EraStandingContext.Provider>);
-
-  it("shows the level, class and the path to the next ranks", () => {
-    render(<ClassStatusCard profile={profile(3260, { level: 33, levelProgress: 60, nextLevelXP: 100, topStat: "vitality" })} />);
-    expect(screen.getByText("33")).toBeTruthy();
-    expect(screen.getByText("60/100 XP")).toBeTruthy();
-    expect(screen.getAllByText("Sentinel").length).toBeGreaterThan(0);
-    expect(screen.getByText("2 levels to Paladin")).toBeTruthy();
-    expect(screen.getByText("Grandmaster")).toBeTruthy();
-    // Without era data it shows the saved era through the CSS labels, with no hint
-    expect(screen.getByTestId("saved-era-name")).toBeTruthy();
-    expect(screen.queryByText(/pace/)).toBeNull();
-  });
-
-  it("shows the pace-based era and how to reach the next one", () => {
-    withStanding(
-      { index: 1, startIndex: 1, lastMonthName: "August", lastMonthPaceXP: 3275 },
-      <ClassStatusCard profile={profile(3260, { level: 33 })} />
-    );
-    expect(screen.getByText("Era of Steel")).toBeTruthy();
+describe("EraHint", () => {
+  it("says how to reach the next era", () => {
+    render(<EraHint standing={{ index: 1, startIndex: 1, lastMonthName: "August", lastMonthPaceXP: 3275 }} xp={3260} />);
     expect(screen.getByText("Pass August's pace for Era III (16 XP)")).toBeTruthy();
   });
 
   it("says when you're ahead of last month's pace", () => {
-    withStanding(
-      { index: 2, startIndex: 1, lastMonthName: "August", lastMonthPaceXP: 3275 },
-      <ClassStatusCard profile={profile(3300, { level: 34 })} />
-    );
-    expect(screen.getByText("Era of Order")).toBeTruthy();
+    render(<EraHint standing={{ index: 2, startIndex: 1, lastMonthName: "August", lastMonthPaceXP: 3275 }} xp={3300} />);
     expect(screen.getByText("Ahead of August's pace")).toBeTruthy();
   });
 
-  it("marks the final rank", () => {
-    render(<ClassStatusCard profile={profile(5000, { level: 47 })} />);
-    expect(screen.getByText("Ultimate rank achieved")).toBeTruthy();
-    expect(screen.getAllByText("Hero").length).toBeGreaterThan(0);
+  it("marks the final era", () => {
+    render(<EraHint standing={{ index: 4, startIndex: 4, lastMonthName: "August", lastMonthPaceXP: 3275 }} xp={3000} />);
+    expect(screen.getByText("Final era")).toBeTruthy();
+  });
+});
+
+describe("dailyTarget (today's ring in the season pace scene)", () => {
+  it("spreads what was needed this morning over the days left, today included", () => {
+    // 301 XP to finish above 500, over 3 days: 101 a day
+    expect(dailyTarget(240, 200, 500, 2)).toEqual({ earned: 40, target: 101, left: 61, progress: 40 / 101 });
+  });
+  it("is full once today's share is met", () => {
+    expect(dailyTarget(320, 200, 500, 2)).toMatchObject({ left: 0, progress: 1 });
+  });
+  it("is full when last month was already beaten before today", () => {
+    expect(dailyTarget(620, 600, 500, 2)).toEqual({ earned: 20, target: 0, left: 0, progress: 1 });
   });
 });

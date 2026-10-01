@@ -11,7 +11,7 @@ import type { HistoryDay } from "@/app/actions/history";
 import type { EventRow, NoteRow, Profile, SeasonPace } from "@/lib/types";
 import { useEraStanding } from "@/components/progress/era-standing";
 import { useTheme } from "@/components/theme-provider";
-import { EraHint } from "./class-status-card";
+import EraHint from "./era-hint";
 import { C, CAPTION, R, TITLE, anchorAt, polar } from "./saga-kit";
 import {
   ChronicleDetails, ChronicleEmblem, ChronicleTitle, FutureDetails, FutureEmblem, FutureTitle,
@@ -79,8 +79,9 @@ const MOOD_GRID = LEVELS.map(l => polygon(MOOD_ANGLES, even(RADAR * l)));
 // before the stage pins) and fills while pinned; its centre then turns from level to era while the
 // level ring tips over, the season's XP gauge turns in with its two tipped rings, the radar draws
 // inside the dotted circle for the stats and reshapes for the moods, the Chronicle reaches back
-// through the years and Future Sight sweeps the next two weeks, and each panel after that gets one
-// STEP. The dial's turning is not part of the script (see its effect).
+// through the years, Future Sight sweeps the next two weeks, the Tavern seats the day's relief, a
+// compass gives way to the map and the orbit returns whole around the Taskmaster. The dial's
+// turning is not part of the script (see its effect).
 const APPROACH = 50;
 const ERA_AT = 108;
 const PACE_AT = 162;
@@ -93,19 +94,16 @@ const FUTURE_LENGTH = 84;
 const TAVERN_LENGTH = 76;
 const MAP_LENGTH = 96;
 const ASK_LENGTH = 64;
-const STEP = 60;
-const PANEL_IN = 24;
 const TAIL = 30;
 
 // When the later scenes start. The Chronicle only plays when past years have something on today's
 // date, and its length depends on how many, so everything after it is worked out per render.
 // `from` is the moment each scene takes the stage and `holdsAt` a moment when it is holding it.
-function sceneTimes(years: number, panels: number) {
+function sceneTimes(years: number) {
   const futureAt = CHRON_AT + (years > 0 ? 10 + years * YEAR_STEP + 14 : 0);
   const tavernAt = futureAt + FUTURE_LENGTH;
   const mapAt = tavernAt + TAVERN_LENGTH;
   const askAt = mapAt + MAP_LENGTH;
-  const firstPanel = askAt + ASK_LENGTH;
   const drawn = [
     { id: "standing", label: "Standing", from: 0, holdsAt: ERA_AT - 14 },
     { id: "era", label: "Era Status", from: ERA_AT + 6, holdsAt: PACE_AT - 16 },
@@ -118,25 +116,10 @@ function sceneTimes(years: number, panels: number) {
     { id: "map", label: "The Map", from: mapAt + 2, holdsAt: askAt - 20 },
     { id: "ask", label: "The Taskmaster", from: askAt + 2, holdsAt: askAt + 40 },
   ];
-  const panelHoldsAt = (i: number) => firstPanel + i * STEP + PANEL_IN + 6;
   // Where the scroll comes to rest: once per scene, and once per year inside the Chronicle
-  const stops = [
-    ...drawn.flatMap(d => d.id === "chronicle" ? Array.from({ length: years }, (_, i) => d.holdsAt + i * YEAR_STEP) : [d.holdsAt]),
-    ...Array.from({ length: panels }, (_, i) => panelHoldsAt(i)),
-  ];
-  return {
-    futureAt,
-    tavernAt,
-    mapAt,
-    askAt,
-    firstPanel,
-    drawn,
-    stops,
-    // The last drawn scene stays on stage unless panels follow it
-    length: firstPanel + (panels > 0 ? (panels - 1) * STEP + PANEL_IN : 0) + TAIL,
-    panelFrom: (i: number) => firstPanel + i * STEP - 4,
-    panelHoldsAt,
-  };
+  const stops = drawn.flatMap(d => d.id === "chronicle" ? Array.from({ length: years }, (_, i) => d.holdsAt + i * YEAR_STEP) : [d.holdsAt]);
+  // The last scene stays on stage for the TAIL, until the page unpins
+  return { futureAt, tavernAt, mapAt, askAt, drawn, stops, length: askAt + ASK_LENGTH + TAIL };
 }
 
 // Scrolling inside the saga moves one stop at a time. A gesture is a run of wheel events with no
@@ -145,7 +128,8 @@ function sceneTimes(years: number, panels: number) {
 const WHEEL_GAP = 160;
 const SWIPE_MIN = 36;
 const SETTLE_AFTER = 160;
-// Left alone on a stop for this long, the saga moves on to the next one by itself
+// Left alone on a stop for this long, the saga moves on to the next one by itself (and from the
+// last one, rolls back to the first)
 const IDLE_BEFORE_AUTO = 8000;
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
@@ -206,21 +190,12 @@ export function dailyTarget(xp: number, xpBeforeToday: number, lastMonthTotalXP:
   return { earned, target, left: Math.max(0, target - earned), progress: Math.min(1, earned / target) };
 }
 
-export interface SagaPanel {
-  id: string;
-  label: string;
-  node: React.ReactNode;
-  // Shown only with reduced motion, standing in for a scene the scroll sequence draws itself
-  staticOnly?: boolean;
-}
-
-
 // The analytics as one pinned scroll sequence. The season's emblem assembles (level, rank path),
 // turns to show the era, becomes the season's XP gauge, then holds a radar that draws the character
-// stats and reshapes into the 30-day moods, reaches back through
-// today's date in past years and sweeps the next two weeks. After that the emblem falls back to become the backdrop and the remaining panels
-// take the stage one at a time. With reduced motion nothing pins or animates: the emblem and the
-// panels (including the cards the sequence would have drawn itself) sit in the page flow.
+// stats and reshapes into the 30-day moods, reaches back through today's date in past years,
+// sweeps the next two weeks, seats the day's relief suggestions, unrolls the map and ends on the
+// way to the Taskmaster. With reduced motion nothing pins or animates: the emblem sits in the page
+// flow with the plain cards (`fallback`) beneath it.
 const subscribeReducedMotion = (onChange: () => void) => {
   const query = window.matchMedia("(prefers-reduced-motion: reduce)");
   query.addEventListener("change", onChange);
@@ -243,14 +218,14 @@ interface GrowthSagaProps {
   completionScore: number;
   // Opens the Taskmaster's dialog
   onAsk: () => void;
-  panels: SagaPanel[];
+  // The analytics as plain cards, shown instead of the drawn scenes when motion is reduced
+  fallback: React.ReactNode;
 }
 
-export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onThisDay, futureEvents, todayStr, tavern, completionScore, onAsk, panels }: GrowthSagaProps) {
+export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onThisDay, futureEvents, todayStr, tavern, completionScore, onAsk, fallback }: GrowthSagaProps) {
   const reduced = useSyncExternalStore(subscribeReducedMotion, prefersReducedMotion, () => false);
   const [mapInfo, setMapInfo] = useState<MapInfo | null>(null);
   const root = useRef<HTMLElement>(null);
-  const stage = useRef<HTMLDivElement>(null);
   const totalRef = useRef<HTMLSpanElement>(null);
   const paceXpRef = useRef<HTMLSpanElement>(null);
   const dialRef = useRef<SVGSVGElement>(null);
@@ -258,7 +233,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   const levelRingTurns = useRef(false);
   const { rank: savedRank, era } = useTheme();
   const standing = useEraStanding();
-  // Index into the scenes: the drawn ones, then the panels
+  // Index into the scenes
   const [scene, setScene] = useState(0);
   // The year the Chronicle is showing
   const [chronStep, setChronStep] = useState(0);
@@ -314,11 +289,9 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   // A string, so the effect below only rebuilds when the days really change
   const markDays = marks.map(m => m.day).join();
 
-  const staged = panels.filter(p => !p.staticOnly);
-  const count = staged.length;
-  const times = sceneTimes(yearCount, count);
+  const times = sceneTimes(yearCount);
   const { length } = times;
-  const scenes = [...times.drawn, ...staged];
+  const scenes = times.drawn;
   const onTavern = scenes[scene]?.id === "tavern";
   const onAskScene = scenes[scene]?.id === "ask";
   // A string, so the navigation below only resets when the stops really change
@@ -344,17 +317,17 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     all("polygon").forEach(p => p.setAttribute("points", statShape));
     all("point").forEach((p, i) => { p.setAttribute("cx", statPoints[i][0]); p.setAttribute("cy", statPoints[i][1]); });
 
-    const { futureAt, tavernAt, mapAt, askAt, firstPanel, drawn, panelFrom } = sceneTimes(yearCount, count);
-    const froms = [...drawn.map(d => d.from), ...Array.from({ length: count }, (_, i) => panelFrom(i))];
+    const { futureAt, tavernAt, mapAt, askAt, drawn } = sceneTimes(yearCount);
+    const froms = drawn.map(d => d.from);
 
     const scope = createScope({ root: el }).add(() => {
       // A timeline only applies a tween's starting values once it reaches it, so hide the later beats up front
-      utils.set("[data-saga=core], [data-saga=era-core], [data-saga=reached], [data-saga=letter], [data-saga=caption], [data-saga=era-text], [data-saga=panel], [data-saga=shape], [data-saga=stat], [data-saga=mood], [data-saga=stats-title], [data-saga=mood-title], [data-saga=gauge], [data-saga=tick], [data-saga=pace-tilt], [data-saga=pace-core], [data-saga=pace-text], [data-saga=chron], [data-saga=chron-title], [data-saga=chron-node], [data-saga=chron-halo], [data-saga=chron-year], [data-saga=chron-entry], [data-saga=chron-items], [data-saga=future], [data-saga=future-title], [data-saga=future-node], [data-saga=future-core], [data-saga=future-row], [data-saga=future-details], [data-saga=tavern], [data-saga=tavern-title], [data-saga=tavern-row], [data-saga=map], [data-saga=map-title], [data-saga=map-disc], [data-saga=map-warp], [data-saga=map-row], [data-saga=ask], [data-saga=ask-title], [data-saga=ask-row], [data-saga=cosmos]", { opacity: 0 });
+      utils.set("[data-saga=core], [data-saga=era-core], [data-saga=reached], [data-saga=letter], [data-saga=caption], [data-saga=era-text], [data-saga=shape], [data-saga=stat], [data-saga=mood], [data-saga=stats-title], [data-saga=mood-title], [data-saga=gauge], [data-saga=tick], [data-saga=pace-tilt], [data-saga=pace-core], [data-saga=pace-text], [data-saga=chron], [data-saga=chron-title], [data-saga=chron-node], [data-saga=chron-halo], [data-saga=chron-year], [data-saga=chron-entry], [data-saga=chron-items], [data-saga=future], [data-saga=future-title], [data-saga=future-node], [data-saga=future-core], [data-saga=future-row], [data-saga=future-details], [data-saga=tavern], [data-saga=tavern-title], [data-saga=tavern-row], [data-saga=map], [data-saga=map-title], [data-saga=map-disc], [data-saga=map-warp], [data-saga=map-row], [data-saga=ask], [data-saga=ask-title], [data-saga=ask-row], [data-saga=cosmos]", { opacity: 0 });
       utils.set("[data-saga=arc], [data-saga=level], [data-saga=grid], [data-saga=axis], [data-saga=gauge-fill], [data-saga=race-arc], [data-saga=time-arc]", { strokeDashoffset: 1 });
       paceXpEl.textContent = "0";
       totalEl.textContent = "0";
 
-      const timeline = createTimeline({
+      const timeline = scriptRef.current = createTimeline({
         defaults: { ease: "out(3)" },
         autoplay: onScroll({ target: el, enter: "center top", leave: "bottom bottom", sync: 0.85 }),
         onUpdate: ({ currentTime: t }) => {
@@ -466,16 +439,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         .add("[data-saga=rings]", { rotate: [0, 360], duration: 40, ease: "inOut(3)" }, askAt - 8)
         .add("[data-saga=ask]", { opacity: [0, 1], scale: [0.2, 1], duration: 24, ease: "outBack(1.6)" }, askAt)
         .add("[data-saga=ask-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, askAt + 4)
-        .add("[data-saga=ask-row]", { opacity: [0, 1], translateY: [16, 0], duration: 12, delay: stagger(4) }, askAt + 14);
-
-      // Any panels after it: the scene clears and the emblem falls back to become their backdrop
-      if (count > 0) {
-        timeline
-          .add("[data-saga=ask], [data-saga=ask-title], [data-saga=ask-details]", { opacity: 0, duration: 12, ease: "in(2)" }, firstPanel - 14)
-          .add("[data-saga=dial-inner]", { opacity: 0.5, duration: 22 }, firstPanel - 12)
-          .add("[data-saga=emblem]", { scale: 1.45, opacity: 0.16, duration: 26, ease: "inOut(2)" }, firstPanel - 12);
-      }
-      timeline
+        .add("[data-saga=ask-row]", { opacity: [0, 1], translateY: [16, 0], duration: 12, delay: stagger(4) }, askAt + 14)
+        // Nothing moves in the tail; this only makes the script as long as the scroll
         .add(pad, { value: 1, duration: 1 }, length - 1);
 
       all("grid").forEach((grid, i) => {
@@ -525,20 +490,13 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         }
       }
 
-      all("panel").forEach((panel, i) => {
-        const start = firstPanel + i * STEP;
-        const tilt = i % 2 ? 2 : -2;
-        timeline.add(panel, { opacity: [0, 1], translateY: [90, 0], scale: [0.88, 1], rotate: [tilt, 0], duration: PANEL_IN }, start);
-        if (i < count - 1) timeline.add(panel, { opacity: 0, translateY: -70, scale: 0.94, duration: 18, ease: "in(2)" }, start + STEP - 14);
-      });
-
       // Start where the scroll already is. Without this a rebuild (the XP changing, say, when a
       // relief is ticked off) would replay the whole script from the top to catch up.
       const from = el.getBoundingClientRect().top - window.innerHeight / 2;
       timeline.seek(Math.min(length, Math.max(0, (-from / (el.offsetHeight - window.innerHeight / 2)) * length)));
     });
     return () => { scope.revert(); };
-  }, [progress, levelProgress, rank, xp, totalXP, statShape, moodShape, count, length, yearCount, markDays, era.id, meterFill, raceProgress, timeProgress, tickCount]);
+  }, [progress, levelProgress, rank, xp, totalXP, statShape, moodShape, length, yearCount, markDays, era.id, meterFill, raceProgress, timeProgress, tickCount]);
 
   // The dial never stops: it drifts while the page is still and spins up with the scroll speed,
   // turning backwards through the moods. The two pace rings turn with it in their own planes, one
@@ -591,22 +549,10 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     };
   }, []);
 
-  // Panels taller than the stage are scaled down to fit it rather than cut off
-  useEffect(() => {
-    const box = stage.current;
-    if (!box || prefersReducedMotion()) return;
-    const fits = Array.from(box.querySelectorAll<HTMLElement>("[data-saga=fit]"));
-    const fit = () => fits.forEach(f => { f.style.transform = `scale(${Math.min(1, box.clientHeight / f.offsetHeight)})`; });
-    const observer = new ResizeObserver(fit);
-    [box, ...fits].forEach(target => observer.observe(target));
-    return () => {
-      observer.disconnect();
-      fits.forEach(f => { f.style.transform = ""; });
-    };
-  }, [count]);
-
   // --- One stop at a time ---------------------------------------------------------------------
   const scrollAnim = useRef(0);
+  // The scroll script, so the roll back can put it straight at the start
+  const scriptRef = useRef<{ seek: (time: number) => unknown } | null>(null);
 
   // Where the script is for a scroll position, and back
   const measure = useCallback(() => {
@@ -651,12 +597,44 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   // Scroll to a scene's first stop
   function jumpTo(target: number) {
     if (!root.current) return;
-    scrollToY(measure().yOf(times.drawn[target]?.holdsAt ?? times.panelHoldsAt(target - times.drawn.length)), true);
+    scrollToY(measure().yOf(times.drawn[target].holdsAt), true);
   }
+
+  // From the last stop back to the first without running the whole script backwards: the stage
+  // winds down into its centre, the page jumps to the start while nothing shows, and the Standing
+  // unwinds out again. Wheel, swipe and autoplay hold off until it is done.
+  const rollBack = useCallback(async () => {
+    const el = root.current;
+    if (!el || scrollAnim.current) return;
+    const layers = Array.from(el.querySelectorAll<HTMLElement>("[data-saga=cosmos], [data-saga=layer]"));
+    scrollAnim.current = -1;
+    const play = (frames: Keyframe[], options: KeyframeAnimationOptions) =>
+      Promise.all(layers.map(layer => layer.animate(frames, { fill: "both", ...options }).finished));
+    try {
+      const out = await play(
+        [{ opacity: 1, transform: "scale(1) rotate(0deg)" }, { opacity: 0, transform: "scale(0.12) rotate(-200deg)" }],
+        { duration: 800, easing: "cubic-bezier(0.6, 0, 0.9, 0.3)" }
+      );
+      const first = stopsKey.split(",").map(Number)[0];
+      window.scrollTo(0, Math.round(measure().yOf(first)));
+      scriptRef.current?.seek(first);
+      setScene(0);
+      setChronStep(0);
+      // Give the scroll a moment to land before anything shows again
+      await new Promise(resolve => setTimeout(resolve, 180));
+      const back = await play(
+        [{ opacity: 0, transform: "scale(1.7) rotate(120deg)" }, { opacity: 1, transform: "scale(1) rotate(0deg)" }],
+        { duration: 1100, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
+      );
+      [...out, ...back].forEach(animation => animation.cancel());
+    } finally {
+      scrollAnim.current = 0;
+    }
+  }, [stopsKey, measure]);
 
   // The legend's Next button goes round again from the last stop (scrolling itself never wraps)
   function nextOrRestart() {
-    if (!step(1) && root.current) scrollToY(measure().yOf(times.stops[0]), true);
+    if (!step(1)) rollBack();
   }
 
   // Left idle on a stop, move on to the next one; any input starts the wait again
@@ -672,18 +650,19 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       if (document.hidden) return touch();
       if (performance.now() - last < IDLE_BEFORE_AUTO || scrollAnim.current) return;
       const { timeNow } = measure();
-      // Only between the first and last stops, and not while a dialog covers the stage
-      if (timeNow < stops[0] - 1 || timeNow > stops[stops.length - 1] - 1) return;
+      // Only while resting on the stops, and not while a dialog covers the stage
+      if (timeNow < stops[0] - 1 || timeNow > stops[stops.length - 1] + 1) return;
       const under = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
       if (!under || !el.contains(under)) return;
-      step(1);
+      // After the last stop it starts again from the Standing
+      if (!step(1)) rollBack();
       touch();
     }, 1000);
     return () => {
       clearInterval(timer);
       events.forEach(name => window.removeEventListener(name, touch));
     };
-  }, [stopsKey, measure, step]);
+  }, [stopsKey, measure, step, rollBack]);
 
   // Wheel, swipe and arrow keys each move one stop while the saga is on screen, and anything else
   // that scrolls it (a flick from above, the scrollbar) settles on the nearest stop
@@ -776,11 +755,11 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       style={{ height: `${100 + length - APPROACH}svh` }}
     >
       <div className="sticky top-0 h-svh motion-safe:touch-none motion-reduce:static motion-reduce:h-auto flex flex-col motion-reduce:gap-8 px-4 md:px-6 pt-20 pb-32 lg:pb-16">
-        <SagaCosmos scenes={scenes} active={scene} />
+        <SagaCosmos active={scene} />
 
         {/* Three rows, the outer two equal, so the orbit's centre is the centre of the screen and
             lines up with the rank crest behind the page */}
-        <div className="absolute inset-0 motion-reduce:static grid grid-cols-1 grid-rows-[1fr_auto_1fr] justify-items-center px-4 pointer-events-none">
+        <div data-saga="layer" className="absolute inset-0 motion-reduce:static grid grid-cols-1 grid-rows-[1fr_auto_1fr] justify-items-center px-4 pointer-events-none">
           {/* Each scene's title sits above the orbit and its details below; every scene shares the two cells */}
           <div className="row-start-1 self-end grid grid-cols-1 text-center w-full pb-12 motion-reduce:pb-6">
             <p data-saga="standing" aria-label={rank} className={cn(TITLE, "col-start-1 row-start-1 self-end text-4xl sm:text-5xl")}>
@@ -1069,25 +1048,11 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
           </div>
         </div>
 
-        <div ref={stage} className="relative flex-1 w-full max-w-6xl mx-auto pointer-events-none motion-reduce:pointer-events-auto motion-reduce:grid motion-reduce:grid-cols-1 lg:motion-reduce:grid-cols-2 motion-reduce:gap-8">
-          {panels.map(panel => panel.staticOnly ? (
-            // Mounted only when they are shown: some of these are costly to render (the map)
-            reduced && <div key={panel.id}>{panel.node}</div>
-          ) : (
-            <div
-              key={panel.id}
-              data-saga="panel"
-              className={cn(
-                "absolute inset-0 motion-reduce:static flex items-center justify-center",
-                scenes[scene] === panel ? "pointer-events-auto" : "pointer-events-none motion-reduce:pointer-events-auto"
-              )}
-            >
-              <div data-saga="fit" className="w-full max-w-2xl motion-reduce:max-w-none">{panel.node}</div>
-            </div>
-          ))}
-        </div>
+        {/* With reduced motion the scenes are not drawn: the plain cards stand in for them. They are
+            mounted only then, since some are costly to render (the map). */}
+        {reduced && <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">{fallback}</div>}
 
-        {/* With reduced motion the scenes are not drawn, so the way to the Taskmaster is a plain button */}
+        {/* ...and the way to the Taskmaster is a plain button */}
         {reduced && <div className="flex justify-center"><AskTaskmasterButton onAsk={onAsk} /></div>}
 
         {/* Where you are in the sequence: step with the arrows or tap a dot to jump */}
