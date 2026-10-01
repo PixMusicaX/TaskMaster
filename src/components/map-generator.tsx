@@ -922,7 +922,7 @@ const BIOME_MATRIX: Record<string, Record<"low" | "balanced" | "peak", { name: s
 const AMBIENT_VOLUME = 0.1;
 
 // The realm's music, very quietly, while the saga's map scene is on stage. Silent when sounds are
-// muted from the navbar. Browsers only allow playback after the reader has interacted with the
+// muted from the navbar, and on touch devices. Browsers only allow playback after the reader has interacted with the
 // page, so if it is refused it starts on the next tap instead.
 function MapAmbience({ url, playing }: { url: string; playing: boolean }) {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -945,7 +945,9 @@ function MapAmbience({ url, playing }: { url: string; playing: boolean }) {
         }
       }, 80);
     };
-    // Where the volume cannot be set from script (iOS), stay silent rather than play at full volume
+    // Phones and tablets stay silent here; they only hear the music in the unrolled preview. (iOS
+    // also ignores a volume set from script, so it would play at full volume.)
+    if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
     audio.volume = 0;
     if (audio.volume !== 0) return;
     const start = () => { audio.play().then(() => fadeTo(AMBIENT_VOLUME)).catch(() => {}); };
