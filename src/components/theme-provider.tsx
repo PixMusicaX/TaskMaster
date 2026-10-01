@@ -32,13 +32,37 @@ const subscribe = (listener: () => void) => {
 };
 const notify = () => listeners.forEach(l => l());
 const readTheme = (): Theme => (document.documentElement.classList.contains("dark") ? "dark" : "light");
-const readRank = (): Rank => (document.documentElement.getAttribute("data-rank") as Rank | null) ?? "Novice";
+// Dark from 6pm to 6am, light otherwise (same rule as lib/theme-init.ts)
+const clockTheme = (): Theme => {
+  const h = new Date().getHours();
+  return h < 6 || h >= 18 ? "dark" : "light";
+};
+const readRank =(): Rank => (document.documentElement.getAttribute("data-rank") as Rank | null) ?? "Novice";
 const readEra = (): string => document.documentElement.getAttribute("data-era") ?? "forge";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = React.useSyncExternalStore(subscribe, readTheme, () => "light" as Theme);
   const rank = React.useSyncExternalStore(subscribe, readRank, () => "Novice" as Rank);
   const eraId = React.useSyncExternalStore(subscribe, readEra, () => "forge");
+
+  // The init script picks the theme on load; this keeps an open app in step when the clock
+  // crosses 6am/6pm. A manual toggle holds until the next crossing.
+  React.useEffect(() => {
+    let last = clockTheme();
+    const sync = () => {
+      const now = clockTheme();
+      if (now === last) return;
+      last = now;
+      document.documentElement.classList.toggle("dark", now === "dark");
+      notify();
+    };
+    const id = window.setInterval(sync, 60_000);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, []);
 
   const toggleTheme = () => {
     // No localStorage.setItem for theme - we don't want to remember it!
