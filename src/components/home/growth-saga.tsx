@@ -18,7 +18,6 @@ import {
   chronicleYears, futureMarks, yearSweep,
 } from "./saga-time-scenes";
 import type { MapInfo } from "@/components/map-generator";
-import SagaCosmos from "./saga-cosmos";
 import { AskDetails, AskEmblem, AskTaskmasterButton, AskTitle } from "./saga-ask-scene";
 import { MapDetails, MapEmblem, MapTitle } from "./saga-map-scene";
 import { TavernDetails, TavernEmblem, TavernTitle, type TavernProps } from "./saga-tavern-scene";
@@ -322,7 +321,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
 
     const scope = createScope({ root: el }).add(() => {
       // A timeline only applies a tween's starting values once it reaches it, so hide the later beats up front
-      utils.set("[data-saga=core], [data-saga=era-core], [data-saga=reached], [data-saga=letter], [data-saga=caption], [data-saga=era-text], [data-saga=shape], [data-saga=stat], [data-saga=mood], [data-saga=stats-title], [data-saga=mood-title], [data-saga=gauge], [data-saga=tick], [data-saga=pace-tilt], [data-saga=pace-core], [data-saga=pace-text], [data-saga=chron], [data-saga=chron-title], [data-saga=chron-node], [data-saga=chron-halo], [data-saga=chron-year], [data-saga=chron-entry], [data-saga=chron-items], [data-saga=future], [data-saga=future-title], [data-saga=future-node], [data-saga=future-core], [data-saga=future-row], [data-saga=future-details], [data-saga=tavern], [data-saga=tavern-title], [data-saga=tavern-row], [data-saga=map], [data-saga=map-title], [data-saga=map-disc], [data-saga=map-warp], [data-saga=map-row], [data-saga=ask], [data-saga=ask-title], [data-saga=ask-row], [data-saga=cosmos]", { opacity: 0 });
+      utils.set("[data-saga=core], [data-saga=era-core], [data-saga=reached], [data-saga=letter], [data-saga=caption], [data-saga=era-text], [data-saga=shape], [data-saga=stat], [data-saga=mood], [data-saga=stats-title], [data-saga=mood-title], [data-saga=gauge], [data-saga=tick], [data-saga=pace-tilt], [data-saga=pace-core], [data-saga=pace-text], [data-saga=chron], [data-saga=chron-title], [data-saga=chron-node], [data-saga=chron-halo], [data-saga=chron-year], [data-saga=chron-entry], [data-saga=chron-items], [data-saga=future], [data-saga=future-title], [data-saga=future-node], [data-saga=future-core], [data-saga=future-row], [data-saga=future-details], [data-saga=tavern], [data-saga=tavern-title], [data-saga=tavern-row], [data-saga=map], [data-saga=map-title], [data-saga=map-disc], [data-saga=map-warp], [data-saga=map-row], [data-saga=ask], [data-saga=ask-title], [data-saga=ask-row]", { opacity: 0 });
       utils.set("[data-saga=arc], [data-saga=level], [data-saga=grid], [data-saga=axis], [data-saga=gauge-fill], [data-saga=race-arc], [data-saga=time-arc]", { strokeDashoffset: 1 });
       paceXpEl.textContent = "0";
       totalEl.textContent = "0";
@@ -339,8 +338,6 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
           setChronStep(Math.min(Math.max(0, yearCount - 1), Math.max(0, Math.floor((t - CHRON_AT - 10) / YEAR_STEP))));
         },
       })
-        // The system fades in round the sun as the stage arrives (opacity only: it is screen-sized)
-        .add("[data-saga=cosmos]", { opacity: [0, 1], duration: 50 }, 6)
         // The emblem assembles while the stage rises into view
         .add("[data-saga=emblem]", { opacity: [0, 1], scale: [0.7, 1], duration: 30 }, 0)
         .add("[data-saga=core]", { opacity: [0, 1], scale: [0.5, 1], duration: 22 }, 12)
@@ -606,7 +603,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   const rollBack = useCallback(async () => {
     const el = root.current;
     if (!el || scrollAnim.current) return;
-    const layers = Array.from(el.querySelectorAll<HTMLElement>("[data-saga=cosmos], [data-saga=layer]"));
+    const layers = Array.from(el.querySelectorAll<HTMLElement>("[data-saga=layer]"));
     scrollAnim.current = -1;
     const play = (frames: Keyframe[], options: KeyframeAnimationOptions) =>
       Promise.all(layers.map(layer => layer.animate(frames, { fill: "both", ...options }).finished));
@@ -755,8 +752,6 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       style={{ height: `${100 + length - APPROACH}svh` }}
     >
       <div className="sticky top-0 h-svh motion-safe:touch-none motion-reduce:static motion-reduce:h-auto flex flex-col motion-reduce:gap-8 px-4 md:px-6 pt-20 pb-32 lg:pb-16">
-        <SagaCosmos active={scene} />
-
         {/* Three rows, the outer two equal, so the orbit's centre is the centre of the screen and
             lines up with the rank crest behind the page */}
         <div data-saga="layer" className="absolute inset-0 motion-reduce:static grid grid-cols-1 grid-rows-[1fr_auto_1fr] justify-items-center px-4 pointer-events-none">
