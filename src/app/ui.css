@@ -85,3 +85,14 @@
   50% { color: var(--c3); }
   75% { color: var(--c4); }
 }
+
+/* Growth saga: a hand of the tipped clock in the Chronicle and Future Sight orbits. It pivots on
+   its foot at the centre; its duration and (negative) delay set it to the real time. */
+.tm-clock-hand {
+  transform-origin: 50% 100%;
+  animation: tm-clock-turn 60s linear infinite;
+}
+@keyframes tm-clock-turn {
+  from { transform: translateX(-50%) rotate(0deg); }
+  to { transform: translateX(-50%) rotate(360deg); }
+}

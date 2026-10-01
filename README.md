@@ -78,7 +78,7 @@ Open [http://localhost:3000](http://localhost:3000) to see your TaskMaster dashb
 Below today's cards, the home page pins a single orbit and plays the analytics through it, one scene per scroll.
 
 - **Moving through it**: one wheel gesture, swipe or arrow key moves one scene. The legend under the orbit has previous and next buttons and a dot per scene, and a button at the right edge returns to the top.
-- **Autoplay**: left idle for 8 seconds it moves on by itself, and from the last scene it rolls back to the first.
+- **Autoplay**: left idle for 8 seconds it moves on by itself, and from the last scene it rolls back to the first. Left idle for 20 seconds higher up the home page, the page scrolls down to the orbit and autoplay starts.
 - **Light and dark**: the app opens in dark mode from 6pm to 6am and light mode otherwise, and switches at those hours while open.
 - **Reduced motion**: with the system's reduced-motion setting on, nothing pins or animates and the analytics appear as plain cards instead.
 

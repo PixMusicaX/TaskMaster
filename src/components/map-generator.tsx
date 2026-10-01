@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { isMuted, subscribeMuted } from "@/lib/sfx";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { RPG_TITLES } from "@/lib/constants";
@@ -917,6 +918,51 @@ const BIOME_MATRIX: Record<string, Record<"low" | "balanced" | "peak", { name: s
   }
 };
 
+// How loud the realm's music is behind the map in the growth saga (the preview plays it at 0.5)
+const AMBIENT_VOLUME = 0.1;
+
+// The realm's music, very quietly, while the saga's map scene is on stage. Silent when sounds are
+// muted from the navbar. Browsers only allow playback after the reader has interacted with the
+// page, so if it is refused it starts on the next tap instead.
+function MapAmbience({ url, playing }: { url: string; playing: boolean }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const fadeRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
+  const on = playing && !muted;
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !on) return;
+    const fadeTo = (target: number) => {
+      clearInterval(fadeRef.current);
+      fadeRef.current = setInterval(() => {
+        if (Math.abs(target - audio.volume) <= 0.011) {
+          audio.volume = target;
+          clearInterval(fadeRef.current);
+          if (target === 0) audio.pause();
+        } else {
+          audio.volume += Math.sign(target - audio.volume) * 0.01;
+        }
+      }, 80);
+    };
+    // Where the volume cannot be set from script (iOS), stay silent rather than play at full volume
+    audio.volume = 0;
+    if (audio.volume !== 0) return;
+    const start = () => { audio.play().then(() => fadeTo(AMBIENT_VOLUME)).catch(() => {}); };
+    start();
+    window.addEventListener("pointerdown", start, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", start);
+      fadeTo(0);
+    };
+  }, [on]);
+
+  // Leaving the page stops it at once
+  useEffect(() => () => clearInterval(fadeRef.current), []);
+
+  return <audio ref={audioRef} src={url} loop preload="none" />;
+}
+
 // What the growth saga shows around the map when it draws it in its orbit
 export interface MapInfo {
   name: string;
@@ -1098,6 +1144,8 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0, variant
           <canvas ref={canvasRef} className="w-full h-full object-cover transition-transform duration-1000 group-hover/map:scale-110" style={{ imageRendering: "pixelated" }} />
           <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,transparent_55%,rgba(0,0,0,0.45)_100%)] pointer-events-none" />
         </button>
+        {/* The preview plays the realm's music itself, so the quiet version stops while it is open */}
+        <MapAmbience url={`/music/${encodeURIComponent(mapConfig.name.toLowerCase().replace(/\s+/g, "-") + ".mp3")}`} playing={interactive && !isFullscreen} />
         {popup}
       </>
     );

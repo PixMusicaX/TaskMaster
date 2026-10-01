@@ -4,6 +4,7 @@ import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { CalendarDays, CheckSquare, Repeat, type LucideIcon } from "lucide-react";
 import type { HistoryDay } from "@/app/actions/history";
 import { noteTextLines, type EventRow } from "@/lib/types";
+import { useMounted } from "@/lib/use-mounted";
 import { cn, moodEmoji } from "@/lib/utils";
 import { C, CAPTION, R, TITLE, anchorAt, polar } from "./saga-kit";
 
@@ -12,6 +13,49 @@ import { C, CAPTION, R, TITLE, anchorAt, polar } from "./saga-kit";
 // orbit; the saga's scroll script animates them through their data-saga names.
 
 const RING = 166;
+
+// A real-time clock face tipped over in 3D inside the ring, behind the centre text; each scene
+// tips it about a different axis. The hands are set once from the time at mount and then turned
+// by CSS (see .tm-clock-hand), so nothing ticks in script, and each hand is only a sliver, which
+// keeps its GPU layer tiny.
+const HANDS = [
+  { name: "hour", seconds: 12 * 3600, length: "26%", className: "w-1 bg-tm-purple-dark dark:bg-tm-yellow" },
+  { name: "minute", seconds: 3600, length: "38%", className: "w-0.5 bg-tm-blue-gray" },
+  { name: "second", seconds: 60, length: "44%", className: "w-px bg-tm-orange-dark" },
+];
+
+function OrbitClock({ axis }: { axis: "x" | "y" }) {
+  // Seconds since midnight when this mounted. The hands are only drawn in the browser, since
+  // the server's clock is not the reader's.
+  const mounted = useMounted();
+  const [startedAt] = useState(() => {
+    const now = new Date();
+    return now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds() + now.getMilliseconds() / 1000;
+  });
+
+  return (
+    <div aria-hidden className="absolute inset-[14%]" style={{ perspective: 700 }}>
+      <div
+        className="absolute inset-0 rounded-full border-2 border-tm-blue-gray/30 opacity-70"
+        style={{ transform: axis === "x" ? "rotateX(62deg) rotateZ(-24deg)" : "rotateY(58deg) rotateZ(18deg)" }}
+      >
+        {Array.from({ length: 12 }, (_, i) => (
+          <span key={i} className="absolute inset-0" style={{ transform: `rotate(${i * 30}deg)` }}>
+            <span className={cn("absolute left-1/2 top-0 -translate-x-1/2 rounded-full bg-tm-blue-gray", i % 3 === 0 ? "w-1 h-[9%]" : "w-px h-[5%] opacity-60")} />
+          </span>
+        ))}
+        {mounted && HANDS.map(hand => (
+          <span
+            key={hand.name}
+            className={cn("tm-clock-hand absolute left-1/2 bottom-1/2 rounded-full", hand.className)}
+            style={{ height: hand.length, animationDuration: `${hand.seconds}s`, animationDelay: `${-(startedAt % hand.seconds)}s` }}
+          />
+        ))}
+        <span className="absolute left-1/2 top-1/2 w-2 h-2 -ml-1 -mt-1 rounded-full bg-tm-orange-dark" />
+      </div>
+    </div>
+  );
+}
 
 function plural(n: number, word: string) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -90,6 +134,7 @@ export function ChronicleTitle({ todayStr }: { todayStr: string }) {
 export function ChronicleEmblem({ years }: { years: ChronicleYear[] }) {
   return (
     <div data-saga="chron" aria-hidden className="absolute inset-0 motion-reduce:hidden">
+      <OrbitClock axis="y" />
       <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full overflow-visible text-tm-orange-light">
         <circle className="text-tm-blue-gray/25" cx={C} cy={C} r={RING} fill="none" stroke="currentColor" strokeWidth="2" />
         {/* Mirrored so it draws anticlockwise from the top */}
@@ -248,6 +293,7 @@ export function FutureEmblem({ marks }: { marks: FutureMark[] }) {
 
   return (
     <div data-saga="future" aria-hidden className="absolute inset-0 motion-reduce:hidden">
+      <OrbitClock axis="x" />
       <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full overflow-visible">
         <circle className="text-tm-blue-gray/25" cx={C} cy={C} r={RING} fill="none" stroke="currentColor" strokeWidth="2" />
         {Array.from({ length: FUTURE_DAYS }, (_, i) => {

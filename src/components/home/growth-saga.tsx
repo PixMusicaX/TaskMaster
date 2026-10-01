@@ -130,6 +130,8 @@ const SETTLE_AFTER = 160;
 // Left alone on a stop for this long, the saga moves on to the next one by itself (and from the
 // last one, rolls back to the first)
 const IDLE_BEFORE_AUTO = 8000;
+// Left idle anywhere above the saga for this long, the home page scrolls down to it
+const IDLE_BEFORE_ARRIVING = 20000;
 // Future Sight waits longer, so its scrolling list can be read through: a base, plus the time the
 // list takes to show each event (see TICK in saga-time-scenes.tsx), within these bounds
 const FUTURE_IDLE = { base: 8000, perEvent: 2600, min: 14000, max: 32000 };
@@ -641,6 +643,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
 
   // How long the scene on stage may sit idle before autoplay moves on
   const idleFor = useRef(IDLE_BEFORE_AUTO);
+  const lastInput = useRef(0);
   const onFuture = scenes[scene]?.id === "future";
   const eventCount = marks.length;
   useEffect(() => {
@@ -654,17 +657,26 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     const el = root.current;
     if (!el || prefersReducedMotion()) return;
     const stops = stopsKey.split(",").map(Number);
-    let last = performance.now();
-    const touch = () => { last = performance.now(); };
+    // Kept across re-runs of this effect, so late-arriving data does not restart the wait
+    if (!lastInput.current) lastInput.current = performance.now();
+    const touch = () => { lastInput.current = performance.now(); };
     const events = ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] as const;
     events.forEach(name => window.addEventListener(name, touch, { passive: true }));
     const timer = setInterval(() => {
       if (document.hidden) return touch();
-      if (performance.now() - last < idleFor.current || scrollAnim.current) return;
-      const { timeNow } = measure();
-      // Only while resting on the stops, and not while a dialog covers the stage
-      if (timeNow < stops[0] - 1 || timeNow > stops[stops.length - 1] + 1) return;
+      const idle = performance.now() - lastInput.current;
+      if (scrollAnim.current) return;
+      const { timeNow, yOf } = measure();
       const under = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+      // Higher up the home page: after a longer wait, come down to the Standing, and autoplay
+      // carries on from there (not while a dialog is open, which sits outside <main>)
+      if (timeNow < stops[0] - 1) {
+        if (idle < IDLE_BEFORE_ARRIVING || !under?.closest("main")) return;
+        scrollToY(yOf(stops[0]), true);
+        return touch();
+      }
+      // Only while resting on the stops, and not while a dialog covers the stage
+      if (idle < idleFor.current || timeNow > stops[stops.length - 1] + 1) return;
       if (!under || !el.contains(under)) return;
       // After the last stop it starts again from the Standing
       if (!step(1)) rollBack();
@@ -674,7 +686,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       clearInterval(timer);
       events.forEach(name => window.removeEventListener(name, touch));
     };
-  }, [stopsKey, measure, step, rollBack]);
+  }, [stopsKey, measure, step, rollBack, scrollToY]);
 
   // Wheel, swipe and arrow keys each move one stop while the saga is on screen, and anything else
   // that scrolls it (a flick from above, the scrollbar) settles on the nearest stop
