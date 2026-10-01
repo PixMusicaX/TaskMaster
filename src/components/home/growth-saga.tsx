@@ -77,8 +77,8 @@ const MOOD_GRID = LEVELS.map(l => polygon(MOOD_ANGLES, even(RADAR * l)));
 // The scroll script, in svh of scrolling. The orbit assembles during the approach (the half screen
 // before the stage pins) and fills while pinned; its centre then turns from level to era while the
 // level ring tips over, the season's XP gauge turns in with its two tipped rings, the radar draws
-// inside the dotted circle for the stats and reshapes for the moods, the Chronicle reaches back
-// through the years, Future Sight sweeps the next two weeks, the Tavern seats the day's relief, a
+// inside the dotted circle for the stats and reshapes for the moods, the Tavern seats the day's
+// relief, Future Sight sweeps the next two weeks, the Chronicle reaches back through the years, a
 // compass gives way to the map and the orbit returns whole around the Taskmaster. The dial's
 // turning is not part of the script (see its effect).
 const APPROACH = 50;
@@ -86,7 +86,7 @@ const ERA_AT = 108;
 const PACE_AT = 162;
 const STATS_AT = 250;
 const MOOD_AT = 322;
-const CHRON_AT = 394;
+const TAVERN_AT = 394;
 // The Chronicle steps through its years, one YEAR_STEP of scroll each
 const YEAR_STEP = 40;
 const FUTURE_LENGTH = 84;
@@ -99,26 +99,26 @@ const TAIL = 30;
 // date, and its length depends on how many, so everything after it is worked out per render.
 // `from` is the moment each scene takes the stage and `holdsAt` a moment when it is holding it.
 function sceneTimes(years: number) {
-  const futureAt = CHRON_AT + (years > 0 ? 10 + years * YEAR_STEP + 14 : 0);
-  const tavernAt = futureAt + FUTURE_LENGTH;
-  const mapAt = tavernAt + TAVERN_LENGTH;
+  const futureAt = TAVERN_AT + TAVERN_LENGTH;
+  const chronAt = futureAt + FUTURE_LENGTH;
+  const mapAt = chronAt + (years > 0 ? 10 + years * YEAR_STEP + 14 : 0);
   const askAt = mapAt + MAP_LENGTH;
   const drawn = [
     { id: "standing", label: "Standing", from: 0, holdsAt: ERA_AT - 14 },
     { id: "era", label: "Era Status", from: ERA_AT + 6, holdsAt: PACE_AT - 16 },
     { id: "pace", label: "Season Pace", from: PACE_AT + 6, holdsAt: STATS_AT - 32 },
     { id: "stats", label: "Character Stats", from: STATS_AT + 8, holdsAt: MOOD_AT - 16 },
-    { id: "mood", label: "Stress Metrics", from: MOOD_AT + 10, holdsAt: CHRON_AT - 24 },
-    ...(years > 0 ? [{ id: "chronicle", label: "Chronicle", from: CHRON_AT + 2, holdsAt: CHRON_AT + 10 + 18 }] : []),
-    { id: "future", label: "Future Sight", from: futureAt + 2, holdsAt: tavernAt - 24 },
-    { id: "tavern", label: "Tavern", from: tavernAt + 2, holdsAt: mapAt - 28 },
+    { id: "mood", label: "Stress Metrics", from: MOOD_AT + 10, holdsAt: TAVERN_AT - 24 },
+    { id: "tavern", label: "Tavern", from: TAVERN_AT + 2, holdsAt: futureAt - 28 },
+    { id: "future", label: "Future Sight", from: futureAt + 2, holdsAt: chronAt - 24 },
+    ...(years > 0 ? [{ id: "chronicle", label: "Chronicle", from: chronAt + 2, holdsAt: chronAt + 10 + 18 }] : []),
     { id: "map", label: "The Map", from: mapAt + 2, holdsAt: askAt - 20 },
     { id: "ask", label: "The Taskmaster", from: askAt + 2, holdsAt: askAt + 40 },
   ];
   // Where the scroll comes to rest: once per scene, and once per year inside the Chronicle
   const stops = drawn.flatMap(d => d.id === "chronicle" ? Array.from({ length: years }, (_, i) => d.holdsAt + i * YEAR_STEP) : [d.holdsAt]);
   // The last scene stays on stage for the TAIL, until the page unpins
-  return { futureAt, tavernAt, mapAt, askAt, drawn, stops, length: askAt + ASK_LENGTH + TAIL };
+  return { futureAt, chronAt, mapAt, askAt, drawn, stops, length: askAt + ASK_LENGTH + TAIL };
 }
 
 // Scrolling inside the saga moves one stop at a time. A gesture is a run of wheel events with no
@@ -130,6 +130,9 @@ const SETTLE_AFTER = 160;
 // Left alone on a stop for this long, the saga moves on to the next one by itself (and from the
 // last one, rolls back to the first)
 const IDLE_BEFORE_AUTO = 8000;
+// Future Sight waits longer, so its scrolling list can be read through: a base, plus the time the
+// list takes to show each event (see TICK in saga-time-scenes.tsx), within these bounds
+const FUTURE_IDLE = { base: 8000, perEvent: 2600, min: 14000, max: 32000 };
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 // The dial's turn rate in degrees a second: at rest, per px/s of scrolling, and the most scrolling can add
@@ -191,8 +194,8 @@ export function dailyTarget(xp: number, xpBeforeToday: number, lastMonthTotalXP:
 
 // The analytics as one pinned scroll sequence. The season's emblem assembles (level, rank path),
 // turns to show the era, becomes the season's XP gauge, then holds a radar that draws the character
-// stats and reshapes into the 30-day moods, reaches back through today's date in past years,
-// sweeps the next two weeks, seats the day's relief suggestions, unrolls the map and ends on the
+// stats and reshapes into the 30-day moods, seats the day's relief suggestions, sweeps the next
+// two weeks, reaches back through today's date in past years, unrolls the map and ends on the
 // way to the Taskmaster. With reduced motion nothing pins or animates: the emblem sits in the page
 // flow with the plain cards (`fallback`) beneath it.
 const subscribeReducedMotion = (onChange: () => void) => {
@@ -316,7 +319,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     all("polygon").forEach(p => p.setAttribute("points", statShape));
     all("point").forEach((p, i) => { p.setAttribute("cx", statPoints[i][0]); p.setAttribute("cy", statPoints[i][1]); });
 
-    const { futureAt, tavernAt, mapAt, askAt, drawn } = sceneTimes(yearCount);
+    const { futureAt, chronAt, mapAt, askAt, drawn } = sceneTimes(yearCount);
     const froms = drawn.map(d => d.from);
 
     const scope = createScope({ root: el }).add(() => {
@@ -330,12 +333,13 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         defaults: { ease: "out(3)" },
         autoplay: onScroll({ target: el, enter: "center top", leave: "bottom bottom", sync: 0.85 }),
         onUpdate: ({ currentTime: t }) => {
-          dialDirection.current = t >= MOOD_AT && t < futureAt ? -1 : 1;
+          // The dial turns backwards through the moods and the Chronicle
+          dialDirection.current = (t >= MOOD_AT && t < TAVERN_AT) || (t >= chronAt && t < mapAt) ? -1 : 1;
           levelRingTurns.current = t >= ERA_AT - 6 && t < PACE_AT + 12;
           let current = 0;
           froms.forEach((from, i) => { if (t >= from) current = i; });
           setScene(current);
-          setChronStep(Math.min(Math.max(0, yearCount - 1), Math.max(0, Math.floor((t - CHRON_AT - 10) / YEAR_STEP))));
+          setChronStep(Math.min(Math.max(0, yearCount - 1), Math.max(0, Math.floor((t - chronAt - 10) / YEAR_STEP))));
         },
       })
         // The emblem assembles while the stage rises into view
@@ -400,7 +404,12 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         .add("[data-saga=shape]", { rotate: [0, 360], duration: 30, ease: "inOut(3)" }, MOOD_AT)
         .add("[data-saga=mood]", { opacity: [0, 1], duration: 12, delay: stagger(5) }, MOOD_AT + 20)
         .add("[data-saga=mood-title]", { opacity: [0, 1], translateY: [24, 0], duration: 18 }, MOOD_AT + 14)
-        .add("[data-saga=radar], [data-saga=mood-title]", { opacity: 0, duration: 12, ease: "in(2)" }, CHRON_AT - 14)
+        .add("[data-saga=radar], [data-saga=mood-title]", { opacity: 0, duration: 12, ease: "in(2)" }, TAVERN_AT - 14)
+        // The Tavern: its three-seat ring turns in and the suggestions line up beneath it
+        .add("[data-saga=tavern]", { opacity: [0, 1], scale: [0.85, 1], rotate: [-60, 0], duration: 20 }, TAVERN_AT - 2)
+        .add("[data-saga=tavern-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, TAVERN_AT + 2)
+        .add("[data-saga=tavern-row]", { opacity: [0, 1], translateY: [16, 0], duration: 12, delay: stagger(4) }, TAVERN_AT + 8)
+        .add("[data-saga=tavern], [data-saga=tavern-title], [data-saga=tavern-details]", { opacity: 0, duration: 12, ease: "in(2)" }, futureAt - 14)
         // Future Sight: a hand sweeps the two-week dial once and what lies ahead appears as it passes
         .add("[data-saga=future]", { opacity: [0, 1], scale: [0.9, 1], duration: 16 }, futureAt - 2)
         .add("[data-saga=future-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, futureAt + 2)
@@ -411,14 +420,10 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         // going backwards the block is gone even if the list is mid-scroll
         .add("[data-saga=future-details]", { opacity: [0, 1], duration: 10 }, futureAt + 20)
         .add("[data-saga=future-row]", { opacity: [0, 1], translateY: [16, 0], duration: 10, delay: stagger(1.2) }, futureAt + 22)
-        // The Tavern: its three-seat ring turns in and the suggestions line up beneath it
-        .add("[data-saga=future], [data-saga=future-title], [data-saga=future-details]", { opacity: 0, duration: 12, ease: "in(2)" }, tavernAt - 14)
-        .add("[data-saga=tavern]", { opacity: [0, 1], scale: [0.85, 1], rotate: [-60, 0], duration: 20 }, tavernAt - 2)
-        .add("[data-saga=tavern-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, tavernAt + 2)
-        .add("[data-saga=tavern-row]", { opacity: [0, 1], translateY: [16, 0], duration: 12, delay: stagger(4) }, tavernAt + 8)
+        // (the Chronicle, when there is one, plays between these two; see below)
+        .add("[data-saga=future], [data-saga=future-title], [data-saga=future-details]", { opacity: 0, duration: 12, ease: "in(2)" }, chronAt - 14)
         // The Map: a compass turns in, its needle swings and settles, then rings rush outward and
         // the map warps in where the needle was
-        .add("[data-saga=tavern], [data-saga=tavern-title], [data-saga=tavern-details]", { opacity: 0, duration: 12, ease: "in(2)" }, mapAt - 14)
         .add("[data-saga=dial-wrap]", { opacity: 0, duration: 14 }, mapAt - 10)
         .add("[data-saga=map]", { opacity: [0, 1], scale: [0.8, 1], duration: 16 }, mapAt - 2)
         .add("[data-saga=map-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, mapAt + 2)
@@ -460,16 +465,16 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       // entry below change with it
       if (yearCount > 0) {
         timeline
-          .add("[data-saga=chron]", { opacity: [0, 1], scale: [0.9, 1], duration: 16 }, CHRON_AT - 2)
-          .add("[data-saga=chron-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, CHRON_AT + 2)
-          .add("[data-saga=chron-node]", { opacity: [0, 1], duration: 8, delay: stagger(2) }, CHRON_AT + 4)
-          .add("[data-saga=chron], [data-saga=chron-title], [data-saga=chron-details]", { opacity: 0, duration: 12, ease: "in(2)" }, futureAt - 14);
+          .add("[data-saga=chron]", { opacity: [0, 1], scale: [0.9, 1], duration: 16 }, chronAt - 2)
+          .add("[data-saga=chron-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, chronAt + 2)
+          .add("[data-saga=chron-node]", { opacity: [0, 1], duration: 8, delay: stagger(2) }, chronAt + 4)
+          .add("[data-saga=chron], [data-saga=chron-title], [data-saga=chron-details]", { opacity: 0, duration: 12, ease: "in(2)" }, mapAt - 14);
         const halos = all("chron-halo");
         const centres = all("chron-year");
         const entries = all("chron-entry");
         const fans = all("chron-items");
         for (let i = 0; i < yearCount; i++) {
-          const start = CHRON_AT + 10 + i * YEAR_STEP;
+          const start = chronAt + 10 + i * YEAR_STEP;
           if (i > 0) timeline.add("[data-saga=chron-sweep]", { strokeDashoffset: [1 - yearSweep(i - 1), 1 - yearSweep(i)], duration: 16, ease: "inOut(2)" }, start - 8);
           timeline
             .add(halos[i], { opacity: [0, 1], duration: 8 }, start)
@@ -634,6 +639,16 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     if (!step(1)) rollBack();
   }
 
+  // How long the scene on stage may sit idle before autoplay moves on
+  const idleFor = useRef(IDLE_BEFORE_AUTO);
+  const onFuture = scenes[scene]?.id === "future";
+  const eventCount = marks.length;
+  useEffect(() => {
+    idleFor.current = onFuture
+      ? Math.min(FUTURE_IDLE.max, Math.max(FUTURE_IDLE.min, FUTURE_IDLE.base + eventCount * FUTURE_IDLE.perEvent))
+      : IDLE_BEFORE_AUTO;
+  }, [onFuture, eventCount]);
+
   // Left idle on a stop, move on to the next one; any input starts the wait again
   useEffect(() => {
     const el = root.current;
@@ -645,7 +660,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     events.forEach(name => window.addEventListener(name, touch, { passive: true }));
     const timer = setInterval(() => {
       if (document.hidden) return touch();
-      if (performance.now() - last < IDLE_BEFORE_AUTO || scrollAnim.current) return;
+      if (performance.now() - last < idleFor.current || scrollAnim.current) return;
       const { timeNow } = measure();
       // Only while resting on the stops, and not while a dialog covers the stage
       if (timeNow < stops[0] - 1 || timeNow > stops[stops.length - 1] + 1) return;
@@ -1006,7 +1021,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
             </div>
 
             {yearCount > 0 && <ChronicleDetails years={years} active={scenes[scene]?.id === "chronicle" ? chronStep : null} />}
-            <FutureDetails marks={marks} active={scenes[scene]?.id === "future"} />
+            <FutureDetails marks={marks} active={onFuture} />
             <MapDetails info={mapInfo} />
             <AskDetails onAsk={onAsk} active={onAskScene} />
             <TavernDetails relief={tavern.relief} loading={tavern.loading} updating={tavern.updating} onToggle={tavern.onToggle} active={onTavern} />

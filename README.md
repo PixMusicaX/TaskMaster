@@ -14,7 +14,7 @@ Built with a stunning glass-morphism aesthetic and powered by AI, TaskMaster hel
 - **📔 Daily Vault**: A bullet-style note-taking system with integrated mood tracking.
 - **🏆 Hall of Fame**: Visualize your monthly progress with a seasonal ranking system.
 - **📊 Detailed Analytics**: Character radars and stress metrics to visualize your journey.
-- **🪐 Growth Orbit**: The home page's analytics play as one pinned scroll sequence inside a single orbit: standing, era, season pace, character stats, stress metrics, chronicle, future sight, the tavern, the map and the Taskmaster.
+- **🪐 Growth Orbit**: The home page's analytics play as one pinned scroll sequence inside a single orbit: standing, era, season pace, character stats, stress metrics, the tavern, future sight, chronicle, the map and the Taskmaster.
 - **📁 Archive System**: Robust tabular archives for notes and calendar events with a 7-year storage reach.
 
 ---
