@@ -23,9 +23,9 @@ html[data-persona] .tm-normal-only { display: none !important; }
 html[data-persona] .tm-card-fx { display: none; }
 
 html:root:root[data-persona] {
-  /* Pause-menu faces: P3 Reload's menu is Rodin Pro UB, heavy and italic; P4's is a bold serif */
+  /* Pause-menu faces: P3 Reload's menu is Rodin Pro UB, heavy and italic; P4 Revival's is a heavy serif */
   --font-p3-menu: "Rodin Pro UB", "FOT-RodinPro-UB", "M PLUS 1p", "Arial Black", sans-serif;
-  --font-p4-menu: "DM Serif Display", "Rockwell", Georgia, serif;
+  --font-p4-menu: "Playfair Display", "Rockwell", Georgia, serif;
   --font-p5-menu: "P5 Menu", "Anton", Impact, sans-serif;
   --card-blur: 0px;
   --ambient-opacity: 0;

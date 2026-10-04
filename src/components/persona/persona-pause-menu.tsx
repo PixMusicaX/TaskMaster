@@ -235,78 +235,191 @@ function P3Menu({ selected, select, onClose, dark }: MenuProps & { dark: boolean
   );
 }
 
-// ======================= P4 =======================
+// ======================= P4 Revival =======================
+// After Persona 4 Revival's menu: a yellow field, blue sky in the top-right wedge, a purple band
+// under the list, Yu adjusting his glasses on the left, flowers, and serif options stepping down
+// the diagonal. Laid out on a 16:9 stage like P5's (cover the screen, zoom out on tall phones).
+// The sky, Yu and the white flower come from the official site (see CREDITS.md).
 
-function Flower({ className, color, ink }: { className?: string; color: string; ink?: string }) {
+const P4_DESCRIPTIONS = ["Head home", "View Calendar", "Open your notebook", "View Social Links", "Look back on records", "View Settings"];
+// Left, top and type size per row (percent of the stage, cqh), and which part of the picture it
+// sits on: the yellow field, the edge of the band, or the purple band
+const P4_ROWS = [
+  { left: 30, top: 15, fs: 9.2, zone: "field" },
+  { left: 33.5, top: 26, fs: 7, zone: "field" },
+  { left: 36.5, top: 35.5, fs: 7.4, zone: "edge" },
+  { left: 40, top: 45.5, fs: 8, zone: "band" },
+  { left: 43.5, top: 56, fs: 8.6, zone: "band" },
+  { left: 47.5, top: 67, fs: 9.6, zone: "band" },
+] as const;
+
+const P4_TONES = {
+  // A pale edge all round, so the dark rows also read over Yu's jacket
+  field: { color: "#2a1533", WebkitTextStroke: "0.14em #fff6b0", paintOrder: "stroke fill" },
+  edge: { color: "#fff3a0", textShadow: "0.05em 0.05em 0 #1c6f8f, -0.03em -0.02em 0 #ff7a00" },
+  // The game's colour fringe: a red and a green copy, nudged apart
+  band: { color: "#ffd400", textShadow: "-0.035em 0.02em 0 #ff2a2a, 0.035em -0.02em 0 #19c22f" },
+};
+
+// Vector flower (the game's six-petal mark), with an optional red and green fringe
+function Flower({ className, color, fringe }: { className?: string; color: string; fringe?: boolean }) {
   return (
-    <svg viewBox="-50 -50 100 100" className={className} aria-hidden>
+    <svg viewBox="-50 -50 100 100" className={className} aria-hidden style={fringe ? { filter: "drop-shadow(-1.5px 1px 0 #ff2a5a) drop-shadow(1.5px -1px 0 #19c22f)" } : undefined}>
       {[0, 60, 120, 180, 240, 300].map(a => (
-        <ellipse key={a} cx="0" cy="-24" rx="15" ry="24" fill={color} stroke={ink} strokeWidth={ink ? 3 : 0} transform={`rotate(${a})`} />
+        <path key={a} d="M 0 -6 C -16 -22 -15 -46 0 -46 C 15 -46 16 -22 0 -6 Z" fill={color} transform={`rotate(${a})`} />
       ))}
-      <circle r="10" fill={color} />
+      <circle r="9" fill={color} />
     </svg>
   );
 }
 
-function P4Menu({ selected, select, onClose, level }: MenuProps) {
+// Safari (and every iOS browser) plays WebM without its transparency, so those get the still
+function supportsAlphaVideo() {
+  const ua = navigator.userAgent;
+  const webkitOnly = /iP(hone|ad|od)/.test(ua) || (/Safari/.test(ua) && !/Chrome|Chromium|Android|Edg\//.test(ua));
+  return !webkitOnly && document.createElement("video").canPlayType('video/webm; codecs="vp9"') !== "";
+}
+
+function P4Menu({ selected, select, onClose, xp }: MenuProps) {
+  const [alphaVideo] = useState(supportsAlphaVideo);
+  // Tall screens only see the middle of the stage, so Yu moves in over the list there
+  const [portrait] = useState(() => window.matchMedia("(max-aspect-ratio: 1/1)").matches);
+  const reduced = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
   return (
-    <div className="absolute inset-0 overflow-hidden" style={{ background: "linear-gradient(200deg, #5fb8ff 0%, #8fd0ff 35%, #ffd93b 36%)" }}>
-      {/* Clouds in the sky, top right */}
-      <div className="absolute inset-0" style={{ background: "radial-gradient(9% 6% at 70% 24%, #fff 60%, transparent 62%), radial-gradient(7% 5% at 76% 21%, #fff 60%, transparent 62%), radial-gradient(10% 6% at 90% 30%, #fff 60%, transparent 62%), radial-gradient(6% 4% at 95% 26%, #fff 60%, transparent 62%)" }} />
-      {/* The yellow sweep and the purple band */}
-      <motion.div className="absolute -left-[10%] top-[-12%] h-[66%] w-[82%] bg-[#ffe100]" style={{ rotate: -14, transformOrigin: "left" }} initial={{ x: "-100%" }} animate={{ x: 0 }} transition={{ duration: 0.35, ease: [0.7, 0, 0.3, 1] }} />
-      <motion.div className="absolute -left-[10%] top-[48%] h-[70%] w-[130%] bg-[#3a1846]" style={{ rotate: -10, transformOrigin: "left" }} initial={{ x: "100%" }} animate={{ x: 0 }} transition={{ duration: 0.35, delay: 0.08, ease: [0.7, 0, 0.3, 1] }} />
-      <div className="absolute -left-[10%] top-[47%] h-[2.2%] w-[130%] bg-[#ffb000]" style={{ rotate: "-10deg", transformOrigin: "left" }} />
-
-      <motion.div className="absolute right-[6%] bottom-[6%] w-[22vmin]" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.35, type: "spring", stiffness: 300, damping: 14 }}>
-        <Flower color="#ffe100" />
-      </motion.div>
-      <motion.div className="absolute left-[3%] bottom-[8%] w-[13vmin]" initial={{ scale: 0 }} animate={{ scale: 1, rotate: 20 }} transition={{ delay: 0.45, type: "spring", stiffness: 300, damping: 14 }}>
-        <Flower color="#fff" ink="#ff3b6b" />
-      </motion.div>
-
-      {/* Yu, big, on the left */}
+    <div className="absolute inset-0 overflow-hidden bg-[#ffc400]">
       <motion.div
-        className="absolute left-[-14%] md:left-[-2%] top-[-4%] h-[170%] aspect-[634/1200]"
-        initial={{ x: -140, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 160, damping: 20 }}
+        className="absolute [container-type:size]"
+        style={{
+          ["--w" as string]: "min(max(100vw, 177.78vh), 250vw)",
+          width: "var(--w)",
+          height: "calc(var(--w) * 0.5625)",
+          top: "calc(50% - var(--w) * 0.28125)",
+          // Keep the list (about 45% across) centred on narrow screens
+          left: "clamp(calc(100vw - var(--w)), calc(50vw - var(--w) * 0.45), 0px)",
+          background: "linear-gradient(155deg, #ffe53b 0%, #ffd400 45%, #ffb300 100%)",
+        }}
+        initial={{ opacity: 0, scale: 1.06 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element -- a static asset; next/image adds nothing here */}
-        <img src="/persona/p4-yu.webp" alt="" className="h-full w-full object-contain object-top" style={{ filter: "drop-shadow(10px 0 0 #ffe100) drop-shadow(-6px 0 0 #fff)" }} draggable={false} />
+        {/* Lighter streaks across the yellow */}
+        <div className="absolute inset-0 opacity-50" style={{ background: "repeating-linear-gradient(-14deg, transparent 0 9cqh, #fff27a 9cqh 9.6cqh, transparent 9.6cqh 21cqh)" }} />
+
+        {/* The sky, in the top-right wedge */}
+        <motion.div
+          className="absolute inset-0"
+          style={{ clipPath: "polygon(47% 0, 100% 0, 100% 25%, 54% 37%)" }}
+          initial={{ x: "20%" }}
+          animate={{ x: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <video className="absolute right-0 top-0 h-[62%] w-[62%] object-cover" src="/persona/p4-sky.mp4" poster="/persona/p4-sky-poster.webp" autoPlay={!reduced} loop muted playsInline aria-hidden />
+        </motion.div>
+        <div className="absolute inset-0 bg-[#ffb300]" style={{ clipPath: "polygon(54% 37%, 100% 25%, 100% 28.5%, 54.6% 40%)" }} />
+
+        {/* The purple band under the lower rows */}
+        <motion.div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(120deg, #4a1763, #2a0d3d 70%)", clipPath: "polygon(31% 49%, 100% 30%, 100% 68%, 63% 100%, 25% 100%)" }}
+          initial={{ x: "-30%", opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.35, delay: 0.05, ease: [0.7, 0, 0.3, 1] }}
+        />
+
+        {/* Flowers: the big yellow one, a small black one, and the official white one */}
+        <motion.div className="absolute" style={{ left: "62%", top: "66%", width: "19%" }} initial={{ scale: 0, rotate: -120 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.3, type: "spring", stiffness: 260, damping: 14 }}>
+          <Flower color="#ffe100" fringe />
+        </motion.div>
+        <motion.div className="absolute" style={{ left: "71%", top: "88%", width: "6.5%" }} initial={{ scale: 0 }} animate={{ scale: 1, rotate: 25 }} transition={{ delay: 0.42, type: "spring", stiffness: 300, damping: 14 }}>
+          <Flower color="#16101c" />
+        </motion.div>
+        <motion.div className="absolute" style={{ left: "2%", top: "77%", width: "11%" }} initial={{ scale: 0, rotate: 90 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.38, type: "spring", stiffness: 300, damping: 14 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- a static asset; next/image adds nothing here */}
+          <img src="/persona/p4-flower-white.webp" alt="" className="w-full h-auto" draggable={false} />
+        </motion.div>
+
+        {/* Yu, adjusting his glasses */}
+        <motion.div
+          className="absolute"
+          style={portrait
+            // Higher, so his face clears the first row, and faded out where the clip ends
+            ? { left: "17%", top: "-34%", height: "112%", aspectRatio: "1149 / 1000", WebkitMaskImage: "linear-gradient(#000 74%, transparent 96%)", maskImage: "linear-gradient(#000 74%, transparent 96%)" }
+            : { left: "-9%", top: "-16%", height: "150%", aspectRatio: "1149 / 1000" }}
+          initial={{ x: "-18%", opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 170, damping: 22 }}
+        >
+          {alphaVideo && !reduced ? (
+            <video className="h-full w-full object-contain" src="/persona/p4-yu.webm" poster="/persona/p4-yu.webp" autoPlay loop muted playsInline aria-hidden />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- a static asset; next/image adds nothing here
+            <img src="/persona/p4-yu.webp" alt="" className="h-full w-full object-contain" draggable={false} />
+          )}
+        </motion.div>
+
+        {/* The dashed stitch that runs from his shoulder into the list */}
+        <svg viewBox="0 0 1000 562.5" className={cn("absolute inset-0 w-full h-full pointer-events-none", portrait && "hidden")} aria-hidden>
+          <path d="M 250 330 C 330 300 380 290 430 286" fill="none" stroke="#fff" strokeWidth="2.4" strokeDasharray="9 8" strokeLinecap="round" />
+        </svg>
+
+        <nav aria-label="Menu" className="absolute inset-0">
+          {PERSONA_MENU_ITEMS.map((item, i) => {
+            const on = selected === i;
+            const row = P4_ROWS[i];
+            return (
+              <motion.div
+                key={item.href}
+                className="absolute"
+                style={{ left: `${row.left}%`, top: `${row.top}%`, fontSize: `${row.fs}cqh`, zIndex: on ? 5 : 1, transformOrigin: "left center" }}
+                initial={{ y: "-40%", opacity: 0, rotate: -12 }}
+                animate={{ y: 0, opacity: 1, rotate: -12, scale: on ? 1.12 : 1 }}
+                transition={{ delay: 0.14 + i * 0.05, type: "spring", stiffness: 480, damping: 22 }}
+              >
+                <Link href={item.href} onClick={onClose} onMouseEnter={() => select(i)} onFocus={() => select(i)} className="relative block outline-none leading-[1] whitespace-nowrap px-[0.12em]">
+                  {on && (
+                    <motion.span
+                      layoutId="p4-pause-cursor"
+                      className="absolute -inset-x-[0.14em] inset-y-[0.04em] bg-white -skew-x-12"
+                      style={{ boxShadow: "0.1em 0.09em 0 #2be0ff, -0.07em -0.05em 0 #ff4fa3" }}
+                      transition={{ type: "spring", stiffness: 600, damping: 32 }}
+                    />
+                  )}
+                  <span
+                    className="relative font-black"
+                    style={{
+                      fontFamily: "var(--font-p4-menu)",
+                      ...(on
+                        ? { color: "transparent", backgroundImage: "linear-gradient(180deg, #ff3d98 20%, #ffb3d9 95%)", WebkitBackgroundClip: "text", backgroundClip: "text" }
+                        : P4_TONES[row.zone]),
+                    }}
+                  >
+                    {item.labels.p4}
+                  </span>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </nav>
+
+        {/* The wallet, here your XP */}
+        {xp !== undefined && (
+          <p className="absolute font-black" style={{ left: "32%", top: "88%", fontSize: "5cqh", fontFamily: "var(--font-p4-menu)", color: "#ffd400", textShadow: "0.05em 0.05em 0 #2a0d3d" }}>
+            ¥{xp.toLocaleString()}
+          </p>
+        )}
       </motion.div>
 
-      <nav className="absolute left-[34%] md:left-[30%] top-[16%] flex flex-col" aria-label="Menu">
-        {PERSONA_MENU_ITEMS.map((item, i) => {
-          const on = selected === i;
-          return (
-            <motion.div key={item.href} style={{ marginLeft: `${i * 1.1}em`, fontSize: "clamp(30px, 5.6vw, 64px)" }} initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1, rotate: -8 }} transition={{ delay: 0.15 + i * 0.05, type: "spring", stiffness: 500, damping: 22 }}>
-              <Link href={item.href} onClick={onClose} onMouseEnter={() => select(i)} onFocus={() => select(i)} className="relative block outline-none leading-[0.95]">
-                {on && <motion.span layoutId="p4-pause-cursor" className="absolute -inset-x-3 inset-y-1 bg-white/90 -skew-x-12 shadow-[6px_6px_0_#2be0ff]" transition={{ type: "spring", stiffness: 600, damping: 32 }} />}
-                <span
-                  className="relative"
-                  style={{
-                    fontFamily: "var(--font-p4-menu)",
-                    color: on ? "transparent" : "#2a1533",
-                    backgroundImage: on ? "linear-gradient(180deg, #ff4fa3, #ffd1ea)" : undefined,
-                    WebkitBackgroundClip: on ? "text" : undefined,
-                    backgroundClip: on ? "text" : undefined,
-                    textShadow: on ? "none" : "3px 3px 0 #ffe100, -1px -1px 0 #fff",
-                  }}
-                >
-                  {item.labels.p4}
-                </span>
-              </Link>
-            </motion.div>
-          );
-        })}
-      </nav>
-
-      {level !== undefined && (
-        <p className="absolute left-[34%] bottom-[7%] text-[#ffe100] text-[clamp(22px,4vw,40px)]" style={{ fontFamily: "var(--font-p4-menu)" }}>
-          Lv {level}
-        </p>
-      )}
+      {/* What the choice does, bottom right as the game prints its hints (on the screen, not the
+          stage, whose right edge can be cropped) */}
+      <motion.p
+        key={selected}
+        className="absolute bottom-[max(1.2rem,env(safe-area-inset-bottom))] right-4 rounded-full bg-[#2a0d3d] text-[#fff3a0] font-bold text-[14px] md:text-[16px] px-4 py-1.5 shadow-[3px_3px_0_#ff7a00]"
+        initial={{ opacity: 0, x: 12 }}
+        animate={{ opacity: 1, x: 0 }}
+      >
+        ✦ {P4_DESCRIPTIONS[selected]}
+      </motion.p>
     </div>
   );
 }

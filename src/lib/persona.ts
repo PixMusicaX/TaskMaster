@@ -29,7 +29,7 @@ export const PERSONA_FORCED_THEME: Record<PersonaStyle, "light" | "dark" | null>
 // Google lookalikes, loaded only on Persona days; the real faces go in public/fonts/persona
 // (see app/persona.css), and win when present
 export const PERSONA_FONTS_URL =
-  "https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;700&family=Jost:ital,wght@0,300;0,400;0,500;0,700;1,500&family=M+PLUS+Rounded+1c:wght@500;800;900&family=Archivo+Black&family=Permanent+Marker&family=M+PLUS+1p:wght@800;900&family=DM+Serif+Display&display=swap";
+  "https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;700&family=Jost:ital,wght@0,300;0,400;0,500;0,700;1,500&family=M+PLUS+Rounded+1c:wght@500;800;900&family=Archivo+Black&family=Permanent+Marker&family=M+PLUS+1p:wght@800;900&family=Playfair+Display:wght@800;900&display=swap";
 
 // Day of month → style for the given month (0-based). Self-contained, with no outside references:
 // lib/theme-init.ts embeds its source in the <head> script.
