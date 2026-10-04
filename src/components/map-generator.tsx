@@ -9,12 +9,16 @@ import { useTheme } from "./theme-provider";
 import { useMounted } from "@/lib/use-mounted";
 import type { NoteRow, Profile } from "@/lib/types";
 import { getDevMapReroll, getDevMapStatus, subscribeDevMap } from "@/lib/dev-map";
+import { usePersona } from "./theme-provider";
+import type { PersonaStyle } from "@/lib/persona";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type BiomeKey =
   | "temperate" | "tropical" | "arctic" | "desert" | "swamp"
   | "volcanic" | "alpine" | "savanna" | "tundra" | "mushroom"
-  | "deadlands" | "coastal" | "hero";
+  | "deadlands" | "coastal" | "hero"
+  // Persona days (lib/persona.ts)
+  | "tartarus" | "midnight" | "mementos";
 
 interface MapParams {
   seed: number;
@@ -83,6 +87,12 @@ interface BiomePalette {
   glowTint?: number[];
   sporeTint?: number[];
   rainbowEffect?: boolean;
+  // Persona maps: drifting fog, TV static, and the games' own place names on the labels
+  fogTint?: number[];
+  staticNoise?: boolean;
+  cityNames?: string[];
+  labelFont?: string;
+  labelStyle?: { box: string; ink: string };
 }
 
 const BIOMES: Record<BiomeKey, BiomePalette> = {
@@ -178,6 +188,39 @@ const BIOMES: Record<BiomeKey, BiomePalette> = {
     volcano: [100, 28, 8], volcanoGlow: [215, 78, 12],
     road: [160, 148, 128], cityColor: [175, 162, 140], forestColor: [90, 88, 65], riverColor: [90, 100, 115],
     ashTint: [160, 155, 148],
+  },
+  tartarus: {
+    label: "Tartarus", icon: "🌕", desc: "The tower that rises in the Dark Hour",
+    deepWater: [8, 22, 14], shallowWater: [18, 48, 30], shore: [70, 120, 70],
+    lowland: [34, 70, 44], midland: [26, 58, 36], highland: [60, 96, 62], peak: [190, 230, 150],
+    volcano: [90, 10, 16], volcanoGlow: [200, 30, 40],
+    road: [110, 160, 110], cityColor: [200, 255, 170], forestColor: [16, 40, 24], riverColor: [40, 90, 60],
+    glowTint: [120, 255, 160], lavaTint: [130, 0, 20],
+    cityNames: ["Iwatodai", "Port Island", "Paulownia Mall", "Gekkoukan", "Naganaki Shrine", "Tatsumi Port", "Moonlight Bridge", "Iwatodai Dorm", "Shirakawa Blvd"],
+    labelFont: "'Jost', 'Century Gothic', sans-serif",
+    labelStyle: { box: "rgba(4,22,12,0.85)", ink: "rgba(150,255,180,0.95)" },
+  },
+  midnight: {
+    label: "Midnight Channel", icon: "📺", desc: "Fog, static and the world inside the TV",
+    deepWater: [60, 40, 70], shallowWater: [110, 80, 110], shore: [240, 210, 90],
+    lowland: [235, 200, 60], midland: [220, 170, 40], highland: [200, 130, 40], peak: [255, 240, 180],
+    volcano: [120, 20, 30], volcanoGlow: [240, 90, 40],
+    road: [40, 30, 20], cityColor: [255, 225, 0], forestColor: [160, 110, 30], riverColor: [130, 90, 130],
+    fogTint: [255, 236, 140], staticNoise: true,
+    cityNames: ["Inaba", "Junes", "Yasogami High", "Samegawa", "Aiya", "Tatsumi Textiles", "Shopping District", "Dojima House", "Amagi Inn"],
+    labelFont: "'Archivo Black', 'Arial Black', sans-serif",
+    labelStyle: { box: "rgba(24,21,18,0.9)", ink: "rgba(255,225,0,1)" },
+  },
+  mementos: {
+    label: "Mementos", icon: "🎭", desc: "The collective palace beneath Tokyo",
+    deepWater: [10, 6, 8], shallowWater: [40, 8, 14], shore: [120, 20, 30],
+    lowland: [36, 30, 34], midland: [26, 22, 26], highland: [60, 40, 46], peak: [200, 190, 190],
+    volcano: [150, 0, 20], volcanoGlow: [255, 40, 60],
+    road: [230, 0, 27], cityColor: [255, 255, 255], forestColor: [70, 10, 20], riverColor: [180, 0, 24],
+    lavaTint: [229, 0, 27], ashTint: [12, 10, 12],
+    cityNames: ["Shibuya", "Yongen-Jaya", "Shujin Academy", "Akihabara", "Shinjuku", "Kichijoji", "Leblanc", "Odaiba", "Ginza"],
+    labelFont: "'Anton', Impact, sans-serif",
+    labelStyle: { box: "rgba(255,255,255,0.92)", ink: "rgba(11,11,11,1)" },
   },
   coastal: {
     label: "Coastal", icon: "⚓", desc: "Archipelago, sea-cliffs & harbours",
@@ -318,6 +361,28 @@ function generateMap(params: MapParams, W: number, H: number, h: Float32Array): 
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const v = h[y * W + x];
       if (v > wl + 0.02 && v < wl + 0.35 && Math.sin(df[y * W + x] * 30) * 0.5 + 0.5 > 0.6) blendPixel(x, y, dr, dg, db, 0.2);
+    }
+  }
+
+  // Fog banks (the Midnight Channel)
+  if (pal.fogTint) {
+    const fg = valueNoise(makePRNG(params.seed + 666), W, H, 90);
+    const [fr, fgc, fb] = pal.fogTint;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const f = fg[y * W + x];
+      if (f > 0.45) blendPixel(x, y, fr, fgc, fb, Math.min(0.55, (f - 0.45) * 1.4));
+    }
+  }
+
+  // TV static
+  if (pal.staticNoise) {
+    const srng = makePRNG(params.seed + 777);
+    for (let y = 0; y < H; y++) {
+      const band = Math.sin(y * 0.09) > 0.92 ? 0.22 : 0.06;
+      for (let x = 0; x < W; x++) {
+        const v = srng() * 255;
+        blendPixel(x, y, v, v, v, band);
+      }
     }
   }
 
@@ -506,11 +571,14 @@ function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number
 
   // ── Cities ────────────────────────────────────────────────────────────────
   const cities: City[] = [];
+  // Persona maps name their towns after the game's places, each used once
+  const placeNames = pal.cityNames ? [...pal.cityNames].sort(() => rng() - 0.5) : null;
   for (let c = 0, pi = 0; c < params.cities && pi < pool.length; pi++) {
     const p = pool[pi]; if (!p || h[p.y * W + p.x] < wl + 0.03) continue;
     if (cities.some(cc => Math.hypot(cc.x - p.x, cc.y - p.y) < 60)) continue;
     const sizes: Array<"village" | "town" | "city"> = ["village", "village", "town", "town", "city"];
-    cities.push({ x: p.x, y: p.y, name: cityName(rng), size: sizes[Math.floor(rng() * sizes.length)] }); c++;
+    const name = placeNames ? placeNames[c % placeNames.length] : cityName(rng);
+    cities.push({ x: p.x, y: p.y, name, size: sizes[Math.floor(rng() * sizes.length)] }); c++;
   }
 
   const [rr2, rg2, rb2] = pal.road;
@@ -601,10 +669,10 @@ function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number
       ctx.strokeStyle = "rgba(60,50,35,0.55)"; ctx.lineWidth = 0.8; ctx.stroke();
     }
     const fs = city.size === "city" ? 11 : city.size === "town" ? 9 : 8;
-    ctx.font = `${city.size === "city" ? "bold " : ""}${fs}px Georgia,serif`;
+    ctx.font = `${city.size === "city" ? "bold " : ""}${fs}px ${pal.labelFont ?? "Georgia,serif"}`;
     const tw = ctx.measureText(city.name).width, lx = city.x + sz + 3, ly = city.y + 4;
-    ctx.fillStyle = "rgba(240,230,210,0.82)"; ctx.fillRect(lx - 2, ly - fs + 1, tw + 4, fs + 2);
-    ctx.fillStyle = "rgba(40,30,20,0.9)"; ctx.fillText(city.name, lx, ly);
+    ctx.fillStyle = pal.labelStyle?.box ?? "rgba(240,230,210,0.82)"; ctx.fillRect(lx - 2, ly - fs + 1, tw + 4, fs + 2);
+    ctx.fillStyle = pal.labelStyle?.ink ?? "rgba(40,30,20,0.9)"; ctx.fillText(city.name, lx, ly);
   });
 
   // ── Tree icons ────────────────────────────────────────────────────────────
@@ -636,6 +704,13 @@ function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number
     }
   }
 
+  // ── Persona landmark on the highest ground: Tartarus, the TV, the Mementos gate ──
+  if (params.biome === "tartarus" || params.biome === "midnight" || params.biome === "mementos") {
+    let top = 0;
+    for (let i = 1; i < h.length; i++) if (h[i] > h[top]) top = i;
+    drawPersonaLandmark(ctx, params.biome, top % W, Math.floor(top / W));
+  }
+
   // ── Compass ───────────────────────────────────────────────────────────────
   ctx.save(); ctx.translate(W - 50, 65);
   [0, Math.PI / 2, Math.PI, Math.PI * 1.5].forEach((ang, i) => {
@@ -658,6 +733,51 @@ function drawOverlay(ctx: CanvasRenderingContext2D, params: MapParams, W: number
   // ── Border (Removed to fix extra lines on edges) ──────────────────────────
 }
 
+function drawPersonaLandmark(ctx: CanvasRenderingContext2D, biome: "tartarus" | "midnight" | "mementos", x: number, y: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  if (biome === "tartarus") {
+    // A crooked tower in tiers, glowing green, with the moon over it
+    const glow = ctx.createRadialGradient(0, -60, 4, 0, -60, 90);
+    glow.addColorStop(0, "rgba(150,255,170,0.45)");
+    glow.addColorStop(1, "rgba(150,255,170,0)");
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, -60, 90, 0, Math.PI * 2); ctx.fill();
+    for (let t = 0; t < 7; t++) {
+      const w = 34 - t * 4.2, yy = -t * 18;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2 + t, yy); ctx.lineTo(w / 2 + t, yy); ctx.lineTo(w / 2 - 2 + t, yy - 16); ctx.lineTo(-w / 2 + 2 + t, yy - 16); ctx.closePath();
+      ctx.fillStyle = t % 2 ? "rgba(20,40,28,0.95)" : "rgba(34,64,44,0.95)"; ctx.fill();
+      ctx.strokeStyle = "rgba(150,255,170,0.7)"; ctx.lineWidth = 1; ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(7, -126); ctx.lineTo(10, -150); ctx.lineTo(13, -126); ctx.fillStyle = "rgba(150,255,170,0.9)"; ctx.fill();
+    ctx.beginPath(); ctx.arc(46, -150, 14, 0, Math.PI * 2); ctx.fillStyle = "rgba(244,255,200,0.95)"; ctx.fill();
+  } else if (biome === "midnight") {
+    // A TV set on the hill, screen full of static
+    ctx.fillStyle = "rgba(24,21,18,0.95)"; ctx.fillRect(-30, -50, 60, 44);
+    ctx.fillStyle = "rgba(255,225,0,1)"; ctx.fillRect(-25, -45, 42, 34);
+    const snow = makePRNG(x * 31 + y);
+    for (let i = 0; i < 160; i++) { const v = Math.floor(snow() * 255); ctx.fillStyle = `rgba(${v},${v},${v},0.55)`; ctx.fillRect(-25 + snow() * 42, -45 + snow() * 34, 2, 1); }
+    ctx.fillStyle = "rgba(239,95,0,1)"; ctx.beginPath(); ctx.arc(23, -36, 3, 0, Math.PI * 2); ctx.arc(23, -24, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(24,21,18,0.95)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-6, -50); ctx.lineTo(-18, -66); ctx.moveTo(6, -50); ctx.lineTo(16, -68); ctx.stroke();
+    ctx.fillRect(-22, -6, 6, 8); ctx.fillRect(16, -6, 6, 8);
+  } else {
+    // The Mementos gate: a red star-burst with the Phantom Thieves' calling-card hat
+    ctx.beginPath();
+    for (let i = 0; i < 20; i++) {
+      const r = i % 2 ? 18 : 46, a = (i / 20) * Math.PI * 2;
+      ctx.lineTo(Math.cos(a) * r, -40 + Math.sin(a) * r);
+    }
+    ctx.closePath(); ctx.fillStyle = "rgba(229,0,27,0.95)"; ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.95)"; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = "rgba(11,11,11,1)";
+    ctx.beginPath(); ctx.ellipse(0, -34, 20, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-11, -34); ctx.quadraticCurveTo(-10, -58, 0, -58); ctx.quadraticCurveTo(10, -58, 11, -34); ctx.fill();
+    ctx.fillStyle = "rgba(229,0,27,1)"; ctx.fillRect(-11, -40, 22, 4);
+  }
+  ctx.restore();
+}
+
 // ─── Map Popup Modal ───────────────────────────────────────────────────────────
 function MapPopupModal({
   mapConfig,
@@ -665,6 +785,8 @@ function MapPopupModal({
 }: {
   mapConfig: {
     name: string;
+    music: string;
+    persona: PersonaStyle | null;
     biome: BiomeKey;
     params: MapParams;
     performanceScore: number;
@@ -764,8 +886,7 @@ function MapPopupModal({
 
   if (!mounted) return null;
 
-  const musicFile = mapConfig.name.toLowerCase().replace(/\s+/g, "-") + ".mp3";
-  const musicUrl = `/music/${encodeURIComponent(musicFile)}`;
+  const musicUrl = mapConfig.music;
   const tornEdge = "polygon(0% 1.5%, 1% 0.5%, 2% 1.2%, 3% 0.2%, 4% 1.8%, 5% 0.4%, 6% 1.1%, 7% 0.1%, 8% 1.6%, 9% 0.3%, 10% 1.3%, 11% 0.5%, 12% 1.7%, 13% 0.2%, 14% 1.4%, 15% 0.6%, 16% 1.9%, 17% 0.3%, 18% 1.2%, 19% 0.4%, 20% 1.5%, 21% 0.1%, 22% 1.8%, 23% 0.4%, 24% 1.3%, 25% 0.6%, 26% 1.6%, 27% 0.2%, 28% 1.4%, 29% 0.5%, 30% 1.7%, 31% 0.3%, 32% 1.1%, 33% 0.6%, 34% 1.8%, 35% 0.4%, 36% 1.3%, 37% 0.1%, 38% 1.6%, 39% 0.5%, 40% 1.4%, 41% 0.2%, 42% 1.9%, 43% 0.4%, 44% 1.1%, 45% 0.6%, 46% 1.7%, 47% 0.3%, 48% 1.5%, 49% 0.1%, 50% 1.8%, 51% 0.4%, 52% 1.3%, 53% 0.6%, 54% 1.6%, 55% 0.2%, 56% 1.4%, 57% 0.5%, 58% 1.7%, 59% 0.3%, 60% 1.1%, 61% 0.6%, 62% 1.8%, 63% 0.4%, 64% 1.3%, 65% 0.1%, 66% 1.6%, 67% 0.5%, 68% 1.4%, 69% 0.2%, 70% 1.9%, 71% 0.4%, 72% 1.1%, 73% 0.6%, 74% 1.7%, 75% 0.3%, 76% 1.5%, 77% 0.1%, 78% 1.8%, 79% 0.4%, 80% 1.3%, 81% 0.6%, 82% 1.6%, 83% 0.2%, 84% 1.4%, 85% 0.5%, 86% 1.7%, 87% 0.3%, 88% 1.1%, 89% 0.6%, 90% 1.8%, 91% 0.4%, 92% 1.3%, 93% 0.1%, 94% 1.6%, 95% 0.5%, 96% 1.4%, 97% 0.2%, 98% 1.9%, 99% 0.4%, 100% 1.5%, 100% 98.5%, 99% 99.6%, 98% 98.1%, 97% 99.8%, 96% 98.2%, 95% 99.6%, 94% 98.9%, 93% 99.9%, 92% 98.4%, 91% 99.7%, 90% 98.7%, 89% 99.5%, 88% 98.3%, 87% 99.8%, 86% 98.6%, 85% 99.4%, 84% 98.1%, 83% 99.7%, 82% 98.8%, 81% 99.6%, 80% 98.5%, 79% 99.9%, 78% 98.2%, 77% 99.6%, 76% 98.7%, 75% 99.4%, 74% 98.3%, 73% 99.8%, 72% 98.9%, 71% 99.6%, 70% 98.1%, 69% 99.8%, 68% 98.6%, 67% 99.5%, 66% 98.4%, 65% 99.9%, 64% 98.7%, 63% 99.6%, 62% 98.2%, 61% 99.4%, 60% 98.9%, 59% 99.7%, 58% 98.3%, 57% 99.8%, 56% 98.6%, 55% 99.8%, 54% 98.4%, 53% 99.4%, 52% 98.7%, 51% 99.6%, 50% 98.2%, 49% 99.9%, 48% 98.5%, 47% 99.7%, 46% 98.4%, 45% 99.4%, 44% 98.7%, 43% 99.9%, 42% 98.1%, 41% 99.8%, 40% 98.5%, 39% 99.5%, 38% 98.4%, 37% 99.9%, 36% 98.7%, 35% 99.6%, 34% 98.2%, 33% 99.4%, 32% 98.9%, 31% 99.7%, 30% 98.3%, 29% 99.8%, 28% 98.6%, 27% 99.8%, 26% 98.4%, 25% 99.4%, 24% 98.7%, 23% 99.6%, 22% 98.2%, 21% 99.9%, 20% 98.5%, 19% 99.7%, 18% 98.4%, 17% 99.4%, 16% 98.7%, 15% 99.9%, 14% 98.1%, 13% 99.8%, 12% 98.5%, 11% 99.5%, 10% 98.4%, 9% 99.9%, 8% 98.7%, 7% 99.6%, 6% 98.2%, 5% 99.4%, 4% 98.9%, 3% 99.7%, 2% 98.3%, 1% 99.8%, 0% 98.5%)";
 
   return createPortal(
@@ -789,53 +910,59 @@ function MapPopupModal({
         transition={{ type: "spring", damping: 20, stiffness: 100 }}
         className="relative w-full max-w-6xl h-full flex items-center justify-center"
       >
-        <div
-          style={{ clipPath: tornEdge }}
-          className="relative w-full aspect-[4/3] max-h-full bg-[#e6d5b8] shadow-[0_0_120px_rgba(0,0,0,1)] overflow-hidden [container-type:inline-size]"
-        >
-          {/* Parchment Overlays */}
-          <div className="absolute inset-0 pointer-events-none z-10 opacity-60 mix-blend-multiply bg-[radial-gradient(circle_at_center,transparent_0%,rgba(139,69,19,0.3)_100%)]" />
-          <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-overlay bg-gradient-to-br from-[#8b4513]/30 via-transparent to-[#4b3621]/50" />
-
-          {/* Folds Logic */}
-          <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.15] mix-blend-multiply bg-[linear-gradient(90deg,transparent_33%,rgba(0,0,0,0.8)_33.5%,transparent_34%,transparent_66%,rgba(0,0,0,0.8)_66.5%,transparent_67%)]" />
-          <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.1] mix-blend-screen bg-[linear-gradient(90deg,transparent_32.5%,rgba(255,255,255,0.4)_33%,transparent_33.5%,transparent_65.5%,rgba(255,255,255,0.4)_66%,transparent_66.5%)]" />
-          <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.15] mix-blend-multiply bg-[linear-gradient(0deg,transparent_49%,rgba(0,0,0,0.8)_50%,transparent_51%)]" />
-
-          {/* Stains & Grime */}
-          <div className="absolute inset-0 pointer-events-none z-30 opacity-20 mix-blend-multiply bg-[radial-gradient(circle_at_15%_25%,#5d4037_0%,transparent_15%),radial-gradient(circle_at_85%_75%,#5d4037_0%,transparent_20%),radial-gradient(circle_at_50%_10%,#5d4037_0%,transparent_12%)] blur-2xl" />
-
-          {/* Paper Texture Grain */}
-          <div className="absolute inset-0 pointer-events-none z-20 opacity-[0.05] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]" />
-
-          {/* The Actual Map Content */}
-          <div className="w-full h-full p-2 bg-[#e6d5b8]">
-             <canvas
-                ref={canvasRef}
-                className="w-full h-full object-cover"
-                style={{
-                  imageRendering: "pixelated",
-                  filter: "sepia(0.25) contrast(1.15) brightness(1.02) saturate(0.9)"
-                }}
-              />
-          </div>
-
-          {/* Edge Burn/Shadow */}
+        {mapConfig.persona ? (
+          <PersonaMapFrame style={mapConfig.persona} name={mapConfig.name}>
+            <canvas ref={canvasRef} className="w-full h-full object-cover" style={{ imageRendering: "pixelated" }} />
+          </PersonaMapFrame>
+        ) : (
           <div
             style={{ clipPath: tornEdge }}
-            className="absolute inset-0 pointer-events-none border-[16px] border-black/40 blur-md z-40"
-          />
+            className="relative w-full aspect-[4/3] max-h-full bg-[#e6d5b8] shadow-[0_0_120px_rgba(0,0,0,1)] overflow-hidden [container-type:inline-size]"
+          >
+            {/* Parchment Overlays */}
+            <div className="absolute inset-0 pointer-events-none z-10 opacity-60 mix-blend-multiply bg-[radial-gradient(circle_at_center,transparent_0%,rgba(139,69,19,0.3)_100%)]" />
+            <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-overlay bg-gradient-to-br from-[#8b4513]/30 via-transparent to-[#4b3621]/50" />
 
-          {/* Archaic Location Title at Bottom */}
-          <div className="absolute bottom-8 md:bottom-12 left-1/2 -translate-x-1/2 z-50 pointer-events-none text-center w-full">
-            <h2
-              style={{ fontFamily: "'Georgia', serif" }}
-              className="text-xl md:text-5xl font-bold text-[#4b3621]/60 italic tracking-[0.2em] uppercase drop-shadow-[0_2px_2px_rgba(255,255,255,0.3)] px-4"
-            >
-              {mapConfig.name}
-            </h2>
+            {/* Folds Logic */}
+            <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.15] mix-blend-multiply bg-[linear-gradient(90deg,transparent_33%,rgba(0,0,0,0.8)_33.5%,transparent_34%,transparent_66%,rgba(0,0,0,0.8)_66.5%,transparent_67%)]" />
+            <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.1] mix-blend-screen bg-[linear-gradient(90deg,transparent_32.5%,rgba(255,255,255,0.4)_33%,transparent_33.5%,transparent_65.5%,rgba(255,255,255,0.4)_66%,transparent_66.5%)]" />
+            <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.15] mix-blend-multiply bg-[linear-gradient(0deg,transparent_49%,rgba(0,0,0,0.8)_50%,transparent_51%)]" />
+
+            {/* Stains & Grime */}
+            <div className="absolute inset-0 pointer-events-none z-30 opacity-20 mix-blend-multiply bg-[radial-gradient(circle_at_15%_25%,#5d4037_0%,transparent_15%),radial-gradient(circle_at_85%_75%,#5d4037_0%,transparent_20%),radial-gradient(circle_at_50%_10%,#5d4037_0%,transparent_12%)] blur-2xl" />
+
+            {/* Paper Texture Grain */}
+            <div className="absolute inset-0 pointer-events-none z-20 opacity-[0.05] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]" />
+
+            {/* The Actual Map Content */}
+            <div className="w-full h-full p-2 bg-[#e6d5b8]">
+               <canvas
+                  ref={canvasRef}
+                  className="w-full h-full object-cover"
+                  style={{
+                    imageRendering: "pixelated",
+                    filter: "sepia(0.25) contrast(1.15) brightness(1.02) saturate(0.9)"
+                  }}
+                />
+            </div>
+
+            {/* Edge Burn/Shadow */}
+            <div
+              style={{ clipPath: tornEdge }}
+              className="absolute inset-0 pointer-events-none border-[16px] border-black/40 blur-md z-40"
+            />
+
+            {/* Archaic Location Title at Bottom */}
+            <div className="absolute bottom-8 md:bottom-12 left-1/2 -translate-x-1/2 z-50 pointer-events-none text-center w-full">
+              <h2
+                style={{ fontFamily: "'Georgia', serif" }}
+                className="text-xl md:text-5xl font-bold text-[#4b3621]/60 italic tracking-[0.2em] uppercase drop-shadow-[0_2px_2px_rgba(255,255,255,0.3)] px-4"
+              >
+                {mapConfig.name}
+              </h2>
+            </div>
           </div>
-        </div>
+        )}
       </motion.div>
 
       <motion.button
@@ -853,6 +980,46 @@ function MapPopupModal({
       </audio>
     </div>,
     document.body
+  );
+}
+
+// Persona maps open in the game's own frame instead of the parchment
+function PersonaMapFrame({ style, name, children }: { style: PersonaStyle; name: string; children: React.ReactNode }) {
+  if (style === "p5") {
+    return (
+      <div className="relative w-full aspect-[4/3] max-h-full bg-black border-[6px] border-white shadow-[16px_16px_0_#e5001b] -rotate-1">
+        <div className="absolute inset-0 p-1">{children}</div>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(circle, rgb(0 0 0 / 0.25) 1.2px, transparent 1.7px) 0 0 / 8px 8px" }} />
+        <h2 className="absolute -bottom-6 left-6 bg-[#e5001b] text-white font-display text-3xl md:text-6xl uppercase px-5 -skew-x-12 border-4 border-black" style={{ fontFamily: "Anton, Impact, sans-serif", textShadow: "4px 4px 0 #000" }}>
+          {name}
+        </h2>
+      </div>
+    );
+  }
+  if (style === "p4") {
+    return (
+      <div className="relative w-full aspect-[4/3] max-h-full bg-[#181512] rounded-[2.5rem] p-4 md:p-7 shadow-[12px_12px_0_#ef5f00] border-4 border-[#ffe100]">
+        <div className="relative w-full h-full rounded-[1.6rem] overflow-hidden">
+          {children}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: "repeating-linear-gradient(0deg, transparent 0 3px, rgb(0 0 0 / 0.12) 3px 4px)" }} />
+          <div className="absolute inset-0 pointer-events-none p-static p-static-jitter opacity-[0.08]" />
+        </div>
+        <h2 className="absolute top-2 md:top-3 left-1/2 -translate-x-1/2 bg-[#ffe100] text-[#181512] font-display text-lg md:text-4xl uppercase italic px-4 rounded-lg border-[3px] border-[#181512] whitespace-nowrap" style={{ fontFamily: "'Archivo Black', sans-serif" }}>
+          {name}
+        </h2>
+      </div>
+    );
+  }
+  return (
+    <div className="relative w-full aspect-[4/3] max-h-full p-1.5" style={{ background: "linear-gradient(135deg, var(--tm-yellow), transparent 40%, var(--tm-orange-light))", clipPath: "polygon(0 0, calc(100% - 40px) 0, 100% 40px, 100% 100%, 0 100%)" }}>
+      <div className="relative w-full h-full overflow-hidden bg-black" style={{ clipPath: "polygon(0 0, calc(100% - 38px) 0, 100% 38px, 100% 100%, 0 100%)" }}>
+        {children}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "repeating-linear-gradient(118deg, transparent 0 46px, rgb(255 255 255 / 0.08) 46px 47px, transparent 47px 120px)" }} />
+      </div>
+      <h2 className="absolute bottom-6 left-8 text-2xl md:text-6xl italic font-light uppercase tracking-[0.12em] text-white" style={{ fontFamily: "var(--font-space-grotesk)", textShadow: "0 0 20px var(--tm-yellow)" }}>
+        {name}
+      </h2>
+    </div>
   );
 }
 
@@ -917,6 +1084,16 @@ const BIOME_MATRIX: Record<string, Record<"low" | "balanced" | "peak", { name: s
     peak: { name: "The Citadel of Light", biome: "hero", params: { waterLevel: 0.3, volcanos: 0, forestDensity: 0.5, cities: 12 } },
   }
 };
+
+// Persona days swap the realm for that game's own place and music (whatever the rank). The tracks
+// live in public/music/persona/ (see CREDITS.md); a missing file just means a silent map.
+const PERSONA_MAPS: Record<PersonaStyle, { name: string; biome: BiomeKey; music: string; params: Partial<MapParams> }> = {
+  p3: { name: "Tartarus", biome: "tartarus", music: "/music/persona/p3.mp3", params: { waterLevel: 0.32, volcanos: 0, forestDensity: 0.3, cities: 5, rivers: 2 } },
+  p4: { name: "The Midnight Channel", biome: "midnight", music: "/music/persona/p4.mp3", params: { waterLevel: 0.28, volcanos: 0, forestDensity: 0.3, cities: 5, rivers: 2 } },
+  p5: { name: "Mementos", biome: "mementos", music: "/music/persona/p5.mp3", params: { waterLevel: 0.3, volcanos: 2, forestDensity: 0.2, cities: 6, rivers: 3 } },
+};
+
+const realmMusic = (name: string) => `/music/${encodeURIComponent(name.toLowerCase().replace(/\s+/g, "-") + ".mp3")}`;
 
 // How loud the realm's music is behind the map in the growth saga (the preview plays it at 0.5)
 const AMBIENT_VOLUME = 0.1;
@@ -990,6 +1167,7 @@ interface WorldMapWidgetProps {
 export function WorldMapWidget({ profile, moodData, completionScore = 0, variant = "card", interactive = true, onInfo }: WorldMapWidgetProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { rank } = useTheme();
+  const persona = usePersona();
   // Rolled once per session so the map only changes when its inputs do
   const [randomOffset] = useState(() => Math.floor(Math.random() * 1000000));
   const [luck] = useState(() => Math.random());
@@ -1036,7 +1214,8 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0, variant
     const currentTitleIndex = Math.max(0, titles.indexOf(currentTitle));
 
     const matrixEntry = BIOME_MATRIX[currentTitle] || BIOME_MATRIX["Novice"];
-    const perfConfig = matrixEntry?.[performance] || BIOME_MATRIX["Novice"].balanced;
+    const personaMap = persona ? PERSONA_MAPS[persona] : null;
+    const perfConfig = personaMap || matrixEntry?.[performance] || BIOME_MATRIX["Novice"].balanced;
 
     const nextTitle = titles[(currentTitleIndex + 1) % titles.length];
     const nextEntry = BIOME_MATRIX[nextTitle] || BIOME_MATRIX["Hero"];
@@ -1072,13 +1251,15 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0, variant
 
     return {
       name: perfConfig.name,
+      music: personaMap ? personaMap.music : realmMusic(perfConfig.name),
+      persona,
       biome: perfConfig.biome as BiomeKey,
       params: finalParams,
       performanceScore,
       performanceState: performance,
       nextStops: nextStops as { name: string; biome: BiomeKey }[],
     };
-  }, [mounted, profile, moodData, rank, completionScore, randomOffset, luck, devStatus, devReroll]);
+  }, [mounted, profile, moodData, rank, persona, completionScore, randomOffset, luck, devStatus, devReroll]);
 
   useEffect(() => {
     if (!mapConfig || !canvasRef.current) return;
@@ -1147,7 +1328,7 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0, variant
           <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,transparent_55%,rgba(0,0,0,0.45)_100%)] pointer-events-none" />
         </button>
         {/* The preview plays the realm's music itself, so the quiet version stops while it is open */}
-        <MapAmbience url={`/music/${encodeURIComponent(mapConfig.name.toLowerCase().replace(/\s+/g, "-") + ".mp3")}`} playing={interactive && !isFullscreen} />
+        <MapAmbience url={mapConfig.music} playing={interactive && !isFullscreen} />
         {popup}
       </>
     );

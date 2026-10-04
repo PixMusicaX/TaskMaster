@@ -128,7 +128,7 @@ export default function PersonaHud({ style, dark, className }: { style: PersonaS
           <span className="text-[28px] sm:text-[34px] font-light tracking-tight text-tm-yellow italic">{md}</span>
           <span className="text-[11px] font-medium px-1 py-0.5 bg-tm-yellow text-[var(--tm-on-accent)] -skew-x-12">{format(now, "EEE").slice(0, 2)}</span>
         </div>
-        <span className={cn("text-[10px] uppercase tracking-[0.28em] mt-0.5", dark ? "text-tm-red p-blink" : "text-tm-blue-gray")}>{time}</span>
+        <span className={cn("p3-hud text-[10px] uppercase tracking-[0.28em] mt-0.5", dark ? "text-tm-red p-blink" : "text-tm-blue-gray")}>{time}</span>
       </div>
       <div className="flex flex-col items-center gap-0.5 text-tm-yellow">
         <MoonGlyph phase={phase} className={cn("w-6 h-6", dark && "p3-moon-pulse")} />

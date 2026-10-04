@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, useAnimationControls } from "framer-motion";
-import { Home, CheckSquare, FileText, Calendar, Info, History, Moon, Sun, Volume2, VolumeX } from "lucide-react";
+import { Home, Menu, Moon, Sun, Volume2, VolumeX } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { useProgress } from "@/components/progress/progress-provider";
 import { isMuted, setMuted, subscribeMuted } from "@/lib/sfx";
@@ -12,15 +12,9 @@ import { type PersonaStyle } from "@/lib/persona";
 import { cn } from "@/lib/utils";
 import PersonaHud from "./persona-hud";
 import Ransom from "./ransom";
+import PersonaPauseMenu from "./persona-pause-menu";
+import { PERSONA_MENU_ITEMS } from "./persona-menu-items";
 
-const ITEMS = [
-  { href: "/", icon: Home, labels: { p3: "Dorm", p4: "Home", p5: "Hideout" } },
-  { href: "/calendar", icon: Calendar, labels: { p3: "Calendar", p4: "Calendar", p5: "Calendar" } },
-  { href: "/notes", icon: FileText, labels: { p3: "Diary", p4: "Notebook", p5: "Notes" } },
-  { href: "/habits", icon: CheckSquare, labels: { p3: "Social Link", p4: "S.Link", p5: "Confidant" } },
-  { href: "/history", icon: History, labels: { p3: "Records", p4: "Records", p5: "Records" } },
-  { href: "/about", icon: Info, labels: { p3: "System", p4: "System", p5: "System" } },
-] satisfies { href: string; icon: typeof Home; labels: Record<PersonaStyle, string> }[];
 
 // The game's menu bar on Persona days: brand and level on the left, the in-game calendar on the
 // right, the menu across the middle (desktop) or along the bottom (phones)
@@ -31,6 +25,8 @@ export default function PersonaNav({ style }: { style: PersonaStyle }) {
   const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
   const pulseControls = useAnimationControls();
   const dark = theme === "dark";
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   useEffect(() => {
     if (pulse) pulseControls.start({ scale: [1, 1.15, 1], rotate: style === "p5" ? [0, -6, 0] : 0, transition: { duration: 0.4 } });
@@ -61,21 +57,27 @@ export default function PersonaNav({ style }: { style: PersonaStyle }) {
         </motion.div>
 
         <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
-          {ITEMS.map((item, i) => (
+          {PERSONA_MENU_ITEMS.map((item, i) => (
             <MenuItem key={item.href} style={style} href={item.href} label={item.labels[style]} active={pathname === item.href} index={i} />
           ))}
         </div>
 
         <div className="flex items-center gap-1 sm:gap-3">
           <div className="hidden md:block">{tools}</div>
+          <button onClick={() => setMenuOpen(true)} className={cn(menuTone(style))} aria-label="Open menu" aria-expanded={menuOpen}>
+            <Menu size={16} strokeWidth={2.6} />
+            <span className="hidden sm:inline">Menu</span>
+          </button>
           <PersonaHud style={style} dark={dark} />
         </div>
       </nav>
 
+      <PersonaPauseMenu style={style} dark={dark} open={menuOpen} onClose={closeMenu} />
+
       {/* Phones: the menu runs along the bottom */}
       <div className={cn("lg:hidden fixed bottom-0 inset-x-0 z-[200] pb-[env(safe-area-inset-bottom)]", bottomTone(style))}>
         <div className="flex items-stretch justify-around px-1 pt-1.5 pb-1.5">
-          {ITEMS.map((item, i) => (
+          {PERSONA_MENU_ITEMS.map((item, i) => (
             <MobileItem key={item.href} style={style} href={item.href} icon={item.icon} label={item.labels[style]} active={pathname === item.href} index={i} />
           ))}
           <div className="md:hidden flex items-center">{tools}</div>
@@ -98,6 +100,15 @@ function bottomTone(style: PersonaStyle) {
     case "p5": return "bg-black border-t-4 border-[#e5001b]";
     case "p4": return "bg-[#181512] border-t-[3px] border-[#ef5f00]";
     default: return "bg-[color-mix(in_srgb,var(--background)_92%,transparent)] border-t border-[color-mix(in_srgb,var(--tm-yellow)_35%,transparent)]";
+  }
+}
+
+function menuTone(style: PersonaStyle) {
+  const base = "flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] uppercase transition-transform active:scale-90 hover:-translate-y-0.5";
+  switch (style) {
+    case "p5": return cn(base, "bg-white text-black font-display -skew-x-12 border-2 border-black shadow-[3px_3px_0_#e5001b]");
+    case "p4": return cn(base, "bg-[#181512] text-[#ffe100] font-display rounded-lg");
+    default: return cn(base, "italic tracking-[0.18em] bg-tm-yellow text-[var(--tm-on-accent)] -skew-x-[18deg]");
   }
 }
 

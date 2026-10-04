@@ -2,6 +2,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   DEV_PERSONA_KEY,
+  PERSONA_OFF_KEY,
+  nextPersonaDay,
   daysToFullMoon,
   moonPhaseIndex,
   personaDaysInMonth,
@@ -51,6 +53,12 @@ describe("persona days", () => {
     expect(scheduledPersona(new Date(2026, 9, normal))).toBeNull();
   });
 
+  it("finds the next Persona day after today", () => {
+    const next = nextPersonaDay(new Date(2026, 9, 4, 12))!;
+    expect(next.date.getDate()).toBe(10);
+    expect(next.style).toBe(scheduledPersona(next.date));
+  });
+
   it("names the time of day like the games", () => {
     const at = (h: number) => new Date(2026, 9, 4, h);
     expect(personaTimeOfDay("p5", at(16), false)).toBe("After School");
@@ -91,6 +99,16 @@ describe("persona in the init script", () => {
     expect(root().getAttribute("data-persona")).toBe("p4");
     expect(root().classList.contains("dark")).toBe(false);
     expect(document.head.querySelector("link[rel=stylesheet]")).not.toBeNull();
+  });
+
+  it("stays off when the player turned Persona days off", () => {
+    vi.setSystemTime(new Date(2026, 9, personaDay[0], 21));
+    localStorage.setItem(PERSONA_OFF_KEY, "1");
+    run();
+    expect(root().hasAttribute("data-persona")).toBe(false);
+    expect(root().classList.contains("dark")).toBe(true);
+    expect(personaForToday()).toBeNull();
+    expect(document.head.querySelector("link")).toBeNull();
   });
 
   it("leaves a normal day alone", () => {

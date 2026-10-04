@@ -2,12 +2,15 @@
 
 import { useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
-import { Bell, MapPin, Settings, Volume2 } from "lucide-react";
+import { Bell, MapPin, Settings, Sparkles, Volume2 } from "lucide-react";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { SPRING } from "@/lib/motion";
 import { isMuted, setMuted, subscribeMuted } from "@/lib/sfx";
 import GlassCard from "@/components/glass-card";
 import VaultSection from "./vault-section";
+import { PERSONA_NAMES, isPersonaOff, nextPersonaDay, setPersonaOff, subscribePersonaSetting } from "@/lib/persona";
+import { usePersona } from "@/components/theme-provider";
 
 function Switch({ on, disabled, onClick, label }: { on: boolean; disabled?: boolean; onClick: () => void; label: string }) {
   return (
@@ -68,12 +71,29 @@ interface SettingsPanelProps {
 
 export default function SettingsPanel({ notificationPermission, locationPermission, onEnableNotifications, onEnableLocation }: SettingsPanelProps) {
   const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
+  const personaOff = useSyncExternalStore(subscribePersonaSetting, isPersonaOff, () => false);
+  const personaToday = usePersona();
+  const next = nextPersonaDay();
+  const personaStatus = personaOff
+    ? "Off on this device"
+    : personaToday
+      ? `Today: ${PERSONA_NAMES[personaToday]} day`
+      : next ? `Next: ${PERSONA_NAMES[next.style]} on ${format(next.date, "MMM d")}` : undefined;
 
   return (
     <VaultSection icon={Settings} iconClassName="text-tm-yellow" title="Settings">
       <GlassCard className="p-5 md:p-8 space-y-6">
         <SettingRow icon={Volume2} title="Sounds" description="Completion, level-up and rank-up sounds, plus haptics on supported phones.">
           <Switch on={!muted} onClick={() => setMuted(!muted)} label="Sounds" />
+        </SettingRow>
+        <div className="h-px bg-tm-blue-gray/10" />
+        <SettingRow
+          icon={Sparkles}
+          title="Persona days"
+          description="Six random days a month when the app turns into Persona 3, 4 or 5."
+          status={personaStatus}
+        >
+          <Switch on={!personaOff} onClick={() => setPersonaOff(!personaOff)} label="Persona days" />
         </SettingRow>
         <div className="h-px bg-tm-blue-gray/10" />
         <SettingRow

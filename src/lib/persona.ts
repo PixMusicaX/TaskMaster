@@ -124,11 +124,51 @@ export function setDevPersonaOverride(value: DevPersonaOverride) {
   window.dispatchEvent(new Event(DEV_PERSONA_EVENT));
 }
 
-// Today's style, with the dev override applied
+// ---- The player's switch (About → Settings): Persona days off on this device ----
+
+export const PERSONA_OFF_KEY = "persona_off";
+export const PERSONA_SETTING_EVENT = "persona-setting-changed";
+
+export function isPersonaOff(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(PERSONA_OFF_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setPersonaOff(off: boolean) {
+  try {
+    if (off) localStorage.setItem(PERSONA_OFF_KEY, "1");
+    else localStorage.removeItem(PERSONA_OFF_KEY);
+  } catch {
+    // Storage blocked: the choice just won't persist
+  }
+  window.dispatchEvent(new Event(PERSONA_SETTING_EVENT));
+}
+
+export function subscribePersonaSetting(cb: () => void) {
+  window.addEventListener(PERSONA_SETTING_EVENT, cb);
+  return () => window.removeEventListener(PERSONA_SETTING_EVENT, cb);
+}
+
+// Today's style: the dev override wins, then the player's switch, then the calendar
 export function personaForToday(now = new Date()): PersonaStyle | null {
   const forced = getDevPersonaOverride();
   if (forced === "off") return null;
-  return forced ?? scheduledPersona(now);
+  if (forced) return forced;
+  return isPersonaOff() ? null : scheduledPersona(now);
+}
+
+// The next scheduled Persona day after today (within the coming year)
+export function nextPersonaDay(now = new Date()): { date: Date; style: PersonaStyle } | null {
+  for (let i = 1; i <= 366; i++) {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+    const style = scheduledPersona(date);
+    if (style) return { date, style };
+  }
+  return null;
 }
 
 // ---- In-game calendar flavour ----

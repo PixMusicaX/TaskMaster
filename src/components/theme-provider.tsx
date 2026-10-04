@@ -3,7 +3,7 @@
 import * as React from "react";
 import { MotionConfig } from "framer-motion";
 import { ERAS, eraById, type Era, type EraId } from "@/lib/eras";
-import { DEV_PERSONA_EVENT, PERSONA_FONTS_URL, PERSONA_FORCED_THEME, personaForToday, type PersonaStyle } from "@/lib/persona";
+import { DEV_PERSONA_EVENT, PERSONA_SETTING_EVENT, PERSONA_FONTS_URL, PERSONA_FORCED_THEME, personaForToday, type PersonaStyle } from "@/lib/persona";
 
 export type Rank = "Novice" | "Squire" | "Vanguard" | "Veteran" | "Knight" | "Champion" | "Sentinel" | "Paladin" | "Grandmaster" | "Hero";
 type Theme = "light" | "dark";
@@ -108,6 +108,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("pageshow", sync);
     window.addEventListener("focus", sync);
     window.addEventListener(DEV_PERSONA_EVENT, sync);
+    window.addEventListener(PERSONA_SETTING_EVENT, sync);
     // React owns <html>'s className and writes it back without "dark" whenever it re-renders the
     // root (after a hydration mismatch, for one), so put the class back if it goes missing
     const observer = new MutationObserver(apply);
@@ -119,6 +120,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("pageshow", sync);
       window.removeEventListener("focus", sync);
       window.removeEventListener(DEV_PERSONA_EVENT, sync);
+      window.removeEventListener(PERSONA_SETTING_EVENT, sync);
     };
   }, []);
 
