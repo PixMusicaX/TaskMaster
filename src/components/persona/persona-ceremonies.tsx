@@ -176,6 +176,14 @@ function ArcanaCard({ rank, className, ink, paper, accent }: { rank: string; cla
   );
 }
 
+// The Velvet Room card back (P3/P4/P5 share it), on the far side of a flipping card
+function CardBack() {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- a static asset; next/image adds nothing here
+    <img src="/persona/tarot-back.webp" alt="" className="absolute inset-0 h-full w-full object-cover [backface-visibility:hidden] [transform:rotateY(180deg)]" draggable={false} />
+  );
+}
+
 function P5Rank({ ceremony }: { ceremony: Ceremony }) {
   const n = rankNumber(ceremony.to);
   return (
@@ -192,9 +200,11 @@ function P5Rank({ ceremony }: { ceremony: Ceremony }) {
           initial={{ rotateY: 180, scale: 0.4, rotate: -30 }}
           animate={{ rotateY: 0, scale: 1, rotate: -8 }}
           transition={{ delay: 0.35, type: "spring", stiffness: 160, damping: 14 }}
+          className="relative w-36 h-56 [transform-style:preserve-3d]"
           style={{ transformPerspective: 800 }}
         >
-          <ArcanaCard rank={ceremony.to} className="w-36 h-56 shadow-[10px_10px_0_#000]" ink="#0b0b0b" paper="#ffffff" accent="#e5001b" />
+          <ArcanaCard rank={ceremony.to} className="absolute inset-0 shadow-[10px_10px_0_#000] [backface-visibility:hidden]" ink="#0b0b0b" paper="#ffffff" accent="#e5001b" />
+          <CardBack />
         </motion.div>
         <div className="flex flex-col items-center sm:items-start gap-3">
           <motion.div initial={{ scale: 3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.75, type: "spring", stiffness: 500, damping: 16 }} className="-rotate-6">
@@ -227,12 +237,14 @@ function P4Rank({ ceremony }: { ceremony: Ceremony }) {
           SOCIAL LINK
         </motion.p>
         <motion.div
-          initial={{ rotateY: 90 }}
+          initial={{ rotateY: 180 }}
           animate={{ rotateY: 0 }}
-          transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+          transition={{ delay: 0.5, duration: 0.7, ease: "easeOut" }}
+          className="relative w-32 h-48 [transform-style:preserve-3d]"
           style={{ transformPerspective: 800 }}
         >
-          <ArcanaCard rank={ceremony.to} className="w-32 h-48 rounded-lg" ink="#181512" paper="#fffdf2" accent="#ef5f00" />
+          <ArcanaCard rank={ceremony.to} className="absolute inset-0 rounded-lg [backface-visibility:hidden]" ink="#181512" paper="#fffdf2" accent="#ef5f00" />
+          <CardBack />
         </motion.div>
         <motion.div className="flex items-center gap-2" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1, type: "spring", stiffness: 500, damping: 12 }}>
           <span className="font-display text-[22px] text-[#181512]">RANK</span>
@@ -266,11 +278,11 @@ function P3Rank({ ceremony }: { ceremony: Ceremony }) {
           initial={{ rotateY: 720, scale: 0.3, opacity: 0 }}
           animate={{ rotateY: 0, scale: 1, opacity: 1 }}
           transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
-          style={{ transformPerspective: 900 }}
+          className="relative w-36 h-56 [transform-style:preserve-3d]"
+          style={{ transformPerspective: 900, filter: "drop-shadow(0 0 18px var(--tm-yellow))" }}
         >
-          <div className="text-tm-yellow" style={{ filter: "drop-shadow(0 0 18px var(--tm-yellow))" }}>
-            <ArcanaCard rank={ceremony.to} className="w-36 h-56" ink="var(--tm-yellow)" paper="var(--background)" accent="var(--tm-orange-light)" />
-          </div>
+          <ArcanaCard rank={ceremony.to} className="absolute inset-0 [backface-visibility:hidden]" ink="var(--tm-yellow)" paper="var(--background)" accent="var(--tm-orange-light)" />
+          <CardBack />
         </motion.div>
         <motion.p className="text-[12px] uppercase tracking-[0.5em] text-tm-blue-gray" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
           Arcana {numeral} · {name}

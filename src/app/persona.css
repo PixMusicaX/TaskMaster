@@ -6,11 +6,12 @@
    layers; only small elements animate (transform/opacity), per the mobile limits.
    ============================================================ */
 
-/* Game faces. Bundled (see CREDITS.md): Earwig Factory (the P5 ransom-note look) and BM Space (P3
-   Reload's HUD labels). The commercial ones the games use (Fontworks Skip Std B, FOT-NewRodin Pro)
+/* Game faces. Bundled (see CREDITS.md): Earwig Factory (the P5 ransom-note look), Persona5main (a
+   fan recreation of P5's menu lettering) and BM Space (P3 Reload's HUD labels). The commercial ones the games use (Fontworks Skip Std B, FOT-NewRodin Pro)
    are picked up if installed locally or dropped into public/fonts/persona; otherwise the Google
    lookalikes (loaded by the init script on Persona days only) take over. */
 @font-face { font-family: "P5 Ransom"; src: local("Earwig Factory"), url("/fonts/persona/p5-ransom.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "P5 Menu"; src: local("Persona5main"), url("/fonts/persona/p5-menu.ttf") format("truetype"); font-display: swap; }
 @font-face { font-family: "P3 HUD"; src: local("BM Space"), url("/fonts/persona/p3-hud.ttf") format("truetype"); font-display: swap; }
 @font-face { font-family: "P4 Display"; src: local("Skip Std B"), local("SkipStd-B"), local("FOT-Skip Std B"); font-display: swap; }
 @font-face { font-family: "P3 Display"; src: local("FOT-NewRodin Pro M"), local("FOT-NewRodinPro-M"), local("Futura PT"); font-display: swap; }
@@ -25,6 +26,7 @@ html:root:root[data-persona] {
   /* Pause-menu faces: P3 Reload's menu is Rodin Pro UB, heavy and italic; P4's is a bold serif */
   --font-p3-menu: "Rodin Pro UB", "FOT-RodinPro-UB", "M PLUS 1p", "Arial Black", sans-serif;
   --font-p4-menu: "DM Serif Display", "Rockwell", Georgia, serif;
+  --font-p5-menu: "P5 Menu", "Anton", Impact, sans-serif;
   --card-blur: 0px;
   --ambient-opacity: 0;
   --radius-xs: 0px;

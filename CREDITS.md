@@ -15,12 +15,15 @@ publishing this repository.
 | `p3-menu-poster.webp` | First frame, shown while the video loads | Same repo (`assets/mobile/bg-loop.jpg`) | Converted to WebP |
 | `p3-menu-move.wav` | The menu's cursor sound | [deltea/p3r-pause-menu](https://github.com/deltea/p3r-pause-menu) (`static/sfx/navigation.wav`) © ATLUS / SEGA | None |
 | `p4-yu.webp` | Yu Narukami, *Persona 4* protagonist render | [Megami Tensei Wiki – File:P4 Protagonist.png](https://megamitensei.fandom.com/wiki/File:P4_Protagonist.png) (uploaded by VeskScans) © ATLUS | Trimmed, resized, WebP |
-| `p5-joker.webp` | Joker, *Persona 5* Phantom Thief render | [Megami Tensei Wiki – File:Phantom render.png](https://megamitensei.fandom.com/wiki/File:Phantom_render.png) (uploaded by AzureJay) © ATLUS | Trimmed, WebP |
+| `p5-menu-bg.webp` | *Persona 5* pause-menu screen: the hand, Joker with the red claw, the sign collage, COMMAND | 1280×720 screenshot found via the Pinterest pin [Examining Persona 5's Menus](https://www.pinterest.com/pin/examining-persona-5s-menus-video-notes-on-p5s-ui--15481192459230552/) (image: `i.pinimg.com/originals/3f/56/69/3f56692680039952c7376be3ab4726ab.jpg`) © ATLUS | The game's menu words and caption cleaned out, so live stickers sit in their place; WebP. `p5-menu-bg-blur.webp` is a blurred copy that fills tall phone screens |
+| `p5-menu-move.mp3` | *Persona 5* menu select sound | [ffaneto/persona5-website-theme](https://github.com/ffaneto/persona5-website-theme) (`public/audio/select.mp3`) © ATLUS | None |
+| `tarot-back.webp` | Velvet Room tarot card back, shown as the rank-up arcana card flips | [ffaneto/persona5-website-theme](https://github.com/ffaneto/persona5-website-theme) (`src/assets/card.png`) © ATLUS | Resized, WebP |
 
 The menus are recreated in HTML and CSS (`src/components/persona/persona-pause-menu.tsx`):
 
 - **P3:** follows deltea's recreation: the fanned rotations, the cyan option colours, the white-and-pink slash cursor that turns the selected word red, the "Command" caption and the side numeral.
-- **P4 and P5:** follow the games' menu screens (the yellow and purple P4 menu with serif options; P5's white hand, ransom-note options, Joker and "COMMAND").
+- **P4:** follows the game's menu screen: yellow and purple, with serif options.
+- **P5:** the game's own menu screen (`p5-menu-bg.webp`), with live stickers where its menu words were. The stickers mix faces: Persona5main (from [ffaneto/persona5-website-theme](https://github.com/ffaneto/persona5-website-theme)), Earwig Factory, Anton and Archivo Black. The selector, a red and a cyan quad whose corners jump every 120 ms with the cyan screen-blended, follows Drew Powers' [Persona 5 Menu UI](https://codepen.io/dangodev/pen/qXdxOO) pen.
 
 None of these repos state a licence.
 
@@ -29,6 +32,7 @@ None of these repos state a licence.
 | File | Font | Author / source | Licence |
 |---|---|---|---|
 | `p5-ransom.otf` | Earwig Factory | Ray Larabie, [Typodermic Fonts](https://typodermicfonts.com/), via [dafont](https://www.dafont.com/earwig-factory.font) | Typodermic free desktop EULA. Web embedding may need a separate licence, so check before publishing |
+| `p5-menu.ttf` | Persona5main | Fan-made recreation of the P5 menu lettering ("Copyright (c) 2022, MYPC"; A–Z, a–z, 0–9, !), via [ffaneto/persona5-website-theme](https://github.com/ffaneto/persona5-website-theme) | None stated |
 | `p3-hud.ttf` | BM Space | BitmapMania, via [dafont](https://www.dafont.com/bm-space.font) | Freeware: personal and homepage use; no bundling into commercial products without permission. *Persona 3 Reload* uses it in its HUD |
 
 These lookalikes come from Google Fonts under the SIL Open Font License, loaded only on Persona days: Anton,

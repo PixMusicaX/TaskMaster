@@ -153,9 +153,35 @@ export function subscribePersonaSetting(cb: () => void) {
   return () => window.removeEventListener(PERSONA_SETTING_EVENT, cb);
 }
 
-// Today's style: the dev override wins, then the player's switch, then the calendar
+// TEMPORARY: a preview switch in About → Settings that forces a style on any day, in production
+// too (unlike the dev override), for trying the looks on a phone. Remove with its settings row.
+export const PERSONA_PREVIEW_KEY = "tm_persona_preview";
+
+export function getPersonaPreview(): DevPersonaOverride {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = localStorage.getItem(PERSONA_PREVIEW_KEY);
+    return value === "p3" || value === "p4" || value === "p5" || value === "off" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setPersonaPreview(value: DevPersonaOverride) {
+  try {
+    if (value === null) localStorage.removeItem(PERSONA_PREVIEW_KEY);
+    else localStorage.setItem(PERSONA_PREVIEW_KEY, value);
+    // Replay the day's intro for the previewed style
+    localStorage.removeItem("persona_intro_seen");
+  } catch {
+    // Storage blocked: the preview just won't persist
+  }
+  window.dispatchEvent(new Event(PERSONA_SETTING_EVENT));
+}
+
+// Today's style: the dev override wins, then the preview, then the player's switch, then the calendar
 export function personaForToday(now = new Date()): PersonaStyle | null {
-  const forced = getDevPersonaOverride();
+  const forced = getDevPersonaOverride() ?? getPersonaPreview();
   if (forced === "off") return null;
   if (forced) return forced;
   return isPersonaOff() ? null : scheduledPersona(now);

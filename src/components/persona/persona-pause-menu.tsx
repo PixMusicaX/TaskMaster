@@ -11,7 +11,6 @@ import { useTheme } from "@/components/theme-provider";
 import { useProgress } from "@/components/progress/progress-provider";
 import { cn } from "@/lib/utils";
 import { PERSONA_MENU_ITEMS } from "./persona-menu-items";
-import Ransom from "./ransom";
 
 // The game's pause menu, which on Persona days is the only menu: P3 Reload's upside-down Makoto
 // under water, P4's yellow sky with Yu, P5's red hand and Joker. Arrow keys move, Enter opens,
@@ -41,13 +40,11 @@ export default function PersonaPauseMenu({ style, open, onClose }: { style: Pers
     selectedRef.current = index;
     setSelected(index);
     if (isMuted()) return;
-    if (style === "p3") {
-      moveSound.current ??= Object.assign(new Audio("/persona/p3-menu-move.wav"), { volume: 0.45 });
-      moveSound.current.currentTime = 0;
-      moveSound.current.play().catch(() => {});
-    } else {
-      sfx.complete();
-    }
+    const file = style === "p3" ? "/persona/p3-menu-move.wav" : style === "p5" ? "/persona/p5-menu-move.mp3" : null;
+    if (!file) return sfx.complete();
+    moveSound.current ??= Object.assign(new Audio(file), { volume: 0.45 });
+    moveSound.current.currentTime = 0;
+    moveSound.current.play().catch(() => {});
   }, [style]);
 
   useEffect(() => {
@@ -66,7 +63,7 @@ export default function PersonaPauseMenu({ style, open, onClose }: { style: Pers
   }, [open, onClose, select, router]);
 
   const dark = theme === "dark";
-  const props = { selected, select, onClose, level: profile?.level };
+  const props = { selected, select, onClose, level: profile?.level, xp: profile?.xp };
 
   return (
     <AnimatePresence>
@@ -118,6 +115,7 @@ interface MenuProps {
   select: (index: number) => void;
   onClose: () => void;
   level?: number;
+  xp?: number;
 }
 
 // ======================= P3 Reload =======================
@@ -315,80 +313,189 @@ function P4Menu({ selected, select, onClose, level }: MenuProps) {
 
 // ======================= P5 =======================
 
-// An open hand, palm towards us, fingers spread (the menu's backing)
-const HAND = "M 34 100 L 22 64 L 6 44 L 10 38 L 24 50 L 22 12 L 30 10 L 34 44 L 38 4 L 46 4 L 46 44 L 54 8 L 62 10 L 56 48 L 70 22 L 77 26 L 64 60 L 62 100 Z";
+// ======================= P5: the game's own menu screen =======================
+// The background is the game's pause menu (public/persona/p5-menu-bg.webp) with its menu words
+// painted out; our stickers sit exactly where they were. Everything is placed on a 16:9 stage, in
+// the screenshot's 1000×562.5 units, scaled to cover the screen and slid sideways on narrow ones
+// to keep the hand in view.
 
-function P5Menu({ selected, select, onClose, level }: MenuProps) {
+const P5_DESCRIPTIONS = ["Lay low at the hideout", "Check the calendar", "Read your notes", "Visit your confidants", "Look back on records", "Change settings"];
+// Our six words on the palm: right edge, top and type size, in screenshot units. The two long
+// ones sit where the game's words spilled off the palm, so they cover those sticker shapes.
+const P5_ROWS = [
+  { right: 552, top: 136, fs: 40, tilt: -2 },
+  { right: 549, top: 214, fs: 44, tilt: 1 },
+  { right: 512, top: 266, fs: 30, tilt: -2 },
+  { right: 509, top: 300, fs: 38, tilt: 0 },
+  { right: 461, top: 344, fs: 28, tilt: 2 },
+  { right: 503, top: 375, fs: 30, tilt: -1 },
+];
+const UNIT_X = 100 / 1000;
+const UNIT_Y = 100 / 562.5;
+
+function seeded(text: string) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
+  return () => {
+    h = Math.imul(h ^ (h >>> 13), 0x5bd1e995) >>> 0;
+    h ^= h >>> 15;
+    return (h >>> 0) / 4294967296;
+  };
+}
+
+const P5_MENU_FACE = '"P5 Menu", Anton, sans-serif';
+const STICKER_FACES = [P5_MENU_FACE, '"Archivo Black", sans-serif', '"P5 Ransom", Anton, sans-serif', "Anton, Impact, sans-serif"];
+
+// A black edge drawn around the white cut (four hard drop-shadows)
+const CUT_EDGE = "drop-shadow(0.05em 0 0 #0b0b0b) drop-shadow(-0.05em 0 0 #0b0b0b) drop-shadow(0 0.05em 0 #0b0b0b) drop-shadow(0 -0.05em 0 #0b0b0b)";
+
+// One menu word as the game cuts it: mixed faces and case, letters bobbing, a white cut hugging the
+// letters with a black edge, the odd letter inverted. The selected word turns mint on a black cut,
+// with a red edge and the cyan pointer.
+function P5Sticker({ text, on }: { text: string; on: boolean }) {
+  const rand = seeded(text);
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#b8000f]">
-      <div className="absolute inset-0" style={{ background: "radial-gradient(60% 50% at 20% 30%, rgb(0 0 0 / 0.35), transparent 70%), radial-gradient(50% 40% at 30% 80%, rgb(80 0 0 / 0.5), transparent 70%)" }} />
+    <span className="relative inline-flex items-center whitespace-nowrap leading-none" style={{ filter: on ? "drop-shadow(-0.09em -0.07em 0 #e5001b)" : CUT_EDGE }}>
+      {on && <span aria-hidden className="absolute -inset-x-[0.14em] -inset-y-[0.1em] bg-[#0b0b0b]" style={{ clipPath: "polygon(1% 14%, 100% 0, 97% 100%, 0 90%)" }} />}
+      {Array.from(text).map((ch, i) => {
+        if (ch === " ") return <span key={i} aria-hidden className="inline-block w-[0.28em]" />;
+        const face = STICKER_FACES[Math.floor(rand() * STICKER_FACES.length)];
+        const lower = i > 0 && rand() < 0.35;
+        const size = 0.84 + rand() * 0.3;
+        const lift = (rand() - 0.5) * 0.12;
+        const tilt = (rand() - 0.5) * 12;
+        const invert = !on && rand() < 0.16;
+        const tight = face === P5_MENU_FACE;
+        return (
+          <span
+            key={i}
+            aria-hidden
+            className="relative inline-block"
+            style={{
+              fontFamily: face,
+              fontSize: `${size}em`,
+              transform: `translateY(${lift}em) rotate(${tilt.toFixed(1)}deg)`,
+              // The fan font's glyphs carry wide side bearings
+              letterSpacing: tight ? "-0.18em" : "-0.02em",
+              marginRight: tight ? "0.12em" : "0.01em",
+              ...(on
+                ? { color: "#d8ffe0", WebkitTextStroke: "0.09em #0b0b0b", paintOrder: "stroke fill" }
+                : invert
+                  ? { color: "#fff", background: "#0b0b0b", padding: "0 0.06em", boxShadow: "0 0 0 0.08em #fff" }
+                  : { color: "#0b0b0b", WebkitTextStroke: "0.22em #fff", paintOrder: "stroke fill" }),
+            }}
+          >
+            {lower ? ch.toLowerCase() : ch}
+          </span>
+        );
+      })}
+      {on && <span aria-hidden className="absolute left-full top-1/2 -translate-y-1/2 ml-[0.1em] w-[0.75em] h-[0.95em] bg-[#2be0ff]" style={{ clipPath: "polygon(0 0, 100% 45%, 0 100%)" }} />}
+    </span>
+  );
+}
 
-      {/* The black-and-white half with Joker */}
+// The selector's jitter: a red and a cyan quad whose corners jump every 120ms, the cyan one
+// screen-blended over the red (after Drew Powers' "Persona 5 Menu UI" pen)
+function randomQuad() {
+  const r = Math.random;
+  return [r() * 30, r() * 20, r() * 30 + 70, r() * 20, r() * 30 + 70, r() * 20 + 30, r() * 30, r() * 20 + 30].map(n => n.toFixed(1)).join(" ");
+}
+
+function P5Selector() {
+  const [quads, setQuads] = useState(() => [randomQuad(), randomQuad()]);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => setQuads([randomQuad(), randomQuad()]), 120);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="absolute -inset-x-[8%] -inset-y-[30%] w-[116%] h-[160%] pointer-events-none opacity-75" aria-hidden>
+      <polygon points={quads[0]} fill="#ff0022" />
+      <polygon points={quads[1]} fill="#1cfeff" style={{ mixBlendMode: "screen" }} />
+    </svg>
+  );
+}
+
+function P5Menu({ selected, select, onClose }: MenuProps) {
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-black">
+      {/* Fills whatever the stage leaves uncovered on tall phones */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- a static asset; next/image adds nothing here */}
+      <img src="/persona/p5-menu-bg-blur.webp" alt="" className="absolute inset-0 h-full w-full object-cover scale-110" draggable={false} />
       <motion.div
-        className="absolute inset-y-0 right-0 w-[62%] md:w-[52%] bg-white"
-        style={{ clipPath: "polygon(18% 0, 100% 0, 100% 100%, 0 100%)" }}
-        initial={{ x: "100%" }}
-        animate={{ x: 0 }}
-        transition={{ duration: 0.35, ease: [0.7, 0, 0.3, 1] }}
+        className="absolute [container-type:size]"
+        style={{
+          // Cover the screen at 16:9, but on tall phones zoom out (to 2.5 screen widths at most) so
+          // the hand, the claw and COMMAND all fit; keep the hand (about 44% across) centred
+          ["--w" as string]: "min(max(100vw, 177.78vh), 250vw)",
+          width: "var(--w)",
+          height: "calc(var(--w) * 0.5625)",
+          top: "calc(50% - var(--w) * 0.28125)",
+          boxShadow: "0 0 60px 30px rgb(0 0 0 / 0.55)",
+          left: "clamp(calc(100vw - var(--w)), calc(50vw - var(--w) * 0.44), 0px)",
+        }}
+        initial={{ scale: 1.12, rotate: -2, opacity: 0 }}
+        animate={{ scale: 1, rotate: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 24 }}
       >
-        <div className="absolute inset-0" style={{ background: "repeating-linear-gradient(-35deg, #0b0b0b 0 18px, #fff 18px 30px, #0b0b0b 30px 34px, #fff 34px 60px)", opacity: 0.9 }} />
-        <div className="absolute inset-0" style={{ background: "radial-gradient(circle, #0b0b0b 2.4px, transparent 2.9px) 0 0 / 11px 11px", WebkitMaskImage: "radial-gradient(55% 45% at 45% 40%, #000, transparent)", maskImage: "radial-gradient(55% 45% at 45% 40%, #000, transparent)" }} />
         {/* eslint-disable-next-line @next/next/no-img-element -- a static asset; next/image adds nothing here */}
-        <img
-          src="/persona/p5-joker.webp"
-          alt=""
-          className="absolute bottom-0 right-[-10%] h-[96%] w-auto max-w-none"
-          style={{ filter: "grayscale(1) contrast(1.8) brightness(0.9) drop-shadow(6px 0 0 #fff) drop-shadow(-6px 0 0 #fff) drop-shadow(0 6px 0 #0b0b0b)" }}
-          draggable={false}
-        />
-        {/* Joker's red slash */}
-        <div className="absolute left-[24%] top-[18%] h-[52%] w-[22%] bg-[#e5001b]" style={{ clipPath: "polygon(40% 0, 70% 6%, 46% 70%, 100% 62%, 92% 84%, 10% 100%)" }} />
+        <img src="/persona/p5-menu-bg.webp" alt="" className="absolute inset-0 h-full w-full" draggable={false} />
+
+        <nav aria-label="Menu" className="absolute inset-0">
+          {PERSONA_MENU_ITEMS.map((item, i) => {
+            const on = selected === i;
+            const row = P5_ROWS[i];
+            return (
+              <motion.div
+                key={item.href}
+                className="absolute flex justify-end"
+                style={{ right: `${100 - row.right * UNIT_X}%`, top: `${row.top * UNIT_Y}%`, fontSize: `${row.fs * UNIT_Y}cqh`, zIndex: on ? 5 : 1 }}
+                initial={{ x: "-30%", opacity: 0 }}
+                animate={{ x: 0, opacity: 1, rotate: on ? row.tilt - 3 : row.tilt, scale: on ? 1.08 : 1 }}
+                transition={{ delay: 0.16 + i * 0.04, type: "spring", stiffness: 520, damping: 22 }}
+              >
+                <Link href={item.href} onClick={onClose} onMouseEnter={() => select(i)} onFocus={() => select(i)} className="relative flex outline-none" aria-label={item.labels.p5}>
+                  {on && <P5Selector />}
+                  <P5Sticker text={item.labels.p5.toUpperCase()} on={on} />
+                </Link>
+              </motion.div>
+            );
+          })}
+        </nav>
+
+        {/* Filler in the gap under the first row, as the game packs its list: Morgana's line */}
+        <motion.div
+          aria-hidden
+          className="absolute flex justify-end pointer-events-none"
+          style={{ right: `${100 - 545 * UNIT_X}%`, top: `${182 * UNIT_Y}%`, fontSize: `${24 * UNIT_Y}cqh` }}
+          initial={{ x: "-30%", opacity: 0 }}
+          animate={{ x: 0, opacity: 1, rotate: 2 }}
+          transition={{ delay: 0.2, type: "spring", stiffness: 520, damping: 22 }}
+        >
+          <P5Sticker text="TAKE YOUR TIME" on={false} />
+        </motion.div>
+
+        {/* What the choice does, where the game prints it under COMMAND */}
+        <motion.p
+          key={selected}
+          className="absolute text-white font-bold whitespace-nowrap max-md:hidden"
+          style={{ left: `${560 * UNIT_X}%`, top: `${475 * UNIT_Y}%`, fontSize: "3.6cqh" }}
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          {P5_DESCRIPTIONS[selected]}
+        </motion.p>
       </motion.div>
 
-      {/* The hand and the menu written on it */}
-      <motion.div
-        className="absolute left-[-6%] md:left-[4%] bottom-[-6%] h-[100%] aspect-[84/100]"
-        initial={{ y: "30%", rotate: -14, opacity: 0 }}
-        animate={{ y: 0, rotate: -6, opacity: 1 }}
-        transition={{ delay: 0.12, type: "spring", stiffness: 200, damping: 18 }}
+      {/* Narrow screens crop the caption's spot, so it sits along the bottom instead */}
+      <motion.p
+        key={`m${selected}`}
+        className="md:hidden absolute bottom-[max(1.2rem,env(safe-area-inset-bottom))] right-4 bg-black text-white font-bold text-[15px] px-3 py-1 -skew-x-12 border-2 border-white shadow-[4px_4px_0_#e5001b]"
+        initial={{ opacity: 0, x: 12 }}
+        animate={{ opacity: 1, x: 0 }}
       >
-        <svg viewBox="0 0 84 100" className="h-full w-full" aria-hidden>
-          <path d={HAND} fill="#fff" stroke="#0b0b0b" strokeWidth="1.2" strokeLinejoin="round" />
-        </svg>
-      </motion.div>
-
-      <nav className="absolute left-[10%] md:left-[16%] top-[22%] flex flex-col items-end gap-0.5" aria-label="Menu">
-        {PERSONA_MENU_ITEMS.map((item, i) => {
-          const on = selected === i;
-          return (
-            <motion.div
-              key={item.href}
-              style={{ marginRight: `${(i % 3) * 0.4}em`, fontSize: "clamp(26px, 4.6vw, 52px)" }}
-              initial={{ x: -80, opacity: 0, rotate: -10 }}
-              animate={{ x: 0, opacity: 1, rotate: on ? -4 : -2 }}
-              transition={{ delay: 0.2 + i * 0.04, type: "spring", stiffness: 520, damping: 22 }}
-            >
-              <Link href={item.href} onClick={onClose} onMouseEnter={() => select(i)} onFocus={() => select(i)} className="relative block outline-none">
-                {on && <span className="absolute -right-4 top-1/2 -translate-y-1/2 w-6 h-8 bg-[#2be0ff]" style={{ clipPath: "polygon(0 0, 100% 50%, 0 100%)" }} />}
-                <span className={cn("relative block transition-transform", on && "scale-110")}>
-                  <Ransom text={item.labels.p5.toUpperCase()} on="light" />
-                </span>
-              </Link>
-            </motion.div>
-          );
-        })}
-      </nav>
-
-      <motion.div className="absolute right-[4%] bottom-[5%] -rotate-3" initial={{ scale: 2.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.45, type: "spring", stiffness: 500, damping: 16 }}>
-        <span className="block bg-black px-3 py-1 border-[3px] border-white -skew-x-6 shadow-[6px_6px_0_#e5001b]">
-          <Ransom text="COMMAND" size="clamp(30px, 6.4vw, 80px)" />
-        </span>
-      </motion.div>
-      {level !== undefined && (
-        <p className="absolute left-[6%] bottom-[4%] text-white font-display italic text-[clamp(24px,4vw,44px)]" style={{ textShadow: "3px 3px 0 #000" }}>
-          LV {level}
-        </p>
-      )}
+        {P5_DESCRIPTIONS[selected]}
+      </motion.p>
     </div>
   );
 }
