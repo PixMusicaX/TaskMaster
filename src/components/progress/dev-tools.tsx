@@ -5,6 +5,7 @@ import { Wrench, X } from "lucide-react";
 import { LEVEL_UP_XP, RPG_TITLES } from "@/lib/constants";
 import { DEV_ERA_EVENT, DEV_XP_EVENT, getDevEraOverride, getDevXpOffset, setDevEraOverride, setDevXpOffset } from "@/lib/dev-xp";
 import { ERAS } from "@/lib/eras";
+import { DEV_PERSONA_EVENT, getDevPersonaOverride, setDevPersonaOverride, type DevPersonaOverride } from "@/lib/persona";
 import { getDevMapStatus, rerollDevMap, setDevMapStatus, subscribeDevMap, type MapStatus } from "@/lib/dev-map";
 import { cn } from "@/lib/utils";
 import { useProgress } from "./progress-provider";
@@ -23,6 +24,19 @@ const subscribeEra = (cb: () => void) => {
   return () => window.removeEventListener(DEV_ERA_EVENT, cb);
 };
 
+const subscribePersona = (cb: () => void) => {
+  window.addEventListener(DEV_PERSONA_EVENT, cb);
+  return () => window.removeEventListener(DEV_PERSONA_EVENT, cb);
+};
+
+const PERSONA_OPTIONS: { value: DevPersonaOverride; label: string; title: string }[] = [
+  { value: null, label: "Auto", title: "Follow the calendar" },
+  { value: "off", label: "Off", title: "Normal design today" },
+  { value: "p3", label: "P3", title: "Force Persona 3" },
+  { value: "p4", label: "P4", title: "Force Persona 4" },
+  { value: "p5", label: "P5", title: "Force Persona 5" },
+];
+
 const MAP_STATUSES: (MapStatus | null)[] = [null, "low", "balanced", "peak"];
 
 // Development-only panel for spoofing XP and the map (client-side, nothing is saved) to try the animations
@@ -32,6 +46,7 @@ export default function DevTools() {
   const offset = useSyncExternalStore(subscribe, getDevXpOffset, () => 0);
   const mapStatus = useSyncExternalStore(subscribeDevMap, getDevMapStatus, () => null);
   const eraOverride = useSyncExternalStore(subscribeEra, getDevEraOverride, () => null);
+  const personaOverride = useSyncExternalStore(subscribePersona, getDevPersonaOverride, () => null);
 
   if (!profile) return null;
 
@@ -104,6 +119,30 @@ export default function DevTools() {
           </div>
 
           <div className="space-y-1.5 pt-2 border-t border-white/10">
+            <p className="font-mono font-semibold uppercase tracking-[0.12em] text-white/60">Persona day</p>
+            <div className="grid grid-cols-5 gap-1">
+              {PERSONA_OPTIONS.map(o => (
+                <button
+                  key={o.label}
+                  onClick={() => {
+                    setDevPersonaOverride(o.value);
+                    // Replay the day's intro when forcing a style
+                    try { localStorage.removeItem("persona_intro_seen"); } catch { /* storage blocked */ }
+                  }}
+                  aria-pressed={personaOverride === o.value}
+                  title={o.title}
+                  className={cn(
+                    "px-1 py-1.5 rounded-lg",
+                    personaOverride === o.value ? "bg-yellow-300 text-black font-semibold" : "bg-white/10 hover:bg-white/20"
+                  )}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5 pt-2 border-t border-white/10">
             <p className="font-mono font-semibold uppercase tracking-[0.12em] text-white/60">Map status</p>
             <div className="grid grid-cols-4 gap-1">
               {MAP_STATUSES.map(status => (
@@ -131,7 +170,7 @@ export default function DevTools() {
           aria-label="Open dev tools"
           className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-black/80 text-yellow-300 font-mono font-semibold shadow-lg"
         >
-          <Wrench size={14} /> DEV{offset !== 0 && ` ${offset > 0 ? "+" : ""}${offset}`}{eraOverride !== null && ` · era ${ERAS[eraOverride].numeral}`}{mapStatus && ` · map ${mapStatus}`}
+          <Wrench size={14} /> DEV{offset !== 0 && ` ${offset > 0 ? "+" : ""}${offset}`}{eraOverride !== null && ` · era ${ERAS[eraOverride].numeral}`}{mapStatus && ` · map ${mapStatus}`}{personaOverride && ` · ${personaOverride}`}
         </button>
       )}
     </div>

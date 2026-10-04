@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { flushSync } from "react-dom";
 import { usePathname } from "next/navigation";
 import { format, subMonths } from "date-fns";
@@ -20,6 +21,10 @@ import SeasonToast, { type Season } from "./season-toast";
 import EraToast, { type EraShift } from "./era-toast";
 import { EraStandingContext, type EraStanding } from "./era-standing";
 import DevTools from "./dev-tools";
+
+// Persona days swap in the game's own ceremonies (loaded only then)
+const PersonaLevelUp = dynamic(() => import("@/components/persona/persona-ceremonies").then(m => m.PersonaLevelUp), { ssr: false });
+const PersonaRankUp = dynamic(() => import("@/components/persona/persona-ceremonies").then(m => m.PersonaRankUp), { ssr: false });
 
 type Profile = Awaited<ReturnType<typeof getProfile>>;
 type EraProgress = Awaited<ReturnType<typeof getEraProgress>>;
@@ -72,7 +77,7 @@ function withRankWipe(apply: () => void) {
 
 export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { rank, setRank, era: themeEra, setEra } = useTheme();
+  const { rank, setRank, era: themeEra, setEra, persona } = useTheme();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [pulse, setPulse] = useState(0);
@@ -304,10 +309,12 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
         {children}
       </EraStandingContext.Provider>
       <XpBurstLayer bursts={bursts} />
-      <LevelUpToast level={levelToast} />
+      {persona ? <PersonaLevelUp level={levelToast} style={persona} /> : <LevelUpToast level={levelToast} />}
       <SeasonToast season={season} onDone={closeSeason} />
       <EraToast shift={eraShift} onDone={closeEraShift} />
-      <RankUpCeremony ceremony={ceremony} onDone={finishCeremony} />
+      {persona
+        ? <PersonaRankUp ceremony={ceremony} onDone={finishCeremony} style={persona} />
+        : <RankUpCeremony ceremony={ceremony} onDone={finishCeremony} />}
       <RecapModal recap={recap} isOpen={recapOpen} onClose={closeRecap} />
       {DEV_TOOLS_ENABLED && <DevTools />}
     </ProgressContext.Provider>
