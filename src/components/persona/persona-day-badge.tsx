@@ -22,16 +22,3 @@ export function PersonaDayBadge({ style, size = 14, className }: { style: Person
     </span>
   );
 }
-
-export function PersonaDayLegend({ className }: { className?: string }) {
-  return (
-    <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-1 text-micro font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray", className)}>
-      {(["p3", "p4", "p5"] as PersonaStyle[]).map(style => (
-        <span key={style} className="inline-flex items-center gap-1.5">
-          <PersonaDayBadge style={style} size={10} />
-          {PERSONA_NAMES[style]} day
-        </span>
-      ))}
-    </div>
-  );
-}

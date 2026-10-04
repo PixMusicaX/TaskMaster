@@ -1,35 +1,79 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { Moon, Sun, Volume2, VolumeX, X } from "lucide-react";
 import type { PersonaStyle } from "@/lib/persona";
-import { sfx } from "@/lib/sfx";
+import { isMuted, setMuted, sfx, subscribeMuted } from "@/lib/sfx";
+import { useTheme } from "@/components/theme-provider";
+import { useProgress } from "@/components/progress/progress-provider";
 import { cn } from "@/lib/utils";
 import { PERSONA_MENU_ITEMS } from "./persona-menu-items";
+import Ransom from "./ransom";
 
-// The game's pause menu, with the protagonist's portrait: Makoto drifting upside down underwater
-// (P3 Reload), Yu on the TV-yellow screen (P4 Golden), Joker on the red slash (P5). The art is in
-// public/persona; see CREDITS.md.
-export default function PersonaPauseMenu({ style, dark, open, onClose }: { style: PersonaStyle; dark: boolean; open: boolean; onClose: () => void }) {
+// The game's pause menu, which on Persona days is the only menu: P3 Reload's upside-down Makoto
+// under water, P4's yellow sky with Yu, P5's red hand and Joker. Arrow keys move, Enter opens,
+// Escape closes. Assets are in public/persona; see CREDITS.md.
+export default function PersonaPauseMenu({ style, open, onClose }: { style: PersonaStyle; open: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
+  const { profile } = useProgress();
+  const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
+  const current = Math.max(0, PERSONA_MENU_ITEMS.findIndex(i => i.href === pathname));
+  const [selected, setSelected] = useState(current);
+  const moveSound = useRef<HTMLAudioElement | null>(null);
+
+  // Each opening starts on the current page
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setSelected(current);
+  }
+
+  const selectedRef = useRef(selected);
+  useEffect(() => { selectedRef.current = selected; });
+
+  const select = useCallback((index: number) => {
+    if (selectedRef.current === index) return;
+    selectedRef.current = index;
+    setSelected(index);
+    if (isMuted()) return;
+    if (style === "p3") {
+      moveSound.current ??= Object.assign(new Audio("/persona/p3-menu-move.wav"), { volume: 0.45 });
+      moveSound.current.currentTime = 0;
+      moveSound.current.play().catch(() => {});
+    } else {
+      sfx.complete();
+    }
+  }, [style]);
 
   useEffect(() => {
     if (!open) return;
     sfx.swoosh();
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.preventDefault(); onClose(); }
+      else if (e.key === "ArrowDown" || e.key === "s") { e.preventDefault(); select((selectedRef.current + 1) % PERSONA_MENU_ITEMS.length); }
+      else if (e.key === "ArrowUp" || e.key === "w") { e.preventDefault(); select((selectedRef.current - 1 + PERSONA_MENU_ITEMS.length) % PERSONA_MENU_ITEMS.length); }
+      else if (e.key === "Enter") { router.push(PERSONA_MENU_ITEMS[selectedRef.current].href); onClose(); }
+    };
+    // Capture phase, so the menu claims the arrow keys before the page under it (the home page's
+    // orbit also steps on them, but skips events already handled)
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [open, onClose, select, router]);
+
+  const dark = theme === "dark";
+  const props = { selected, select, onClose, level: profile?.level };
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
           key="pause"
-          className="fixed inset-0 z-[420] overflow-hidden"
+          className="fixed inset-0 z-[420] overflow-hidden select-none"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.25 } }}
@@ -37,182 +81,314 @@ export default function PersonaPauseMenu({ style, dark, open, onClose }: { style
           aria-modal="true"
           aria-label="Menu"
         >
-          {style === "p3" && <P3Menu pathname={pathname} dark={dark} onClose={onClose} />}
-          {style === "p4" && <P4Menu pathname={pathname} onClose={onClose} />}
-          {style === "p5" && <P5Menu pathname={pathname} onClose={onClose} />}
-          <button
-            onClick={onClose}
-            aria-label="Close menu"
-            className={cn(
-              "absolute top-4 right-4 z-10 p-2.5 transition-transform active:scale-90",
-              style === "p5" && "bg-black text-white border-2 border-white -rotate-6",
-              style === "p4" && "bg-[#181512] text-[#ffe100] rounded-lg",
-              style === "p3" && "text-white/80 hover:text-white"
+          {style === "p3" && <P3Menu {...props} dark={dark} />}
+          {style === "p4" && <P4Menu {...props} />}
+          {style === "p5" && <P5Menu {...props} />}
+
+          {/* Sound, the P3 day/Dark Hour switch, and close */}
+          <div className={cn("absolute top-3 right-3 z-20 flex items-center gap-1.5", toolTone(style))}>
+            <button onClick={() => setMuted(!muted)} className="p-2.5 active:scale-90 transition-transform" aria-label={muted ? "Unmute sounds" : "Mute sounds"} aria-pressed={muted}>
+              {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+            </button>
+            {style === "p3" && (
+              <button onClick={toggleTheme} className="p-2.5 active:scale-90 transition-transform" aria-label="Toggle theme">
+                {dark ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
             )}
-          >
-            <X size={22} strokeWidth={2.5} />
-          </button>
+            <button onClick={onClose} className="p-2.5 active:scale-90 transition-transform" aria-label="Close menu">
+              <X size={20} strokeWidth={2.6} />
+            </button>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
   );
 }
 
-// ---------------- P3 Reload: sinking into your own mind ----------------
+function toolTone(style: PersonaStyle) {
+  switch (style) {
+    case "p5": return "[&>button]:bg-black [&>button]:text-white [&>button]:border-2 [&>button]:border-white [&>button]:-rotate-6";
+    case "p4": return "[&>button]:bg-[#2a1533] [&>button]:text-[#ffe100] [&>button]:rounded-full";
+    default: return "[&>button]:text-white [&>button]:drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]";
+  }
+}
 
-function P3Menu({ pathname, dark, onClose }: { pathname: string; dark: boolean; onClose: () => void }) {
-  const deep = dark ? "#021a0e" : "#04245e";
-  const mid = dark ? "#0b5a36" : "#0a5fc4";
-  const glow = dark ? "#5cff9a" : "#7fd4ff";
+interface MenuProps {
+  selected: number;
+  select: (index: number) => void;
+  onClose: () => void;
+  level?: number;
+}
+
+// ======================= P3 Reload =======================
+
+// Rotation and offset per row, after the game's fanned list
+const P3_LAYOUT = [
+  { rotate: -18, x: -40, z: 1 },
+  { rotate: -12, x: 0, z: 0 },
+  { rotate: -15, x: -36, z: 1 },
+  { rotate: -6, x: -14, z: 2 },
+  { rotate: -3, x: -48, z: 1 },
+  { rotate: 6, x: 0, z: 0 },
+];
+const P3_DESCRIPTIONS = ["Back to the dorm", "View Calendar", "Read your Diary", "View Social Links", "View Records", "View Settings"];
+const P3_COLORS = ["#16CFFB", "#7DE6FD", "#77FEFC"];
+// The white slash and the pink one behind it (from the game's cursor)
+const P3_CURSOR = "polygon(4% 96%, 100% 4%, 84% 100%)";
+const P3_CURSOR_BACK = "polygon(-6% 100%, 104% 0%, 82% 98%)";
+
+function P3Menu({ selected, select, onClose, dark }: MenuProps & { dark: boolean }) {
+  const [src] = useState(() => (window.matchMedia("(min-width: 768px)").matches ? "/persona/p3-menu.mp4" : "/persona/p3-menu-mobile.mp4"));
+  // Day is the game's blue; the Dark Hour turns the water green
+  const tint = dark ? "hue-rotate(-95deg) saturate(1.15) brightness(0.9)" : undefined;
+  const colors = dark ? ["#5CFF9A", "#9DFFC4", "#C8FF8A"] : P3_COLORS;
+
   return (
-    <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${mid} 0%, ${deep} 75%)` }}>
-      {/* Light from the surface, and caustics (static) */}
-      <div className="absolute inset-0 opacity-60" style={{ background: `repeating-linear-gradient(100deg, transparent 0 7%, ${glow}22 7% 9%, transparent 9% 16%)`, WebkitMaskImage: "linear-gradient(180deg, #000, transparent 70%)", maskImage: "linear-gradient(180deg, #000, transparent 70%)" }} />
-      <div className="absolute inset-0 opacity-40" style={{ background: `radial-gradient(30% 12% at 30% 4%, ${glow}, transparent 70%), radial-gradient(25% 10% at 70% 2%, #ffffff, transparent 70%)` }} />
+    <div className="absolute inset-0 bg-[#015FCC]" style={{ fontFamily: "var(--font-p3-menu)" }}>
+      <motion.video
+        className="absolute inset-0 h-full w-full object-cover object-[22%_center] md:object-left"
+        style={{ filter: tint }}
+        src={src}
+        poster="/persona/p3-menu-poster.webp"
+        autoPlay
+        loop
+        muted
+        playsInline
+        aria-hidden
+        initial={{ y: "-8%", scale: 1.08 }}
+        animate={{ y: 0, scale: 1 }}
+        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+      />
 
-      {/* Makoto, upside down, swaying with the water */}
-      <motion.div
-        className="absolute right-[4%] sm:right-[16%] top-[-6%] h-[92%] aspect-[232/889] origin-top"
-        initial={{ y: -80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1, rotate: [-2.5, 2.5, -2.5] }}
-        transition={{ y: { duration: 1.2, ease: [0.16, 1, 0.3, 1] }, opacity: { duration: 0.8 }, rotate: { duration: 7, repeat: Infinity, ease: "easeInOut" } }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element -- a static asset; next/image adds nothing here */}
-        <img src="/persona/p3-makoto.webp" alt="" className="h-full w-full object-contain" style={{ filter: dark ? "sepia(0.4) hue-rotate(70deg) saturate(1.3) brightness(0.85)" : "saturate(0.85) brightness(0.95) hue-rotate(-8deg)" }} draggable={false} />
-      </motion.div>
+      {/* The page number, huge and sideways down the left edge */}
+      <div className="absolute -left-[0.08em] top-0 h-full flex items-center pointer-events-none" aria-hidden>
+        <span className="block rotate-90 origin-center italic font-black text-[#808080]/80 leading-none tracking-[-0.12em]" style={{ fontSize: "min(34vh, 40vw)" }}>
+          0{selected + 1}
+        </span>
+      </div>
 
-      {/* Rising bubbles (small, cheap) */}
-      {[12, 28, 47, 63, 81].map((left, i) => (
-        <motion.span
-          key={left}
-          className="absolute bottom-0 w-2 h-2 rounded-full border border-white/50"
-          style={{ left: `${left}%` }}
-          animate={{ y: [0, -900], opacity: [0, 0.8, 0] }}
-          transition={{ duration: 6 + i, repeat: Infinity, delay: i * 1.3, ease: "easeOut" }}
-        />
-      ))}
-
-      <nav className="absolute left-[6%] top-1/2 -translate-y-1/2 flex flex-col gap-1 sm:gap-2">
+      <nav className="absolute left-[24%] md:left-[40%] top-[64%] md:top-1/2 -translate-y-1/2 flex flex-col" aria-label="Menu">
         {PERSONA_MENU_ITEMS.map((item, i) => {
-          const active = pathname === item.href;
+          const on = selected === i;
+          const l = P3_LAYOUT[i];
           return (
-            <motion.div key={item.href} initial={{ x: -60, opacity: 0 }} animate={{ x: i * 14, opacity: 1 }} transition={{ delay: 0.15 + i * 0.05, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}>
-              <Link href={item.href} onClick={onClose} className="group relative block px-3 py-0.5">
-                <span className={cn("absolute inset-0 -skew-x-[20deg] transition-transform origin-left", active ? "bg-white scale-x-100" : "bg-white/90 scale-x-0 group-hover:scale-x-100")} />
-                <span className={cn("relative block text-[34px] sm:text-[52px] leading-[1.05] italic font-bold uppercase tracking-tight transition-colors", active ? "text-[#04245e]" : "text-white group-hover:text-[#04245e]")} style={{ fontFamily: "var(--font-space-grotesk)" }}>
+            <motion.div
+              key={item.href}
+              className="relative -my-[0.04em]"
+              style={{ zIndex: on ? 5 : l.z, fontSize: "clamp(38px, 7.2vw, 84px)" }}
+              initial={{ x: -120, opacity: 0, rotate: l.rotate }}
+              animate={{ x: l.x * 0.6, opacity: 1, rotate: l.rotate }}
+              transition={{ delay: 0.12 + i * 0.04, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <Link
+                href={item.href}
+                onClick={onClose}
+                onMouseEnter={() => select(i)}
+                onFocus={() => select(i)}
+                className="relative block px-[0.1em] outline-none"
+              >
+                {on && (
+                  <>
+                    <motion.span
+                      className="absolute inset-[-0.1em_-0.35em_-0.05em_-0.5em] bg-[#FD77D9]"
+                      style={{ clipPath: P3_CURSOR_BACK }}
+                      animate={{ scale: [1, 1.05, 1] }}
+                      transition={{ duration: 0.15, repeat: Infinity, repeatDelay: 0.6 }}
+                    />
+                    <span className="absolute inset-[-0.1em_-0.35em_-0.05em_-0.5em] bg-white" style={{ clipPath: P3_CURSOR }} />
+                  </>
+                )}
+                <motion.span
+                  className="relative block italic font-black uppercase leading-[0.9] tracking-[-0.09em] whitespace-nowrap"
+                  style={{ color: on ? "#000" : colors[(i + 2) % colors.length], textShadow: on ? "none" : "0 2px 10px rgba(0,40,120,0.35)" }}
+                  animate={on ? { scale: [1, 1.18, 1.08] } : { scale: 1 }}
+                  transition={{ duration: 0.22 }}
+                >
                   {item.labels.p3}
-                </span>
+                </motion.span>
+                {/* Where the white slash crosses the word it turns red */}
+                {on && (
+                  <motion.span
+                    aria-hidden
+                    className="absolute inset-0 px-[0.1em] block italic font-black uppercase leading-[0.9] tracking-[-0.09em] whitespace-nowrap text-[#F00] pointer-events-none"
+                    style={{ clipPath: P3_CURSOR }}
+                    animate={{ scale: [1, 1.18, 1.08] }}
+                    transition={{ duration: 0.22 }}
+                  >
+                    {item.labels.p3}
+                  </motion.span>
+                )}
               </Link>
             </motion.div>
           );
         })}
       </nav>
-      <p className="p3-hud absolute bottom-5 right-5 text-[11px] uppercase tracking-[0.3em]" style={{ color: glow }}>
-        {dark ? "The Dark Hour" : "Memento mori"}
-      </p>
+
+      {/* Command caption, bottom right */}
+      <div className="absolute bottom-4 right-0 flex flex-col items-start text-white" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
+        <p className="italic text-[20px] md:text-[30px] pr-6 md:pr-20 font-bold">{P3_DESCRIPTIONS[selected]}</p>
+        <div className="flex items-center w-full gap-1 text-[11px]">
+          <span>Command</span>
+          <span className="grow h-px bg-white shadow-[0_1px_6px_rgba(0,0,0,0.5)]" />
+        </div>
+        <p className="mt-2 pr-6 md:pr-20 self-end text-[13px] italic hidden md:block">↵ Confirm · Esc Close</p>
+      </div>
     </div>
   );
 }
 
-// ---------------- P4 Golden: TV yellow ----------------
+// ======================= P4 =======================
 
-function P4Menu({ pathname, onClose }: { pathname: string; onClose: () => void }) {
+function Flower({ className, color, ink }: { className?: string; color: string; ink?: string }) {
   return (
-    <div className="absolute inset-0 bg-[#ffe100]">
-      <div className="absolute inset-0" style={{ background: "repeating-linear-gradient(0deg, transparent 0 3px, rgb(0 0 0 / 0.05) 3px 4px)" }} />
-      <div className="absolute inset-y-0 left-0 w-[46%] bg-[#181512]" style={{ clipPath: "polygon(0 0, 100% 0, 78% 100%, 0 100%)" }} />
-      <div className="absolute inset-y-0 left-0 w-[46%] p-static opacity-[0.12]" style={{ clipPath: "polygon(0 0, 100% 0, 78% 100%, 0 100%)" }} />
+    <svg viewBox="-50 -50 100 100" className={className} aria-hidden>
+      {[0, 60, 120, 180, 240, 300].map(a => (
+        <ellipse key={a} cx="0" cy="-24" rx="15" ry="24" fill={color} stroke={ink} strokeWidth={ink ? 3 : 0} transform={`rotate(${a})`} />
+      ))}
+      <circle r="10" fill={color} />
+    </svg>
+  );
+}
 
+function P4Menu({ selected, select, onClose, level }: MenuProps) {
+  return (
+    <div className="absolute inset-0 overflow-hidden" style={{ background: "linear-gradient(200deg, #5fb8ff 0%, #8fd0ff 35%, #ffd93b 36%)" }}>
+      {/* Clouds in the sky, top right */}
+      <div className="absolute inset-0" style={{ background: "radial-gradient(9% 6% at 70% 24%, #fff 60%, transparent 62%), radial-gradient(7% 5% at 76% 21%, #fff 60%, transparent 62%), radial-gradient(10% 6% at 90% 30%, #fff 60%, transparent 62%), radial-gradient(6% 4% at 95% 26%, #fff 60%, transparent 62%)" }} />
+      {/* The yellow sweep and the purple band */}
+      <motion.div className="absolute -left-[10%] top-[-12%] h-[66%] w-[82%] bg-[#ffe100]" style={{ rotate: -14, transformOrigin: "left" }} initial={{ x: "-100%" }} animate={{ x: 0 }} transition={{ duration: 0.35, ease: [0.7, 0, 0.3, 1] }} />
+      <motion.div className="absolute -left-[10%] top-[48%] h-[70%] w-[130%] bg-[#3a1846]" style={{ rotate: -10, transformOrigin: "left" }} initial={{ x: "100%" }} animate={{ x: 0 }} transition={{ duration: 0.35, delay: 0.08, ease: [0.7, 0, 0.3, 1] }} />
+      <div className="absolute -left-[10%] top-[47%] h-[2.2%] w-[130%] bg-[#ffb000]" style={{ rotate: "-10deg", transformOrigin: "left" }} />
+
+      <motion.div className="absolute right-[6%] bottom-[6%] w-[22vmin]" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.35, type: "spring", stiffness: 300, damping: 14 }}>
+        <Flower color="#ffe100" />
+      </motion.div>
+      <motion.div className="absolute left-[3%] bottom-[8%] w-[13vmin]" initial={{ scale: 0 }} animate={{ scale: 1, rotate: 20 }} transition={{ delay: 0.45, type: "spring", stiffness: 300, damping: 14 }}>
+        <Flower color="#fff" ink="#ff3b6b" />
+      </motion.div>
+
+      {/* Yu, big, on the left */}
       <motion.div
-        className="absolute left-[2%] bottom-0 h-[96%] aspect-[634/1200]"
-        initial={{ x: -120, opacity: 0 }}
+        className="absolute left-[-14%] md:left-[-2%] top-[-4%] h-[170%] aspect-[634/1200]"
+        initial={{ x: -140, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 160, damping: 20 }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- a static asset; next/image adds nothing here */}
-        <img src="/persona/p4-yu.webp" alt="" className="h-full w-full object-contain object-bottom drop-shadow-[8px_0_0_#ef5f00]" draggable={false} />
+        <img src="/persona/p4-yu.webp" alt="" className="h-full w-full object-contain object-top" style={{ filter: "drop-shadow(10px 0 0 #ffe100) drop-shadow(-6px 0 0 #fff)" }} draggable={false} />
       </motion.div>
 
-      <nav className="absolute right-[5%] top-1/2 -translate-y-1/2 flex flex-col gap-2.5 items-end">
+      <nav className="absolute left-[34%] md:left-[30%] top-[16%] flex flex-col" aria-label="Menu">
         {PERSONA_MENU_ITEMS.map((item, i) => {
-          const active = pathname === item.href;
+          const on = selected === i;
           return (
-            <motion.div key={item.href} initial={{ x: 80, opacity: 0, scale: 0.8 }} animate={{ x: 0, opacity: 1, scale: 1 }} transition={{ delay: 0.1 + i * 0.05, type: "spring", stiffness: 500, damping: 20 }}>
-              <Link
-                href={item.href}
-                onClick={onClose}
-                className={cn(
-                  "block min-w-[180px] sm:min-w-[240px] text-right px-5 py-1.5 rounded-xl border-[3px] border-[#181512] font-display text-[22px] sm:text-[30px] uppercase italic transition-transform hover:-translate-x-2",
-                  active ? "bg-white text-[#181512] shadow-[5px_5px_0_#ef5f00]" : "bg-[#181512] text-[#ffe100] shadow-[5px_5px_0_rgb(0_0_0_/_0.25)]"
-                )}
-              >
-                {item.labels.p4}
-              </Link>
-            </motion.div>
-          );
-        })}
-      </nav>
-    </div>
-  );
-}
-
-// ---------------- P5: the red slash ----------------
-
-function P5Menu({ pathname, onClose }: { pathname: string; onClose: () => void }) {
-  return (
-    <div className="absolute inset-0 bg-[#0b0b0b]">
-      <motion.div
-        className="absolute -left-[20%] top-[18%] h-[64%] w-[140%] bg-[#e5001b]"
-        style={{ rotate: -16 }}
-        initial={{ x: "-110%" }}
-        animate={{ x: 0 }}
-        transition={{ duration: 0.35, ease: [0.7, 0, 0.3, 1] }}
-      />
-      <div className="absolute inset-0" style={{ background: "radial-gradient(circle, rgb(0 0 0 / 0.3) 1.3px, transparent 1.8px) 0 0 / 9px 9px" }} />
-
-      <motion.div
-        className="absolute left-[-4%] sm:left-[4%] bottom-0 h-[88%] aspect-[786/912]"
-        initial={{ x: -160, opacity: 0, rotate: -6 }}
-        animate={{ x: 0, opacity: 1, rotate: 0 }}
-        transition={{ delay: 0.15, type: "spring", stiffness: 260, damping: 20 }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element -- a static asset; next/image adds nothing here */}
-        <img
-          src="/persona/p5-joker.webp"
-          alt=""
-          className="h-full w-full object-contain object-bottom"
-          style={{ filter: "drop-shadow(5px 0 0 #fff) drop-shadow(-5px 0 0 #fff) drop-shadow(0 5px 0 #fff) drop-shadow(0 -5px 0 #fff) drop-shadow(10px 10px 0 #000)" }}
-          draggable={false}
-        />
-      </motion.div>
-
-      <nav className="absolute right-[4%] top-1/2 -translate-y-1/2 flex flex-col items-end gap-1">
-        {PERSONA_MENU_ITEMS.map((item, i) => {
-          const active = pathname === item.href;
-          const tilt = [-8, 5, -4, 7, -6, 4][i % 6];
-          return (
-            <motion.div
-              key={item.href}
-              initial={{ x: 120, opacity: 0, rotate: tilt * 2 }}
-              animate={{ x: -(i % 2) * 28, opacity: 1, rotate: tilt }}
-              transition={{ delay: 0.2 + i * 0.045, type: "spring", stiffness: 520, damping: 22 }}
-            >
-              <Link href={item.href} onClick={onClose} className="group relative block px-4 py-0.5">
+            <motion.div key={item.href} style={{ marginLeft: `${i * 1.1}em`, fontSize: "clamp(30px, 5.6vw, 64px)" }} initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1, rotate: -8 }} transition={{ delay: 0.15 + i * 0.05, type: "spring", stiffness: 500, damping: 22 }}>
+              <Link href={item.href} onClick={onClose} onMouseEnter={() => select(i)} onFocus={() => select(i)} className="relative block outline-none leading-[0.95]">
+                {on && <motion.span layoutId="p4-pause-cursor" className="absolute -inset-x-3 inset-y-1 bg-white/90 -skew-x-12 shadow-[6px_6px_0_#2be0ff]" transition={{ type: "spring", stiffness: 600, damping: 32 }} />}
                 <span
-                  className={cn("absolute inset-0 transition-transform", active ? "bg-white scale-100" : "bg-white scale-0 group-hover:scale-100")}
-                  style={{ clipPath: "polygon(3% 10%, 100% 0, 96% 90%, 0 100%)" }}
-                />
-                <span
-                  className={cn("relative block font-display text-[36px] sm:text-[56px] uppercase leading-none transition-colors", active ? "text-[#e5001b]" : "text-white group-hover:text-[#e5001b]")}
-                  style={{ WebkitTextStroke: active ? "0" : "1.5px #000", textShadow: active ? "4px 4px 0 #000" : "4px 4px 0 #e5001b" }}
+                  className="relative"
+                  style={{
+                    fontFamily: "var(--font-p4-menu)",
+                    color: on ? "transparent" : "#2a1533",
+                    backgroundImage: on ? "linear-gradient(180deg, #ff4fa3, #ffd1ea)" : undefined,
+                    WebkitBackgroundClip: on ? "text" : undefined,
+                    backgroundClip: on ? "text" : undefined,
+                    textShadow: on ? "none" : "3px 3px 0 #ffe100, -1px -1px 0 #fff",
+                  }}
                 >
-                  {item.labels.p5}
+                  {item.labels.p4}
                 </span>
               </Link>
             </motion.div>
           );
         })}
       </nav>
+
+      {level !== undefined && (
+        <p className="absolute left-[34%] bottom-[7%] text-[#ffe100] text-[clamp(22px,4vw,40px)]" style={{ fontFamily: "var(--font-p4-menu)" }}>
+          Lv {level}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ======================= P5 =======================
+
+// An open hand, palm towards us, fingers spread (the menu's backing)
+const HAND = "M 34 100 L 22 64 L 6 44 L 10 38 L 24 50 L 22 12 L 30 10 L 34 44 L 38 4 L 46 4 L 46 44 L 54 8 L 62 10 L 56 48 L 70 22 L 77 26 L 64 60 L 62 100 Z";
+
+function P5Menu({ selected, select, onClose, level }: MenuProps) {
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-[#b8000f]">
+      <div className="absolute inset-0" style={{ background: "radial-gradient(60% 50% at 20% 30%, rgb(0 0 0 / 0.35), transparent 70%), radial-gradient(50% 40% at 30% 80%, rgb(80 0 0 / 0.5), transparent 70%)" }} />
+
+      {/* The black-and-white half with Joker */}
+      <motion.div
+        className="absolute inset-y-0 right-0 w-[62%] md:w-[52%] bg-white"
+        style={{ clipPath: "polygon(18% 0, 100% 0, 100% 100%, 0 100%)" }}
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        transition={{ duration: 0.35, ease: [0.7, 0, 0.3, 1] }}
+      >
+        <div className="absolute inset-0" style={{ background: "repeating-linear-gradient(-35deg, #0b0b0b 0 18px, #fff 18px 30px, #0b0b0b 30px 34px, #fff 34px 60px)", opacity: 0.9 }} />
+        <div className="absolute inset-0" style={{ background: "radial-gradient(circle, #0b0b0b 2.4px, transparent 2.9px) 0 0 / 11px 11px", WebkitMaskImage: "radial-gradient(55% 45% at 45% 40%, #000, transparent)", maskImage: "radial-gradient(55% 45% at 45% 40%, #000, transparent)" }} />
+        {/* eslint-disable-next-line @next/next/no-img-element -- a static asset; next/image adds nothing here */}
+        <img
+          src="/persona/p5-joker.webp"
+          alt=""
+          className="absolute bottom-0 right-[-10%] h-[96%] w-auto max-w-none"
+          style={{ filter: "grayscale(1) contrast(1.8) brightness(0.9) drop-shadow(6px 0 0 #fff) drop-shadow(-6px 0 0 #fff) drop-shadow(0 6px 0 #0b0b0b)" }}
+          draggable={false}
+        />
+        {/* Joker's red slash */}
+        <div className="absolute left-[24%] top-[18%] h-[52%] w-[22%] bg-[#e5001b]" style={{ clipPath: "polygon(40% 0, 70% 6%, 46% 70%, 100% 62%, 92% 84%, 10% 100%)" }} />
+      </motion.div>
+
+      {/* The hand and the menu written on it */}
+      <motion.div
+        className="absolute left-[-6%] md:left-[4%] bottom-[-6%] h-[100%] aspect-[84/100]"
+        initial={{ y: "30%", rotate: -14, opacity: 0 }}
+        animate={{ y: 0, rotate: -6, opacity: 1 }}
+        transition={{ delay: 0.12, type: "spring", stiffness: 200, damping: 18 }}
+      >
+        <svg viewBox="0 0 84 100" className="h-full w-full" aria-hidden>
+          <path d={HAND} fill="#fff" stroke="#0b0b0b" strokeWidth="1.2" strokeLinejoin="round" />
+        </svg>
+      </motion.div>
+
+      <nav className="absolute left-[10%] md:left-[16%] top-[22%] flex flex-col items-end gap-0.5" aria-label="Menu">
+        {PERSONA_MENU_ITEMS.map((item, i) => {
+          const on = selected === i;
+          return (
+            <motion.div
+              key={item.href}
+              style={{ marginRight: `${(i % 3) * 0.4}em`, fontSize: "clamp(26px, 4.6vw, 52px)" }}
+              initial={{ x: -80, opacity: 0, rotate: -10 }}
+              animate={{ x: 0, opacity: 1, rotate: on ? -4 : -2 }}
+              transition={{ delay: 0.2 + i * 0.04, type: "spring", stiffness: 520, damping: 22 }}
+            >
+              <Link href={item.href} onClick={onClose} onMouseEnter={() => select(i)} onFocus={() => select(i)} className="relative block outline-none">
+                {on && <span className="absolute -right-4 top-1/2 -translate-y-1/2 w-6 h-8 bg-[#2be0ff]" style={{ clipPath: "polygon(0 0, 100% 50%, 0 100%)" }} />}
+                <span className={cn("relative block transition-transform", on && "scale-110")}>
+                  <Ransom text={item.labels.p5.toUpperCase()} on="light" />
+                </span>
+              </Link>
+            </motion.div>
+          );
+        })}
+      </nav>
+
+      <motion.div className="absolute right-[4%] bottom-[5%] -rotate-3" initial={{ scale: 2.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.45, type: "spring", stiffness: 500, damping: 16 }}>
+        <span className="block bg-black px-3 py-1 border-[3px] border-white -skew-x-6 shadow-[6px_6px_0_#e5001b]">
+          <Ransom text="COMMAND" size="clamp(30px, 6.4vw, 80px)" />
+        </span>
+      </motion.div>
+      {level !== undefined && (
+        <p className="absolute left-[6%] bottom-[4%] text-white font-display italic text-[clamp(24px,4vw,44px)]" style={{ textShadow: "3px 3px 0 #000" }}>
+          LV {level}
+        </p>
+      )}
     </div>
   );
 }

@@ -21,13 +21,17 @@ function hash(text: string) {
   };
 }
 
-export default function Ransom({ text, className, size = "1em" }: { text: string; className?: string; size?: string }) {
+// "light" is for paper backgrounds (the P5 menu's white hand): no white-on-clear cutouts
+const LIGHT_LOOKS = LOOKS.map(look => (look.background === "transparent" ? { background: "transparent", color: "#0b0b0b" } : look));
+
+export default function Ransom({ text, className, size = "1em", on = "dark" }: { text: string; className?: string; size?: string; on?: "dark" | "light" }) {
   const rand = hash(text);
+  const looks = on === "light" ? LIGHT_LOOKS : LOOKS;
   return (
     <span className={cn("p-ransom", className)} style={{ fontSize: size }} aria-label={text} role="img">
       {Array.from(text).map((ch, i) => {
         if (ch === " ") return <span key={i} aria-hidden style={{ width: "0.3em", padding: 0 }} />;
-        const look = LOOKS[Math.floor(rand() * LOOKS.length)];
+        const look = looks[Math.floor(rand() * looks.length)];
         const face = FACES[Math.floor(rand() * FACES.length)];
         const rotate = (rand() - 0.5) * 16;
         const scale = 0.85 + rand() * 0.4;

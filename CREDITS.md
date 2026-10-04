@@ -6,16 +6,23 @@ character, logo, name and piece of art from those games belongs to **ATLUS / SEG
 listed below were collected for this showcase only. Check each licence before reusing them or
 publishing this repository.
 
-## Character art (`public/persona/`)
+## Pause-menu art (`public/persona/`)
 
 | File | What | Source | Changes |
 |---|---|---|---|
-| `p3-makoto.webp` | Makoto Yuki, *Persona 3 Reload* official character render | Official site, [p3re.jp/en](https://p3re.jp/en/) (`img_character1_….webp`) © ATLUS / SEGA | Trimmed, rotated 180° for the upside-down underwater pause menu, resized, WebP |
+| `p3-menu.mp4` | *Persona 3 Reload* pause-menu background loop (Makoto upside down under water), desktop | From the official P3R website, via [deltea/p3r-pause-menu](https://github.com/deltea/p3r-pause-menu) (`static/background.mp4`) © ATLUS / SEGA | None |
+| `p3-menu-mobile.mp4` | The same loop, smaller (306 KB) for phones | [Cikibber/Cikibber.github.io](https://github.com/Cikibber/Cikibber.github.io) (`assets/mobile/bg-loop.mp4`) © ATLUS / SEGA | None |
+| `p3-menu-poster.webp` | First frame, shown while the video loads | Same repo (`assets/mobile/bg-loop.jpg`) | Converted to WebP |
+| `p3-menu-move.wav` | The menu's cursor sound | [deltea/p3r-pause-menu](https://github.com/deltea/p3r-pause-menu) (`static/sfx/navigation.wav`) © ATLUS / SEGA | None |
 | `p4-yu.webp` | Yu Narukami, *Persona 4* protagonist render | [Megami Tensei Wiki – File:P4 Protagonist.png](https://megamitensei.fandom.com/wiki/File:P4_Protagonist.png) (uploaded by VeskScans) © ATLUS | Trimmed, resized, WebP |
 | `p5-joker.webp` | Joker, *Persona 5* Phantom Thief render | [Megami Tensei Wiki – File:Phantom render.png](https://megamitensei.fandom.com/wiki/File:Phantom_render.png) (uploaded by AzureJay) © ATLUS | Trimmed, WebP |
 
-The pause-menu layouts are recreated in HTML and CSS (`src/components/persona/persona-pause-menu.tsx`).
-The P3 one follows *Persona 3 Reload*'s menu, where Makoto sinks upside down through water.
+The menus are recreated in HTML and CSS (`src/components/persona/persona-pause-menu.tsx`):
+
+- **P3:** follows deltea's recreation: the fanned rotations, the cyan option colours, the white-and-pink slash cursor that turns the selected word red, the "Command" caption and the side numeral.
+- **P4 and P5:** follow the games' menu screens (the yellow and purple P4 menu with serif options; P5's white hand, ransom-note options, Joker and "COMMAND").
+
+None of these repos state a licence.
 
 ## Fonts (`public/fonts/persona/`)
 
@@ -25,10 +32,11 @@ The P3 one follows *Persona 3 Reload*'s menu, where Makoto sinks upside down thr
 | `p3-hud.ttf` | BM Space | BitmapMania, via [dafont](https://www.dafont.com/bm-space.font) | Freeware: personal and homepage use; no bundling into commercial products without permission. *Persona 3 Reload* uses it in its HUD |
 
 These lookalikes come from Google Fonts under the SIL Open Font License, loaded only on Persona days: Anton,
-Oswald, Jost, M PLUS Rounded 1c, Archivo Black and Permanent Marker.
+Oswald, Jost, M PLUS Rounded 1c, M PLUS 1p, DM Serif Display, Archivo Black and Permanent Marker.
 
 The games' own commercial faces, Fontworks **Skip Std B** (P4/P3R) and **FOT-NewRodin Pro** /
-**FOT-Rodin Pro** (P3R/P5), aren't bundled. `src/app/persona.css` uses them if they're installed on
+**FOT-Rodin Pro** (P3R/P5, including the Rodin Pro UB of the P3R menu), aren't bundled, even though
+some GitHub recreations include them. `src/app/persona.css` uses them if they're installed on
 the device ([Fontworks](https://en.fontworks.co.jp/)). The font list for each game comes from
 [Game Font Library](https://www.gamefontlibrary.com/games/persona-3-reload).
 

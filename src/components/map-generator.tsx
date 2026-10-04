@@ -1378,9 +1378,10 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0, variant
 
         <div className="flex flex-wrap gap-1.5 justify-center">
           {mapConfig.nextStops.map((stop, i) => (
-            <div key={i} className="flex-[0_0_calc(33.33%-6px)] py-2.5 px-1 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-colors group/stop text-center min-w-0">
-              <span className="text-caption opacity-70 group-hover/stop:opacity-100 transition-opacity mb-0.5">{BIOMES[stop.biome].icon}</span>
-              <h5 className="text-tiny font-mono font-semibold uppercase text-foreground/90 tracking-[0.12em] leading-tight w-full px-1 whitespace-normal break-words">{stop.name}</h5>
+            // Phones fit all five in one row as icons; the names show from sm up
+            <div key={i} title={stop.name} aria-label={stop.name} className="flex-[0_0_calc(20%-6px)] sm:flex-[0_0_calc(33.33%-6px)] py-2.5 px-1 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-colors group/stop text-center min-w-0">
+              <span className="text-base sm:text-caption opacity-80 sm:opacity-70 group-hover/stop:opacity-100 transition-opacity sm:mb-0.5" aria-hidden>{BIOMES[stop.biome].icon}</span>
+              <h5 className="max-sm:hidden text-tiny font-mono font-semibold uppercase text-foreground/90 tracking-[0.12em] leading-tight w-full px-1 whitespace-normal break-words">{stop.name}</h5>
             </div>
           ))}
         </div>

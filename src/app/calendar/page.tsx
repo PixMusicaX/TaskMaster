@@ -18,7 +18,7 @@ import TabularViewModal from "@/components/TabularViewModal";
 import type { EventRow, MoodEntry, Profile, ReliefRow } from "@/lib/types";
 import { Search } from "lucide-react";
 import { PERSONA_NAMES, scheduledPersona } from "@/lib/persona";
-import { PersonaDayBadge, PersonaDayLegend } from "@/components/persona/persona-day-badge";
+import { PersonaDayBadge } from "@/components/persona/persona-day-badge";
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -548,6 +548,8 @@ export default function CalendarPage() {
                         onClick={() => setSelectedDate(day)}
                         className={cn(
                           "relative p-2 border-r border-b border-tm-blue-gray/5 text-left transition-all flex flex-col gap-1 min-h-[100px]",
+                          // A Persona day dresses the whole box in that game's look
+                          persona && `p-day p-day-${persona}`,
                           !isCurrentMonth ? "text-tm-blue-gray/20 bg-tm-blue-gray/5" : "text-foreground",
                           isSelected ? "bg-tm-yellow/10" : "hover:bg-tm-yellow/5",
                           dayMood === "good" && "bg-tm-yellow/[0.03]",
@@ -562,7 +564,7 @@ export default function CalendarPage() {
                             )}>
                               {format(day, "d")}
                             </span>
-                            {persona && <PersonaDayBadge style={persona} size={12} className={cn(!isCurrentMonth && "opacity-40")} />}
+                            {persona && <PersonaDayBadge style={persona} size={12} className={cn("relative", !isCurrentMonth && "opacity-40")} />}
                           </span>
                           {dayMood && (
                             <span className="text-sm opacity-80 group-hover:opacity-100 transition-all">
@@ -598,7 +600,6 @@ export default function CalendarPage() {
                     );
                   })}
                 </motion.div>
-                <PersonaDayLegend className="px-4 py-3 border-t border-tm-blue-gray/10" />
               </div>
             </GlassCard>
 
@@ -719,7 +720,6 @@ export default function CalendarPage() {
                   );
                 })}
               </motion.div>
-              <PersonaDayLegend className="pt-3 border-t border-tm-blue-gray/10 justify-center" />
             </GlassCard>
 
             <div className="space-y-6 flex flex-col">
