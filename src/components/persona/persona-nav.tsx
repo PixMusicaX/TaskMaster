@@ -41,7 +41,7 @@ export default function PersonaNav({ style }: { style: PersonaStyle }) {
   return (
     <>
       <div className="h-14 sm:h-16" aria-hidden />
-      <div className="fixed top-0 inset-x-0 z-[100] pointer-events-none flex items-start justify-between px-3 sm:px-5 pt-[max(0.6rem,env(safe-area-inset-top))]">
+      <div className="fixed top-0 inset-x-0 z-[100] pointer-events-none flex items-start justify-between gap-2 px-3 sm:px-5 pt-[max(0.6rem,env(safe-area-inset-top))]">
         <motion.div
           className="pointer-events-auto"
           initial={{ opacity: 0, x: -30 }}
@@ -58,7 +58,8 @@ export default function PersonaNav({ style }: { style: PersonaStyle }) {
             className={cn("flex items-center gap-2", menuTone(style))}
           >
             <Menu size={18} strokeWidth={2.8} />
-            <span className="leading-none">{style === "p4" ? "Menu" : "MENU"}</span>
+            {/* P4's date block is the widest: on narrow phones the word gives way to the level beside it */}
+            <span className={cn("leading-none", style === "p4" && profile && "max-[440px]:hidden")}>{style === "p4" ? "Menu" : "MENU"}</span>
             {profile && (
               <span className={cn("flex flex-col gap-0.5 leading-none", style === "p3" && "pl-2 border-l border-white/50")}>
                 <span className="text-[11px]">LV {profile.level}</span>

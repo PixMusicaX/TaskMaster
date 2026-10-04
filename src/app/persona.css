@@ -511,7 +511,7 @@ html[data-persona="p3"] ::-webkit-scrollbar-thumb { background: var(--p3-edge); 
   .p-static-jitter, .p-blink, .p3-moon-pulse { animation: none !important; }
 }
 
-/* P4 saga: the picture is clipped to the TV screen, so Chronicle's fan of items (which sits out
-   to the right of the ring on wide screens) gives way to the one-line tally under the set */
-html[data-persona="p4"] [data-saga="chron-items"] { display: none; }
-html[data-persona="p4"] [data-saga="chron-entry"] > p.truncate { display: block; }
+/* P4 and P5 sagas: the picture is clipped to the TV or phone screen, so Chronicle's fan of items
+   (which sits out to the right of the ring on wide screens) gives way to the one-line tally */
+html:is([data-persona="p4"], [data-persona="p5"]) [data-saga="chron-items"] { display: none; }
+html:is([data-persona="p4"], [data-persona="p5"]) [data-saga="chron-entry"] > p.truncate { display: block; }

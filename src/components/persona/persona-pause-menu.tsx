@@ -255,8 +255,8 @@ const P4_DESCRIPTIONS = ["Head home", "View Calendar", "Open your notebook", "Vi
 // Left, top and type size per row (percent of the stage, cqh), and which part of the picture it
 // sits on: the yellow field, the edge of the band, or the purple band
 const P4_ROWS = [
-  { left: 30, top: 15, fs: 9.2, zone: "field" },
-  { left: 33.5, top: 26, fs: 7, zone: "field" },
+  { left: 29.5, top: 12.5, fs: 9.2, zone: "field" },
+  { left: 33.5, top: 26.5, fs: 7, zone: "field" },
   { left: 36.5, top: 35.5, fs: 7.4, zone: "edge" },
   { left: 40, top: 45.5, fs: 8, zone: "band" },
   { left: 43.5, top: 56, fs: 8.6, zone: "band" },

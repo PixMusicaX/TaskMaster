@@ -153,35 +153,9 @@ export function subscribePersonaSetting(cb: () => void) {
   return () => window.removeEventListener(PERSONA_SETTING_EVENT, cb);
 }
 
-// TEMPORARY: a preview switch in About → Settings that forces a style on any day, in production
-// too (unlike the dev override), for trying the looks on a phone. Remove with its settings row.
-export const PERSONA_PREVIEW_KEY = "tm_persona_preview";
-
-export function getPersonaPreview(): DevPersonaOverride {
-  if (typeof window === "undefined") return null;
-  try {
-    const value = localStorage.getItem(PERSONA_PREVIEW_KEY);
-    return value === "p3" || value === "p4" || value === "p5" || value === "off" ? value : null;
-  } catch {
-    return null;
-  }
-}
-
-export function setPersonaPreview(value: DevPersonaOverride) {
-  try {
-    if (value === null) localStorage.removeItem(PERSONA_PREVIEW_KEY);
-    else localStorage.setItem(PERSONA_PREVIEW_KEY, value);
-    // Replay the day's intro for the previewed style
-    localStorage.removeItem("persona_intro_seen");
-  } catch {
-    // Storage blocked: the preview just won't persist
-  }
-  window.dispatchEvent(new Event(PERSONA_SETTING_EVENT));
-}
-
-// Today's style: the dev override wins, then the preview, then the player's switch, then the calendar
+// Today's style: the dev override wins, then the player's switch, then the calendar
 export function personaForToday(now = new Date()): PersonaStyle | null {
-  const forced = getDevPersonaOverride() ?? getPersonaPreview();
+  const forced = getDevPersonaOverride();
   if (forced === "off") return null;
   if (forced) return forced;
   return isPersonaOff() ? null : scheduledPersona(now);
@@ -198,7 +172,7 @@ export function nextPersonaDay(now = new Date()): { date: Date; style: PersonaSt
 }
 
 // The style the AI should speak in (server side). The client sends what it is showing, which
-// respects the player's switch and the preview: a style, or null for a normal day. When nothing
+// respects the player's switch: a style, or null for a normal day. When nothing
 // is sent, the calendar decides from the client's date ("yyyy-MM-dd").
 export function resolvePersonaStyle(sent: unknown, today: string): PersonaStyle | null {
   if (sent === "p3" || sent === "p4" || sent === "p5") return sent;

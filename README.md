@@ -15,6 +15,7 @@ Built with a stunning glass-morphism aesthetic and powered by AI, TaskMaster hel
 - **🏆 Hall of Fame**: Visualize your monthly progress with a seasonal ranking system.
 - **📊 Detailed Analytics**: Character radars and stress metrics to visualize your journey.
 - **🪐 Growth Orbit**: The home page's analytics play as one pinned scroll sequence inside a single orbit: standing, era, season pace, character stats, stress metrics, the tavern, future sight, chronicle, the map and the Taskmaster.
+- **🎭 Persona Days**: Six random days a month, the whole app turns into Persona 3, 4 or 5: its own look, pause menu, map, music, AI voice and Growth Orbit animations.
 - **📁 Archive System**: Robust tabular archives for notes and calendar events with a 7-year storage reach.
 
 ---
@@ -71,6 +72,13 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) to see your TaskMaster dashboard.
 
+### 6. Checks
+```bash
+npm run lint
+npm run typecheck
+npm test
+```
+
 ---
 
 ## 🪐 The Growth Orbit
@@ -83,6 +91,23 @@ Below today's cards, the home page pins a single orbit and plays the analytics t
 - **Reduced motion**: with the system's reduced-motion setting on, nothing pins or animates and the analytics appear as plain cards instead.
 
 The scroll script lives in `src/components/home/growth-saga.tsx`, with each later scene in its own `saga-*.tsx` file beside it. Everything in it animates by transform or opacity only. Avoid animating anything screen-sized there: each animated element gets its own GPU layer, and large ones can make mobile Safari kill the page.
+
+---
+
+## 🎭 Persona Days
+
+Each month, six calendar days are picked at random (two each for Persona 3, 4 and 5). On those days the app takes that game's look, whatever your rank or era; every other day the normal design is untouched. The days are marked on the calendar, are the same on every device, and never fall next to each other.
+
+- **Look**: Persona 3 follows the clock (blue by day, the green Dark Hour at night), Persona 4 is always light and Persona 5 always dark.
+- **Navigation**: the navbars give way to a floating Menu button (or the `M` key) and the in-game date. The menu is that game's pause screen, with every page on it.
+- **Map and music**: the realm map becomes Tartarus, the Midnight Channel or Mementos. Its music plays from `public/persona/p3.mp3`, `p4.mp3` and `p5.mp3`; the tracks aren't included, so add your own.
+- **AI voice**: missions, preparation tips, relief suggestions and the Taskmaster's answers are written in that game's style.
+- **Growth Orbit**: the orbit plays inside that game's device. Persona 3 is a disc in a music player, with earphones, a track number and an equalizer. Persona 4 is the picture on a TV: each scene is a channel, changed with the remote through static, a white screen and colour bars. Persona 5 is a smartphone that is shaken, spun or tossed while the scene is swiped away in an app switcher.
+- **Turning it off**: About → Settings → "Persona days".
+
+The schedule and helpers are in `src/lib/persona.ts`, the styles in `src/app/persona.css`, the menu and chrome in `src/components/persona/`, and the orbit animations in `src/components/home/saga-p3.tsx`, `saga-p4.tsx` and `saga-p5.tsx`. In development, the dev tools have a "Persona day" row that forces a style on any day.
+
+Fonts, images and video borrowed from the games and from fan recreations are listed in [CREDITS.md](CREDITS.md). They are there for a personal, non-commercial showcase; the MIT license below covers this project's own code only.
 
 ---
 

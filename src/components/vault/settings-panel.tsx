@@ -9,7 +9,7 @@ import { SPRING } from "@/lib/motion";
 import { isMuted, setMuted, subscribeMuted } from "@/lib/sfx";
 import GlassCard from "@/components/glass-card";
 import VaultSection from "./vault-section";
-import { PERSONA_NAMES, getPersonaPreview, isPersonaOff, nextPersonaDay, setPersonaOff, setPersonaPreview, subscribePersonaSetting, type DevPersonaOverride } from "@/lib/persona";
+import { PERSONA_NAMES, isPersonaOff, nextPersonaDay, setPersonaOff, subscribePersonaSetting } from "@/lib/persona";
 import { usePersona } from "@/components/theme-provider";
 
 function Switch({ on, disabled, onClick, label }: { on: boolean; disabled?: boolean; onClick: () => void; label: string }) {
@@ -62,14 +62,6 @@ function SettingRow({ icon: Icon, title, description, status, children }: {
   );
 }
 
-const PREVIEW_OPTIONS: { value: DevPersonaOverride; label: string }[] = [
-  { value: null, label: "Auto" },
-  { value: "off", label: "Off" },
-  { value: "p3", label: "P3" },
-  { value: "p4", label: "P4" },
-  { value: "p5", label: "P5" },
-];
-
 interface SettingsPanelProps {
   notificationPermission: string;
   locationPermission: string;
@@ -81,7 +73,6 @@ export default function SettingsPanel({ notificationPermission, locationPermissi
   const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
   const personaOff = useSyncExternalStore(subscribePersonaSetting, isPersonaOff, () => false);
   const personaToday = usePersona();
-  const preview = useSyncExternalStore(subscribePersonaSetting, getPersonaPreview, () => null);
   const next = nextPersonaDay();
   const personaStatus = personaOff
     ? "Off on this device"
@@ -104,25 +95,6 @@ export default function SettingsPanel({ notificationPermission, locationPermissi
         >
           <Switch on={!personaOff} onClick={() => setPersonaOff(!personaOff)} label="Persona days" />
         </SettingRow>
-        {/* TEMPORARY: preview any Persona style on any day (see setPersonaPreview) */}
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:pl-14">
-          <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">Preview</span>
-          <div className="flex flex-wrap gap-1" role="group" aria-label="Preview a Persona style">
-            {PREVIEW_OPTIONS.map(o => (
-              <button
-                key={o.label}
-                onClick={() => setPersonaPreview(o.value)}
-                aria-pressed={preview === o.value}
-                className={cn(
-                  "px-2 sm:px-2.5 py-1.5 rounded-lg text-caption font-mono font-semibold uppercase transition-colors",
-                  preview === o.value ? "bg-tm-yellow text-[var(--tm-on-accent)]" : "bg-tm-blue-gray/10 text-tm-blue-gray hover:bg-tm-blue-gray/20"
-                )}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </div>
         <div className="h-px bg-tm-blue-gray/10" />
         <SettingRow
           icon={Bell}

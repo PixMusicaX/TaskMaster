@@ -32,7 +32,7 @@ function Flower({ color }: { color: string }) {
 // Behind the set: the rainbow, the flowers and the remote
 export function P4Stage() {
   return (
-    <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none motion-reduce:hidden">
+    <div aria-hidden className="absolute inset-x-0 top-0 bottom-[var(--lift)] overflow-hidden pointer-events-none motion-reduce:hidden">
       {/* The rainbow: seven arcs over the set, drawn left to right on every channel change */}
       <svg viewBox="0 0 200 110" className="absolute left-1/2 top-1/2 w-[150%] sm:w-[110%] max-w-[1100px] -translate-x-1/2 -translate-y-[62%] overflow-visible" fill="none">
         {RAINBOW.map((color, i) => (
@@ -59,7 +59,7 @@ export function P4Stage() {
       ))}
 
       {/* The remote, to the left of the set, with its infrared pulses */}
-      <div data-saga="p4-remote" className="absolute top-1/2 w-[clamp(26px,7.5vw,46px)] aspect-[1/2.7] -translate-y-[30%] origin-bottom" style={{ left: "calc(50% - min(43vw, 31svh, 400px) * 0.895 - clamp(26px, 7.5vw, 46px) - 1.5vw)" }}>
+      <div data-saga="p4-remote" className="absolute top-1/2 w-[clamp(26px,7.5vw,46px)] aspect-[1/2.7] -translate-y-[30%] origin-bottom" style={{ left: "calc(50% - min(62vw, 40svh, 400px) * var(--z) * 0.895 - clamp(26px, 7.5vw, 46px) - 1.5vw)" }}>
         <div className="relative h-full w-full bg-[#181512] border-2 border-[#fffdf2] flex flex-col items-center gap-[6%] pt-[14%]" style={{ borderRadius: "22%", boxShadow: "0.25em 0.25em 0 #ef5f00" }}>
           <span data-saga="p4-led" className="w-[22%] aspect-square bg-[#ef3b2c]" style={{ borderRadius: "50%" }} />
           <span data-saga="p4-thumb" className="w-[54%] aspect-square bg-[#ffe100]" style={{ borderRadius: "50%" }} />
