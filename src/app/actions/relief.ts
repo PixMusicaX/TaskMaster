@@ -5,6 +5,8 @@ import { reliefRecommendation, note } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { format, subDays } from "date-fns";
 import { getReliefRecommendationPrompt } from "@/lib/prompts";
+import { isRepeat, rollReliefBrief } from "@/lib/relief-dice";
+import { resolvePersonaStyle } from "@/lib/persona";
 import { invalidateSeasonSnapshots } from "./gamification";
 import { getEventsByDateRange } from "./events";
 import { safeGenerateContent } from "@/lib/ai-utils";
@@ -13,13 +15,23 @@ import { eq, desc, gte, lte, lt, ne, asc, and, isNotNull } from "drizzle-orm";
 
 const GEMINI_API_KEY = process.env.gemini_key;
 
+// How far back the Tavern remembers what it has already suggested
+const RELIEF_MEMORY_DAYS = 120;
+
+type ReliefPick = { title: string; type: string; description: string };
+
+// `persona` is the Persona style the client is showing (null for a normal day; left out, the
+// calendar decides). `exclude` lists titles to treat as already suggested (a regenerate passes
+// the picks it just threw away).
 export async function getReliefRecommendation(
-  lat?: number, 
-  lon?: number, 
+  lat?: number,
+  lon?: number,
   clientDateStr?: string,
   cachedLocation?: string,
   cachedWeather?: string,
-  cachedTemp?: string
+  cachedTemp?: string,
+  persona?: string | null,
+  exclude: string[] = []
 ) {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
 
@@ -93,34 +105,61 @@ export async function getReliefRecommendation(
           const clientNow = new Date(today);
           const twoWeeksAgo = subDays(clientNow, 14);
           const twoWeeksAgoStr = format(twoWeeksAgo, "yyyy-MM-dd");
+          // Mood comes from the last two weeks; the do-not-repeat list reaches back four months
           const [taskData, notesData, history] = await Promise.all([
             getEventsByDateRange(twoWeeksAgo, clientNow),
             db.select().from(note).where(gte(note.date, twoWeeksAgoStr)),
-            getReliefHistory(twoWeeksAgoStr)
+            getReliefHistory(format(subDays(clientNow, RELIEF_MEMORY_DAYS), "yyyy-MM-dd"))
           ]);
 
-          const prompt = getReliefRecommendationPrompt({
-            ...weatherInfo,
-            recentNotes: notesData.map((n) => parseNoteLines(n.content)?.map(p => p.text).join(" ") ?? n.content),
-            recentTasks: taskData.map((t) => ({
-              title: t.title,
-              completed: t.completed
-            })),
-            history: history.flatMap((r) => [
+          const past = [
+            ...exclude.map(title => ({ title, type: "just replaced" as string | null })),
+            ...history.flatMap((r) => [
               { title: r.title, type: r.type },
               ...((r.alternatives as ReliefAlternative[] | null) || []).map((alt) => ({ title: alt.title, type: alt.type }))
             ]),
-            today
-          });
+          ].filter(h => !h.title.includes("[OFF]"));
+          const pastTitles = past.map(h => h.title);
+          // The model is bad at dice, so today's types and angles are rolled here
+          const brief = rollReliefBrief(history.map(r => r.type));
 
-          const content = await safeGenerateContent(prompt, {
-            model: "gemini-3.1-flash-lite",
-            responseMimeType: "application/json"
-          });
+          const ask = async (rejected: string[]) => {
+            const content = await safeGenerateContent(getReliefRecommendationPrompt({
+              ...weatherInfo,
+              recentNotes: notesData.map((n) => parseNoteLines(n.content)?.map(p => p.text).join(" ") ?? n.content),
+              recentTasks: taskData.map((t) => ({
+                title: t.title,
+                completed: t.completed
+              })),
+              history: past,
+              today,
+              brief,
+              rejected,
+              persona: resolvePersonaStyle(persona, today),
+            }), {
+              model: "gemini-3.1-flash-lite",
+              responseMimeType: "application/json",
+              temperature: 1.15,
+            });
+            const data = JSON.parse(content) as { recommendations: ReliefPick[]; alternatives?: ReliefAlternative[] };
+            return { main: data.recommendations[0], alternatives: data.alternatives || [] };
+          };
 
-          if (content) {
-            const data = JSON.parse(content);
-            const main = data.recommendations[0];
+          let picks = await ask([]);
+          // It still repeats now and then: name the repeats and ask once more
+          const repeats = [picks.main, ...picks.alternatives].filter(p => isRepeat(p.title, pastTitles)).map(p => p.title);
+          if (repeats.length) {
+            try {
+              const second = await ask(repeats);
+              const stillRepeats = [second.main, ...second.alternatives].filter(p => isRepeat(p.title, pastTitles)).length;
+              if (stillRepeats < repeats.length) picks = second;
+            } catch (retryError) {
+              console.error("Relief retry failed, keeping the first answer:", retryError);
+            }
+          }
+
+          if (picks.main) {
+            const main = picks.main;
             const [newRec] = await db.insert(reliefRecommendation).values({
               date: today,
               title: main.title,
@@ -129,7 +168,7 @@ export async function getReliefRecommendation(
               location: weatherInfo.location,
               weather: weatherInfo.weather,
               temp: weatherInfo.temp.split('°')[0], // Store only the max temp for display
-              alternatives: data.alternatives || [],
+              alternatives: picks.alternatives,
               xpReward: 10,
               stat: "charisma"
             }).returning();
@@ -241,12 +280,16 @@ export async function regenerateReliefRecommendation(
   clientDateStr?: string,
   cachedLocation?: string,
   cachedWeather?: string,
-  cachedTemp?: string
+  cachedTemp?: string,
+  persona?: string | null
 ) {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   try {
-    await db.delete(reliefRecommendation).where(eq(reliefRecommendation.date, today));
-    return await getReliefRecommendation(lat, lon, clientDateStr, cachedLocation, cachedWeather, cachedTemp);
+    // The picks being thrown away must not come straight back
+    const discarded = await db.delete(reliefRecommendation).where(eq(reliefRecommendation.date, today))
+      .returning({ title: reliefRecommendation.title, alternatives: reliefRecommendation.alternatives });
+    const exclude = discarded.flatMap(r => [r.title, ...((r.alternatives as ReliefAlternative[] | null) || []).map(a => a.title)]);
+    return await getReliefRecommendation(lat, lon, clientDateStr, cachedLocation, cachedWeather, cachedTemp, persona, exclude);
   } catch {
     return null;
   }

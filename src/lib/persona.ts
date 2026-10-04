@@ -197,6 +197,17 @@ export function nextPersonaDay(now = new Date()): { date: Date; style: PersonaSt
   return null;
 }
 
+// The style the AI should speak in (server side). The client sends what it is showing, which
+// respects the player's switch and the preview: a style, or null for a normal day. When nothing
+// is sent, the calendar decides from the client's date ("yyyy-MM-dd").
+export function resolvePersonaStyle(sent: unknown, today: string): PersonaStyle | null {
+  if (sent === "p3" || sent === "p4" || sent === "p5") return sent;
+  if (sent === null) return null;
+  const [y, m, d] = today.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return scheduledPersona(new Date(y, m - 1, d));
+}
+
 // ---- In-game calendar flavour ----
 
 // The time-of-day phases the games show under the date

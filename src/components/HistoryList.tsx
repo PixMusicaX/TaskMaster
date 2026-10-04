@@ -322,8 +322,11 @@ export default function HistoryList() {
 
           {groupByMonth(data).map(group => (
             <section key={group.key} className="relative">
-              <div className="sticky top-20 z-20 py-2 pl-10 sm:pl-12">
-                <span className="inline-block px-3 py-1 rounded-full bg-background/85 backdrop-blur-md border border-tm-blue-gray/15 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">
+              {/* Mobile Safari repaints a sticky element with backdrop blur a frame behind the scroll,
+                  which shows as the pill vibrating. So it gets its own compositor layer, and on
+                  phones a near-solid background instead of the blur. */}
+              <div className="sticky top-20 z-20 py-2 pl-10 sm:pl-12 [transform:translateZ(0)]">
+                <span className="inline-block px-3 py-1 rounded-full bg-background/95 sm:bg-background/85 sm:backdrop-blur-md border border-tm-blue-gray/15 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">
                   {group.label}
                 </span>
               </div>

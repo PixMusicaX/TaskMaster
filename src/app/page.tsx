@@ -16,6 +16,7 @@ import { getDailyQuote } from "@/app/actions/daily-quote";
 import { getReliefRecommendation, toggleReliefRecommendation, regenerateReliefRecommendation } from "@/app/actions/relief";
 import { getPreparationTip, togglePreparationTip, regeneratePreparationTip } from "@/app/actions/preparation";
 import { getSpecialDayColors } from "@/lib/utils";
+import { personaForToday } from "@/lib/persona";
 import type { EventRow, HabitWithLogs, NoteRow, PrepTipRow, Profile, Relief, SeasonPace, SmartMissionRow } from "@/lib/types";
 import TaskmasterDialog from "@/components/taskmaster-dialog";
 import DailyMissionsCard from "@/components/home/daily-missions-card";
@@ -42,7 +43,8 @@ function fetchReliefWithLocation(fetcher: ReliefFetcher, todayStr: string): Prom
     const cachedTemp = localStorage.getItem('tm_lastTemp') || undefined;
     const isCached = (!lat || !lon) && !!cachedLocation;
 
-    const relief = await fetcher(lat, lon, todayStr, cachedLocation, cachedWeather, cachedTemp);
+    // The Persona style on screen today (null on a normal day), so the Tavern speaks in its voice
+    const relief = await fetcher(lat, lon, todayStr, cachedLocation, cachedWeather, cachedTemp, personaForToday());
 
     if (lat && lon && relief && relief.location !== "No location found") {
       localStorage.setItem('tm_lastLocation', relief.location || "");
@@ -229,8 +231,8 @@ export default function Home() {
       setAiLoading(true);
       try {
         const [smartData, prepData, quoteData] = await Promise.all([
-          getSmartMission(todayStr),
-          getPreparationTip(todayStr),
+          getSmartMission(todayStr, personaForToday()),
+          getPreparationTip(todayStr, personaForToday()),
           getDailyQuote(todayStr)
         ]);
         setSmartMission(smartData);
@@ -308,7 +310,7 @@ export default function Home() {
     setSmartMission({ ...smartMission, completed: !smartMission.completed });
     try {
       await toggleSmartMission(smartMission.id, !smartMission.completed);
-      const [data] = await Promise.all([getSmartMission(todayStr), refreshProfile()]);
+      const [data] = await Promise.all([getSmartMission(todayStr, personaForToday()), refreshProfile()]);
       setSmartMission(data);
     } finally {
       setUpdatingSmart(false);
@@ -330,7 +332,7 @@ export default function Home() {
 
   async function handleRegeneratePrep() {
     setPrepLoading(true);
-    setPrepTip((await regeneratePreparationTip(todayStr)) ?? null);
+    setPrepTip((await regeneratePreparationTip(todayStr, personaForToday())) ?? null);
     setPrepLoading(false);
   }
 
@@ -351,8 +353,8 @@ export default function Home() {
 
   async function handleRegenerate() {
     setAiLoading(true);
-    await regenerateSmartMission(todayStr);
-    const [data, quoteData] = await Promise.all([getSmartMission(todayStr), getDailyQuote(todayStr)]);
+    await regenerateSmartMission(todayStr, personaForToday());
+    const [data, quoteData] = await Promise.all([getSmartMission(todayStr, personaForToday()), getDailyQuote(todayStr)]);
     setSmartMission(data);
     setDailyQuote(quoteData);
     setAiLoading(false);

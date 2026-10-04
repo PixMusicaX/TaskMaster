@@ -22,6 +22,9 @@ import { AskDetails, AskEmblem, AskTaskmasterButton, AskTitle } from "./saga-ask
 import { MapDetails, MapEmblem, MapTitle } from "./saga-map-scene";
 import { TavernDetails, TavernEmblem, TavernTitle, type TavernProps } from "./saga-tavern-scene";
 import { METER_MAX_XP, meterScale, raceGoal } from "./season-pace-card";
+import { P3DiscBack, P3Stage, addP3Script } from "./saga-p3";
+import { P4Stage, P4TvBack, P4TvFront, addP4Script } from "./saga-p4";
+import { P5AppCard, P5PhoneBack, P5PhoneFront, P5Stage, addP5Script } from "./saga-p5";
 
 const RANKS = RPG_TITLES.length;
 
@@ -235,7 +238,13 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   const dialRef = useRef<SVGSVGElement>(null);
   const dialDirection = useRef(1);
   const levelRingTurns = useRef(false);
-  const { rank: savedRank, era } = useTheme();
+  const { rank: savedRank, era, persona } = useTheme();
+  // Persona 3 days: the saga plays on the music player (see saga-p3.tsx)
+  const p3 = persona === "p3" && !reduced;
+  // Persona 4 days: it plays on the TV, and the scenes are channels (see saga-p4.tsx)
+  const p4 = persona === "p4" && !reduced;
+  // Persona 5 days: it plays on the smartphone, and the scenes are apps (see saga-p5.tsx)
+  const p5 = persona === "p5" && !reduced;
   const standing = useEraStanding();
   // Index into the scenes
   const [scene, setScene] = useState(0);
@@ -447,6 +456,13 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         // Nothing moves in the tail; this only makes the script as long as the scroll
         .add(pad, { value: 1, duration: 1 }, length - 1);
 
+      // Persona 3 days: the music player's own moves, on the same script
+      if (p3) addP3Script(timeline, froms);
+      // Persona 4 days: the TV's channel changes
+      if (p4) addP4Script(timeline, froms);
+      // Persona 5 days: the smartphone's app switches
+      if (p5) addP5Script(timeline, froms);
+
       all("grid").forEach((grid, i) => {
         timeline.add(grid, { points: [STAT_GRID[i], MOOD_GRID[i]], duration: 30, ease: "inOut(3)" }, MOOD_AT);
       });
@@ -500,7 +516,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       timeline.seek(Math.min(length, Math.max(0, (-from / (el.offsetHeight - window.innerHeight / 2)) * length)));
     });
     return () => { scope.revert(); };
-  }, [progress, levelProgress, rank, xp, totalXP, statShape, moodShape, length, yearCount, markDays, era.id, meterFill, raceProgress, timeProgress, tickCount]);
+  }, [progress, levelProgress, rank, xp, totalXP, statShape, moodShape, length, yearCount, markDays, era.id, meterFill, raceProgress, timeProgress, tickCount, p3, p4, p5]);
 
   // The dial never stops: it drifts while the page is still and spins up with the scroll speed,
   // turning backwards through the moods. The two pace rings turn with it in their own planes, one
@@ -782,8 +798,11 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         {/* Three rows, the outer two equal, so the orbit's centre is the centre of the screen and
             lines up with the rank crest behind the page */}
         <div data-saga="layer" className="absolute inset-0 motion-reduce:static grid grid-cols-1 grid-rows-[1fr_auto_1fr] justify-items-center px-4 pointer-events-none">
+          {p3 && <P3Stage scene={scene} label={scenes[scene]?.label ?? ""} />}
+          {p4 && <P4Stage />}
+          {p5 && <P5Stage />}
           {/* Each scene's title sits above the orbit and its details below; every scene shares the two cells */}
-          <div className="row-start-1 self-end grid grid-cols-1 text-center w-full pb-12 motion-reduce:pb-6">
+          <div className={cn("row-start-1 self-end grid grid-cols-1 text-center w-full motion-reduce:pb-6 relative z-10", p4 ? "pb-[calc(min(43vw,31svh,400px)*0.47)]" : p5 ? "pb-[calc(min(46vw,23svh,400px)*0.56)]" : "pb-12")}>
             <p data-saga="standing" aria-label={rank} className={cn(TITLE, "col-start-1 row-start-1 self-end text-4xl sm:text-5xl")}>
               {rank.split("").map((letter, i) => (
                 <span key={i} aria-hidden data-saga="letter" className="inline-block">{letter}</span>
@@ -826,7 +845,24 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
             <AskTitle />
           </div>
 
-          <div data-saga="emblem" className="row-start-2 relative w-[min(62vw,40svh)] max-w-[400px] aspect-square">
+          {/* On a Persona 3 day the orbit is the disc in the music player: `device` is what the script
+              flips, tumbles and spins between tracks (in 3D, hence the perspective), and the disc's
+              engraved back shows mid-turn */}
+          {/* On a Persona 4 day it is the picture on the TV: the set is drawn round it (and sits a
+              little left, so set and control panel are centred together), and `device` is what
+              collapses, rolls and tears between channels */}
+          {/* On a Persona 5 day it is the screen of the smartphone: `rig` is the whole handset, which the
+              script shakes, spins and tosses, and `device` is the app that is swiped away */}
+          <div data-saga="rig" className={cn("row-start-2 relative", p4 && "-translate-x-[12.5%]")} style={p3 ? { perspective: 1100 } : undefined}>
+          {p4 && <P4TvBack scene={scene} count={scenes.length} />}
+          {p5 && <P5PhoneBack scene={scene} />}
+          {/* The picture stays inside the screen, whatever the channel change does to it */}
+          <div style={p4 ? { clipPath: "inset(-16% -21% round 9% / 10%)" } : p5 ? { clipPath: "inset(-38% -22% round 5% / 3.5%)" } : undefined}>
+          <div data-saga="device" className={cn("relative", p3 && "[transform-style:preserve-3d]")}>
+          {p3 && <P3DiscBack />}
+          {p5 && <P5AppCard />}
+          {/* On phones the P3 orbit is a little smaller, leaving the sides to the earbuds and the player */}
+          <div data-saga="emblem" className={cn("relative max-w-[400px] aspect-square", p3 ? "w-[min(50vw,40svh)] sm:w-[min(62vw,40svh)] [backface-visibility:hidden]" : p4 ? "w-[min(43vw,31svh)]" : p5 ? "w-[min(46vw,23svh)]" : "w-[min(62vw,40svh)]")}>
             {/* The dotted circle is the radar's circumcircle */}
             {/* The wrapper is the script's (the dial fades out for the pace scene); the turning is the loop's */}
             <div data-saga="dial-wrap" className="absolute inset-0">
@@ -1008,8 +1044,13 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
               </svg>
             </div>
           </div>
+          </div>
+          </div>
+          {p4 && <P4TvFront scene={scene} />}
+          {p5 && <P5PhoneFront />}
+          </div>
 
-          <div className="row-start-3 self-start grid grid-cols-1 text-center w-full pt-8 [@media(max-height:720px)]:pt-3 motion-reduce:pt-6">
+          <div className={cn("row-start-3 self-start grid grid-cols-1 text-center w-full motion-reduce:pt-6 relative z-10", p4 ? "pt-[calc(min(43vw,31svh,400px)*0.37)]" : p5 ? "pt-[calc(min(46vw,23svh,400px)*0.54)]" : "pt-8 [@media(max-height:720px)]:pt-3")}>
             <div data-saga="standing" className="col-start-1 row-start-1">
               <p data-saga="caption" className={cn(CAPTION, "flex flex-col items-center gap-1")}>
                 <span className={nextRank ? "text-foreground" : "text-tm-orange-dark"}>

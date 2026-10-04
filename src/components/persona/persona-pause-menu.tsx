@@ -106,7 +106,8 @@ function toolTone(style: PersonaStyle) {
   switch (style) {
     case "p5": return "[&>button]:bg-black [&>button]:text-white [&>button]:border-2 [&>button]:border-white [&>button]:-rotate-6";
     case "p4": return "[&>button]:bg-[#2a1533] [&>button]:text-[#ffe100] [&>button]:rounded-full";
-    default: return "[&>button]:text-white [&>button]:drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]";
+    // Makoto's shirt is white, so the buttons carry their own dark backing
+    default: return "[&>button]:text-white [&>button]:bg-black/55 [&>button]:rounded-full";
   }
 }
 
@@ -136,15 +137,22 @@ const P3_CURSOR = "polygon(4% 96%, 100% 4%, 84% 100%)";
 const P3_CURSOR_BACK = "polygon(-6% 100%, 104% 0%, 82% 98%)";
 
 function P3Menu({ selected, select, onClose, dark }: MenuProps & { dark: boolean }) {
-  const [src] = useState(() => (window.matchMedia("(min-width: 768px)").matches ? "/persona/p3-menu.mp4" : "/persona/p3-menu-mobile.mp4"));
+  // Phones: Makoto keeps the top of the screen and the list gets the deep water below him, spaced
+  // out and tilted less (the game's fanned list is drawn for widescreen)
+  const [narrow] = useState(() => !window.matchMedia("(min-width: 768px)").matches);
+  const src = narrow ? "/persona/p3-menu-mobile.mp4" : "/persona/p3-menu.mp4";
   // Day is the game's blue; the Dark Hour turns the water green
   const tint = dark ? "hue-rotate(-95deg) saturate(1.15) brightness(0.9)" : undefined;
   const colors = dark ? ["#5CFF9A", "#9DFFC4", "#C8FF8A"] : P3_COLORS;
+  const deep = dark ? "#031a0d" : "#031F64";
+  const mid = dark ? "#0a6a34" : "#0a35c8";
+  // A dark edge on every option, so it reads over the water and over Makoto alike
+  const edge = dark ? "#02240f" : "#04245e";
 
   return (
-    <div className="absolute inset-0 bg-[#015FCC]" style={{ fontFamily: "var(--font-p3-menu)" }}>
+    <div className="absolute inset-0" style={{ fontFamily: "var(--font-p3-menu)", background: `linear-gradient(180deg, ${mid} 0%, ${deep} 100%)` }}>
       <motion.video
-        className="absolute inset-0 h-full w-full object-cover object-[22%_center] md:object-left"
+        className="absolute inset-x-0 top-0 h-[56%] md:h-full w-full object-cover object-[20%_center] md:object-left max-md:[mask-image:linear-gradient(#000_62%,transparent)]"
         style={{ filter: tint }}
         src={src}
         poster="/persona/p3-menu-poster.webp"
@@ -159,23 +167,23 @@ function P3Menu({ selected, select, onClose, dark }: MenuProps & { dark: boolean
       />
 
       {/* The page number, huge and sideways down the left edge */}
-      <div className="absolute -left-[0.08em] top-0 h-full flex items-center pointer-events-none" aria-hidden>
-        <span className="block rotate-90 origin-center italic font-black text-[#808080]/80 leading-none tracking-[-0.12em]" style={{ fontSize: "min(34vh, 40vw)" }}>
+      <div className="absolute -left-[0.08em] top-0 h-[56%] md:h-full flex items-center pointer-events-none" aria-hidden>
+        <span className="block rotate-90 origin-center italic font-black text-[#808080]/80 leading-none tracking-[-0.12em]" style={{ fontSize: narrow ? "min(22vh, 34vw)" : "min(34vh, 40vw)" }}>
           0{selected + 1}
         </span>
       </div>
 
-      <nav className="absolute left-[24%] md:left-[40%] top-[64%] md:top-1/2 -translate-y-1/2 flex flex-col" aria-label="Menu">
+      <nav className="absolute left-[12%] top-[48%] md:left-[40%] md:top-1/2 md:-translate-y-1/2 flex flex-col" aria-label="Menu">
         {PERSONA_MENU_ITEMS.map((item, i) => {
           const on = selected === i;
           const l = P3_LAYOUT[i];
           return (
             <motion.div
               key={item.href}
-              className="relative -my-[0.04em]"
-              style={{ zIndex: on ? 5 : l.z, fontSize: "clamp(38px, 7.2vw, 84px)" }}
-              initial={{ x: -120, opacity: 0, rotate: l.rotate }}
-              animate={{ x: l.x * 0.6, opacity: 1, rotate: l.rotate }}
+              className="relative my-[0.16em] md:-my-[0.04em]"
+              style={{ zIndex: on ? 5 : l.z, fontSize: narrow ? "clamp(30px, 8.8vw, 44px)" : "clamp(38px, 7.2vw, 84px)" }}
+              initial={{ x: -120, opacity: 0, rotate: narrow ? l.rotate * 0.4 : l.rotate }}
+              animate={{ x: narrow ? i * 9 : l.x * 0.6, opacity: 1, rotate: narrow ? l.rotate * 0.4 : l.rotate }}
               transition={{ delay: 0.12 + i * 0.04, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
             >
               <Link
@@ -198,7 +206,9 @@ function P3Menu({ selected, select, onClose, dark }: MenuProps & { dark: boolean
                 )}
                 <motion.span
                   className="relative block italic font-black uppercase leading-[0.9] tracking-[-0.09em] whitespace-nowrap"
-                  style={{ color: on ? "#000" : colors[(i + 2) % colors.length], textShadow: on ? "none" : "0 2px 10px rgba(0,40,120,0.35)" }}
+                  style={on
+                    ? { color: "#000" }
+                    : { color: colors[(i + 2) % colors.length], WebkitTextStroke: `0.07em ${edge}`, paintOrder: "stroke fill", textShadow: `0 0.04em 0.3em ${edge}` }}
                   animate={on ? { scale: [1, 1.18, 1.08] } : { scale: 1 }}
                   transition={{ duration: 0.22 }}
                 >

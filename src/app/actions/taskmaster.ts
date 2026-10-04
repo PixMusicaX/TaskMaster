@@ -7,8 +7,11 @@ import { eq } from "drizzle-orm";
 import { getTaskmasterQueryBuilderPrompt, getTaskmasterAnswerPrompt } from "@/lib/prompts";
 import { getProfile } from "./gamification";
 import { safeGenerateContent } from "@/lib/ai-utils";
+import { resolvePersonaStyle } from "@/lib/persona";
 
-export async function askTaskmaster(question: string, clientDateStr?: string) {
+// `persona` is the Persona style the client is showing (null for a normal day; left out, the
+// calendar decides), so the answer comes in that game's voice
+export async function askTaskmaster(question: string, clientDateStr?: string, persona?: string | null) {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   const isDev = process.env.NODE_ENV === "development";
 
@@ -67,6 +70,7 @@ export async function askTaskmaster(question: string, clientDateStr?: string) {
       stats: profile.stats,
       queryData,
       question,
+      persona: resolvePersonaStyle(persona, today),
     });
 
     const content = await safeGenerateContent(answerPrompt, {

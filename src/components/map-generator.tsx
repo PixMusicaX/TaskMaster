@@ -1086,11 +1086,11 @@ const BIOME_MATRIX: Record<string, Record<"low" | "balanced" | "peak", { name: s
 };
 
 // Persona days swap the realm for that game's own place and music (whatever the rank). The tracks
-// live in public/music/persona/ (see CREDITS.md); a missing file just means a silent map.
+// live in public/persona/ as p3.mp3, p4.mp3 and p5.mp3 (see CREDITS.md); a missing file just means a silent map.
 const PERSONA_MAPS: Record<PersonaStyle, { name: string; biome: BiomeKey; music: string; params: Partial<MapParams> }> = {
-  p3: { name: "Tartarus", biome: "tartarus", music: "/music/persona/p3.mp3", params: { waterLevel: 0.32, volcanos: 0, forestDensity: 0.3, cities: 5, rivers: 2 } },
-  p4: { name: "The Midnight Channel", biome: "midnight", music: "/music/persona/p4.mp3", params: { waterLevel: 0.28, volcanos: 0, forestDensity: 0.3, cities: 5, rivers: 2 } },
-  p5: { name: "Mementos", biome: "mementos", music: "/music/persona/p5.mp3", params: { waterLevel: 0.3, volcanos: 2, forestDensity: 0.2, cities: 6, rivers: 3 } },
+  p3: { name: "Tartarus", biome: "tartarus", music: "/persona/p3.mp3", params: { waterLevel: 0.32, volcanos: 0, forestDensity: 0.3, cities: 5, rivers: 2 } },
+  p4: { name: "The Midnight Channel", biome: "midnight", music: "/persona/p4.mp3", params: { waterLevel: 0.28, volcanos: 0, forestDensity: 0.3, cities: 5, rivers: 2 } },
+  p5: { name: "Mementos", biome: "mementos", music: "/persona/p5.mp3", params: { waterLevel: 0.3, volcanos: 2, forestDensity: 0.2, cities: 6, rivers: 3 } },
 };
 
 const realmMusic = (name: string) => `/music/${encodeURIComponent(name.toLowerCase().replace(/\s+/g, "-") + ".mp3")}`;

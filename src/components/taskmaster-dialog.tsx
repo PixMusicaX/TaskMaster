@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, MessageSquare, Send, Sparkles } from "lucide-react";
 import GlassCard from "./glass-card";
 import { askTaskmaster, getTaskmasterRemainingQueries } from "@/app/actions/taskmaster";
+import { personaForToday } from "@/lib/persona";
 
 function formatResponse(text: string) {
   return text.split('\n').map((line, i) => {
@@ -64,7 +65,8 @@ export default function TaskmasterDialog({ isOpen, onClose }: TaskmasterDialogPr
     setError(null);
     setResponse(null);
 
-    const res = await askTaskmaster(question);
+    // The Persona style on screen today (null on a normal day), so the answer comes in its voice
+    const res = await askTaskmaster(question, undefined, personaForToday());
     
     if (res.success && res.answer) {
       setResponse(res.answer);

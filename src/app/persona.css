@@ -153,6 +153,13 @@ html[data-persona="p5"] .tm-card h3 {
   display: inline-block;
   transform: skewX(-8deg);
 }
+/* Italic, slanted letters lean past their box, and a truncating heading (overflow: hidden) would
+   chip them off. Padding gives the lean room; the negative margin keeps the text where it was. */
+html[data-persona="p5"] :is(h1, h2, h3, h4).truncate,
+html[data-persona="p3"] :is(h1, h2, h3, h4).truncate {
+  padding: 0.08em 0.22em;
+  margin: -0.08em -0.22em;
+}
 
 html[data-persona="p5"] button,
 html[data-persona="p5"] a { -webkit-tap-highlight-color: transparent; }
@@ -267,6 +274,17 @@ html[data-persona="p4"] .bg-tm-yellow .text-tm-yellow,
 html[data-persona="p4"] .bg-tm-yellow .text-tm-purple-dark,
 html[data-persona="p4"] .bg-tm-yellow .text-foreground {
   color: var(--p4-yellow);
+}
+
+/* And where the accent fill is a sliding layer BESIDE the text, not around it (Chronicle's active
+   tab, the calendar's selected day): the text and the marker dots on it turn yellow too */
+html[data-persona="p4"] :has(> .bg-tm-yellow.absolute),
+html[data-persona="p4"] :has(> .bg-tm-yellow.absolute) .text-tm-purple-dark,
+html[data-persona="p4"] :has(> .bg-tm-yellow.absolute) .text-foreground {
+  color: var(--p4-yellow);
+}
+html[data-persona="p4"] :has(> .bg-tm-yellow.absolute) [class*="bg-tm-purple-dark"]:not(.absolute) {
+  background-color: var(--p4-yellow);
 }
 
 html[data-persona="p4"] .tm-xp-fill {
@@ -492,3 +510,8 @@ html[data-persona="p3"] ::-webkit-scrollbar-thumb { background: var(--p3-edge); 
 @media (prefers-reduced-motion: reduce) {
   .p-static-jitter, .p-blink, .p3-moon-pulse { animation: none !important; }
 }
+
+/* P4 saga: the picture is clipped to the TV screen, so Chronicle's fan of items (which sits out
+   to the right of the ring on wide screens) gives way to the one-line tally under the set */
+html[data-persona="p4"] [data-saga="chron-items"] { display: none; }
+html[data-persona="p4"] [data-saga="chron-entry"] > p.truncate { display: block; }

@@ -16,7 +16,9 @@ async function delay(ms: number) {
 export async function safeGenerateContent(prompt: string, options: { 
   systemInstruction?: string,
   responseMimeType?: string,
-  model?: string 
+  model?: string,
+  // Higher values make the picks less predictable (the Tavern uses this for variety)
+  temperature?: number
 } = {}) {
   if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is missing");
 
@@ -35,7 +37,9 @@ export async function safeGenerateContent(prompt: string, options: {
       try {
         const model = genAI.getGenerativeModel({ 
           model: modelName,
-          generationConfig: options.responseMimeType ? { responseMimeType: options.responseMimeType } : undefined,
+          generationConfig: options.responseMimeType || options.temperature !== undefined
+            ? { responseMimeType: options.responseMimeType, temperature: options.temperature }
+            : undefined,
           systemInstruction: options.systemInstruction
         });
 
