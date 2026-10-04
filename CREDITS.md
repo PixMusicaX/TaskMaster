@@ -47,7 +47,7 @@ some GitHub recreations include them. `src/app/persona.css` uses them if they're
 the device ([Fontworks](https://en.fontworks.co.jp/)). The font list for each game comes from
 [Game Font Library](https://www.gamefontlibrary.com/games/persona-3-reload).
 
-## Music (`public/music/persona/`)
+## Music (`public/persona/`)
 
 The special map on each Persona day plays `p3.mp3`, `p4.mp3` or `p5.mp3` from this folder. The
 tracks aren't included: add your own copies (for example from the official soundtracks) and list
@@ -55,9 +55,9 @@ them here.
 
 | File | Track | Source |
 |---|---|---|
-| `p3.mp3` | *(your pick, e.g. "Mass Destruction" or "Iwatodai Dorm")* | |
-| `p4.mp3` | *(your pick, e.g. "Your Affection" or "Reach Out to the Truth")* | |
-| `p5.mp3` | *(your pick, e.g. "Beneath the Mask" or "Life Will Change")* | |
+| `p3.mp3` | Color your night | |
+| `p4.mp3` | Backside of the TV | |
+| `p5.mp3` | Last Surprise | |
 
 ## Sound effects
 

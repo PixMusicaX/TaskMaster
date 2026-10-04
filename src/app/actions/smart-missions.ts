@@ -5,6 +5,7 @@ import { smartMission, note } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { format, subDays } from "date-fns";
 import { getSmartMissionPrompt } from "@/lib/prompts";
+import { resolvePersonaStyle } from "@/lib/persona";
 import { getProfile, invalidateSeasonSnapshots } from "./gamification";
 import { getHabits } from "./habits";
 import { getEventsByDateRange } from "./events";
@@ -14,7 +15,9 @@ import { eq, desc, gte } from "drizzle-orm";
 
 const GEMINI_API_KEY = process.env.gemini_key;
 
-export async function getSmartMission(clientDateStr?: string) {
+// `persona` is the Persona style the client is showing (null for a normal day; left out, the
+// calendar decides), so the mission is written in that game's voice
+export async function getSmartMission(clientDateStr?: string, persona?: string | null) {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
 
   try {
@@ -51,7 +54,8 @@ export async function getSmartMission(clientDateStr?: string) {
             })),
             recentNotes: notesData.map((n) => n.content),
             missionHistory: history.map((m) => ({ title: m.title, completed: m.completed })),
-            today
+            today,
+            persona: resolvePersonaStyle(persona, today),
           });
 
           console.log("=== GEMINI SDK SMART MISSION PROMPT ===");
@@ -141,11 +145,11 @@ export async function getSmartMissionHistory(sinceDate?: string) {
   }
 }
 
-export async function regenerateSmartMission(clientDateStr?: string) {
+export async function regenerateSmartMission(clientDateStr?: string, persona?: string | null) {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   try {
     await db.delete(smartMission).where(eq(smartMission.date, today));
-    return await getSmartMission(clientDateStr);
+    return await getSmartMission(clientDateStr, persona);
   } catch (e) {
     console.error("Error in regenerateSmartMission:", e);
     return null;

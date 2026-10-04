@@ -5,6 +5,7 @@ import { preparationTip, event } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { format, addDays } from "date-fns";
 import { getPreparationTipPrompt } from "@/lib/prompts";
+import { resolvePersonaStyle } from "@/lib/persona";
 import { safeGenerateContent } from "@/lib/ai-utils";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { subDays } from "date-fns";
@@ -12,7 +13,9 @@ import { getProfile, invalidateSeasonSnapshots } from "./gamification";
 
 const GEMINI_API_KEY = process.env.gemini_key;
 
-export async function getPreparationTip(clientDateStr?: string) {
+// `persona` is the Persona style the client is showing (null for a normal day; left out, the
+// calendar decides), so the tip is written in that game's voice
+export async function getPreparationTip(clientDateStr?: string, persona?: string | null) {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   
   try {
@@ -54,7 +57,8 @@ export async function getPreparationTip(clientDateStr?: string) {
           title: profile.title,
           topStat: profile.topStat,
           stats: profile.stats
-        }
+        },
+        persona: resolvePersonaStyle(persona, today),
       });
 
       const content = await safeGenerateContent(prompt, {
@@ -98,11 +102,11 @@ export async function togglePreparationTip(id: string, completed: boolean) {
   }
 }
 
-export async function regeneratePreparationTip(clientDateStr?: string) {
+export async function regeneratePreparationTip(clientDateStr?: string, persona?: string | null) {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   try {
     await db.delete(preparationTip).where(eq(preparationTip.date, today));
-    return await getPreparationTip(clientDateStr);
+    return await getPreparationTip(clientDateStr, persona);
   } catch {
     return null;
   }
