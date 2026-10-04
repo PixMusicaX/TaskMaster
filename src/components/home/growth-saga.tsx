@@ -797,12 +797,22 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       <div className="sticky top-0 h-svh motion-safe:touch-none motion-reduce:static motion-reduce:h-auto flex flex-col motion-reduce:gap-8 px-4 md:px-6 pt-20 pb-32 lg:pb-16">
         {/* Three rows, the outer two equal, so the orbit's centre is the centre of the screen and
             lines up with the rank crest behind the page */}
-        <div data-saga="layer" className="absolute inset-0 motion-reduce:static grid grid-cols-1 grid-rows-[1fr_auto_1fr] justify-items-center px-4 pointer-events-none">
+        {/* On Persona 4 and 5 days the orbit is drawn smaller (--z) inside its device, smaller still on
+            short screens, and the whole stage sits a little higher (--lift) to leave the details room */}
+        <div
+          data-saga="layer"
+          className={cn(
+            "absolute inset-0 motion-reduce:static grid grid-cols-1 grid-rows-[1fr_auto_1fr] justify-items-center px-4 pointer-events-none",
+            (p4 || p5) && "[--lift:9svh] pb-[var(--lift)]",
+            p4 && "[--z:0.72] [@media(max-height:720px)]:[--z:0.66]",
+            p5 && "[--z:0.75] [@media(max-height:720px)]:[--z:0.68]"
+          )}
+        >
           {p3 && <P3Stage scene={scene} label={scenes[scene]?.label ?? ""} />}
           {p4 && <P4Stage />}
           {p5 && <P5Stage />}
           {/* Each scene's title sits above the orbit and its details below; every scene shares the two cells */}
-          <div className={cn("row-start-1 self-end grid grid-cols-1 text-center w-full motion-reduce:pb-6 relative z-10", p4 ? "pb-[calc(min(43vw,31svh,400px)*0.47)]" : p5 ? "pb-[calc(min(46vw,23svh,400px)*0.56)]" : "pb-12")}>
+          <div className={cn("row-start-1 self-end grid grid-cols-1 text-center w-full motion-reduce:pb-6 relative z-10", p4 ? "pb-[calc(min(62vw,40svh,400px)*var(--z)*0.47)]" : p5 ? "pb-[calc(min(62vw,40svh,400px)*var(--z)*0.53)]" : "pb-12")}>
             <p data-saga="standing" aria-label={rank} className={cn(TITLE, "col-start-1 row-start-1 self-end text-4xl sm:text-5xl")}>
               {rank.split("").map((letter, i) => (
                 <span key={i} aria-hidden data-saga="letter" className="inline-block">{letter}</span>
@@ -857,12 +867,13 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
           {p4 && <P4TvBack scene={scene} count={scenes.length} />}
           {p5 && <P5PhoneBack scene={scene} />}
           {/* The picture stays inside the screen, whatever the channel change does to it */}
-          <div style={p4 ? { clipPath: "inset(-16% -21% round 9% / 10%)" } : p5 ? { clipPath: "inset(-38% -22% round 5% / 3.5%)" } : undefined}>
+          <div style={p4 ? { clipPath: "inset(-16% -21% round 9% / 10%)" } : p5 ? { clipPath: "inset(-32% -22% round 5% / 3.5%)" } : undefined}>
           <div data-saga="device" className={cn("relative", p3 && "[transform-style:preserve-3d]")}>
           {p3 && <P3DiscBack />}
           {p5 && <P5AppCard />}
-          {/* On phones the P3 orbit is a little smaller, leaving the sides to the earbuds and the player */}
-          <div data-saga="emblem" className={cn("relative max-w-[400px] aspect-square", p3 ? "w-[min(50vw,40svh)] sm:w-[min(62vw,40svh)] [backface-visibility:hidden]" : p4 ? "w-[min(43vw,31svh)]" : p5 ? "w-[min(46vw,23svh)]" : "w-[min(62vw,40svh)]")}>
+          {/* On Persona days the orbit is drawn smaller to leave room for the device round it. It is zoomed
+              rather than resized, so everything in it (which is sized for the full orbit) shrinks with it */}
+          <div data-saga="emblem" className={cn("relative max-w-[400px] aspect-square", "w-[min(62vw,40svh)]", p3 && "[zoom:0.8] sm:[zoom:1] [backface-visibility:hidden]", (p4 || p5) && "[zoom:var(--z)]")}>
             {/* The dotted circle is the radar's circumcircle */}
             {/* The wrapper is the script's (the dial fades out for the pace scene); the turning is the loop's */}
             <div data-saga="dial-wrap" className="absolute inset-0">
@@ -989,7 +1000,13 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
                       dominantBaseline="middle" fontSize="13" fill="currentColor"
                       className="font-mono font-semibold uppercase"
                     >
-                      {tick.label}
+                      {/* Inside a TV or phone screen there is no room beside the ring for the whole
+                          label on one line, so it stacks */}
+                      {p4 || p5
+                        ? tick.label.split(" · ").map((part, n, parts) => (
+                          <tspan key={part} x={label.x} dy={n === 0 ? (parts.length - 1) * -8 : 16}>{part}</tspan>
+                        ))
+                        : tick.label}
                     </text>
                   </g>
                 );
@@ -1050,7 +1067,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
           {p5 && <P5PhoneFront />}
           </div>
 
-          <div className={cn("row-start-3 self-start grid grid-cols-1 text-center w-full motion-reduce:pt-6 relative z-10", p4 ? "pt-[calc(min(43vw,31svh,400px)*0.37)]" : p5 ? "pt-[calc(min(46vw,23svh,400px)*0.54)]" : "pt-8 [@media(max-height:720px)]:pt-3")}>
+          <div className={cn("row-start-3 self-start grid grid-cols-1 text-center w-full motion-reduce:pt-6 relative z-10", p3 && "max-sm:px-11", p4 ? "pt-[calc(min(62vw,40svh,400px)*var(--z)*0.46)]" : p5 ? "pt-[calc(min(62vw,40svh,400px)*var(--z)*0.6)]" : "pt-8 [@media(max-height:720px)]:pt-3")}>
             <div data-saga="standing" className="col-start-1 row-start-1">
               <p data-saga="caption" className={cn(CAPTION, "flex flex-col items-center gap-1")}>
                 <span className={nextRank ? "text-foreground" : "text-tm-orange-dark"}>

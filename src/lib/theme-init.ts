@@ -1,6 +1,6 @@
 import { ERAS } from "./eras";
 import { DEV_TOOLS_ENABLED } from "./dev-xp";
-import { DEV_PERSONA_KEY, PERSONA_OFF_KEY, PERSONA_PREVIEW_KEY, PERSONA_FONTS_URL, PERSONA_FORCED_THEME, pickPersonaDays } from "./persona";
+import { DEV_PERSONA_KEY, PERSONA_OFF_KEY, PERSONA_FONTS_URL, PERSONA_FORCED_THEME, pickPersonaDays } from "./persona";
 
 const ERA_LABELS = Object.fromEntries(ERAS.map(e => [e.id, [e.numeral, e.name]]));
 
@@ -16,8 +16,7 @@ export const themeInitScript = `(function(){try{
 var d=document.documentElement,n=new Date(),h=n.getHours();
 var pick=${pickPersonaDays.toString()};
 var ps=localStorage.getItem(${JSON.stringify(PERSONA_OFF_KEY)})==='1'?null:(pick(n.getFullYear(),n.getMonth())[n.getDate()]||null);
-var o=localStorage.getItem(${JSON.stringify(PERSONA_PREVIEW_KEY)});
-if(${JSON.stringify(DEV_TOOLS_ENABLED)}&&localStorage.getItem(${JSON.stringify(DEV_PERSONA_KEY)}))o=localStorage.getItem(${JSON.stringify(DEV_PERSONA_KEY)});
+var o=${JSON.stringify(DEV_TOOLS_ENABLED)}?localStorage.getItem(${JSON.stringify(DEV_PERSONA_KEY)}):null;
 if(o==='off')ps=null;else if(o==='p3'||o==='p4'||o==='p5')ps=o;
 var pt=ps?${JSON.stringify(PERSONA_FORCED_THEME)}[ps]:null;
 d.classList.toggle('dark',pt?pt==='dark':(h<6||h>=18));

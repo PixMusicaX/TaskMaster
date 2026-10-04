@@ -41,7 +41,7 @@ const STARS = [
 // Behind the phone: the burst and the stars
 export function P5Stage() {
   return (
-    <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none motion-reduce:hidden">
+    <div aria-hidden className="absolute inset-x-0 top-0 bottom-[var(--lift)] overflow-hidden pointer-events-none motion-reduce:hidden">
       <svg data-saga="p5-burst" viewBox="-104 -104 208 208" className="absolute left-1/2 top-1/2 w-[min(135vw,92svh)] aspect-square -ml-[min(67.5vw,46svh)] -mt-[min(67.5vw,46svh)] overflow-visible">
         <polygon points={BURST} fill={INK} stroke={PAPER} strokeWidth="2.5" strokeLinejoin="miter" />
         <polygon points={BURST} fill={RED} transform="scale(0.8) rotate(7)" />
@@ -68,18 +68,18 @@ export function P5PhoneBack({ scene }: { scene: number }) {
       ))}
 
       {/* Body, with the red shadow thrown behind it */}
-      <div className="absolute -inset-x-[29%] -inset-y-[50%]" style={{ background: RED, borderRadius: "11% / 6%", transform: "translate(3.5%, 2%) rotate(2deg)" }} />
-      <div className="absolute -inset-x-[29%] -inset-y-[50%]" style={{ background: INK, borderRadius: "11% / 6%", boxShadow: `inset 0 0 0 0.2em ${PAPER}` }} />
+      <div className="absolute -inset-x-[29%] -inset-y-[43%]" style={{ background: RED, borderRadius: "11% / 8%", transform: "translate(3.5%, 2%) rotate(2deg)" }} />
+      <div className="absolute -inset-x-[29%] -inset-y-[43%]" style={{ background: INK, borderRadius: "11% / 8%", boxShadow: `inset 0 0 0 0.2em ${PAPER}` }} />
 
       {/* Speaker and camera */}
-      <div className="absolute left-1/2 -top-[45%] w-[26%] h-[2.2%] -translate-x-1/2" style={{ background: PAPER, borderRadius: 99 }} />
-      <div className="absolute left-[70%] -top-[45.9%] w-[4%] aspect-square" style={{ background: RED, borderRadius: "50%" }} />
+      <div className="absolute left-1/2 -top-[38.6%] w-[26%] h-[2.2%] -translate-x-1/2" style={{ background: PAPER, borderRadius: 99 }} />
+      <div className="absolute left-[70%] -top-[39.5%] w-[4%] aspect-square" style={{ background: RED, borderRadius: "50%" }} />
 
       {/* The screen */}
-      <div className="absolute -inset-x-[22%] -inset-y-[38%] bg-background" style={{ borderRadius: "5% / 3.5%", boxShadow: `0 0 0 0.14em ${RED}` }} />
+      <div className="absolute -inset-x-[22%] -inset-y-[32%] bg-background" style={{ borderRadius: "5% / 3.5%", boxShadow: `0 0 0 0.14em ${RED}` }} />
 
       {/* The dock: the lit app is the scene on screen */}
-      <div className="absolute -inset-x-[22%] -bottom-[47.5%] h-[7%] flex justify-center gap-[5%]">
+      <div className="absolute -inset-x-[22%] -bottom-[40.5%] h-[6%] flex justify-center gap-[5%]">
         {Array.from({ length: DOCK }, (_, i) => {
           const lit = i === scene % DOCK;
           return (
@@ -99,7 +99,7 @@ export function P5PhoneBack({ scene }: { scene: number }) {
 // shrinks and is swiped away with the picture.
 export function P5AppCard() {
   return (
-    <div data-saga="p5-frame" aria-hidden className="absolute -inset-x-[22%] -inset-y-[38%] pointer-events-none motion-reduce:hidden" style={{ background: "#1c1c1c", borderRadius: "6% / 4.5%", boxShadow: `inset 0 0 0 0.22em ${PAPER}, 0.5em 0.5em 0 ${RED}` }}>
+    <div data-saga="p5-frame" aria-hidden className="absolute -inset-x-[22%] -inset-y-[32%] pointer-events-none motion-reduce:hidden" style={{ background: "#1c1c1c", borderRadius: "6% / 4.5%", boxShadow: `inset 0 0 0 0.22em ${PAPER}, 0.5em 0.5em 0 ${RED}` }}>
       <span className="absolute left-[8%] top-[5%] w-[34%] h-[3.5%]" style={{ background: RED }} />
       <span className="absolute right-[8%] top-[5%] w-[8%] h-[3.5%]" style={{ background: PAPER }} />
     </div>
@@ -109,7 +109,7 @@ export function P5AppCard() {
 // What passes over the picture: the neighbouring cards in the app switcher, and the slash
 export function P5PhoneFront() {
   return (
-    <div aria-hidden className="absolute -inset-x-[22%] -inset-y-[38%] overflow-hidden pointer-events-none motion-reduce:hidden" style={{ borderRadius: "5% / 3.5%" }}>
+    <div aria-hidden className="absolute -inset-x-[22%] -inset-y-[32%] overflow-hidden pointer-events-none motion-reduce:hidden" style={{ borderRadius: "5% / 3.5%" }}>
       <div data-saga="p5-cards" className="absolute inset-0">
         {[-1, 1].map(side => (
           <div key={side} className="absolute inset-y-[19%] w-[62%]" style={{ left: `${19 + side * 70}%`, background: side < 0 ? PAPER : RED, borderRadius: "6%", boxShadow: `inset 0 0 0 0.18em ${side < 0 ? INK : PAPER}`, transform: `rotate(${side * 3}deg)` }}>
