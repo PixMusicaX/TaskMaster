@@ -184,8 +184,9 @@ html:root:root[data-persona="p4"] {
   --background: #ffe100;
   --foreground: #181512;
   --tm-yellow: #181512;
-  --tm-orange-light: #f59f00;
-  --tm-orange-dark: #e35200;
+  /* Dark enough to read on the yellow page as well as on the cream cards */
+  --tm-orange-light: #b45309;
+  --tm-orange-dark: #c2410c;
   --tm-blue-gray: #5a4f3a;
   --tm-purple-dark: #181512;
   --tm-red: #e03131;
@@ -202,8 +203,8 @@ html[data-persona="p4"]::before {
   background:
     /* scanlines */
     repeating-linear-gradient(0deg, transparent 0 3px, rgb(0 0 0 / 0.045) 3px 4px),
-    /* bottom ink band with a stripe of orange */
-    linear-gradient(176deg, transparent 0 88%, var(--p4-orange) 88% 89.2%, var(--p4-ink) 89.2%),
+    /* bottom amber band with a stripe of orange (not ink: dark headings scroll over it) */
+    linear-gradient(176deg, transparent 0 88%, var(--p4-orange) 88% 89.2%, #ffb300 89.2%),
     var(--p4-yellow);
 }
 /* Soft orange halftone fading out from the top-left */
@@ -249,6 +250,23 @@ html[data-persona="p4"] select {
   background-color: #fff;
   color: var(--p4-ink);
   border: 2px solid var(--p4-ink);
+}
+
+/* P4's accent and its dark ink are the same black, so accent-on-ink (crests, badges) would vanish:
+   on an ink surface, accent and ink text turn TV yellow instead */
+html[data-persona="p4"] .bg-tm-purple-dark,
+html[data-persona="p4"] .bg-tm-purple-dark.text-tm-yellow,
+html[data-persona="p4"] .bg-tm-purple-dark .text-tm-yellow,
+html[data-persona="p4"] .bg-tm-purple-dark .text-tm-purple-dark,
+html[data-persona="p4"] .bg-tm-purple-dark .text-foreground {
+  color: var(--p4-yellow);
+}
+/* The same the other way round: ink text on a solid accent fill */
+html[data-persona="p4"] .bg-tm-yellow,
+html[data-persona="p4"] .bg-tm-yellow .text-tm-yellow,
+html[data-persona="p4"] .bg-tm-yellow .text-tm-purple-dark,
+html[data-persona="p4"] .bg-tm-yellow .text-foreground {
+  color: var(--p4-yellow);
 }
 
 html[data-persona="p4"] .tm-xp-fill {
@@ -352,6 +370,13 @@ html[data-persona="p3"] input,
 html[data-persona="p3"] textarea,
 html[data-persona="p3"] select {
   border-radius: 0;
+}
+
+/* Accent on the dark ink surface: the day palette's blue is too close to navy, so use the glow */
+html[data-persona="p3"]:not(.dark) .bg-tm-purple-dark,
+html[data-persona="p3"]:not(.dark) .bg-tm-purple-dark.text-tm-yellow,
+html[data-persona="p3"]:not(.dark) .bg-tm-purple-dark .text-tm-yellow {
+  color: var(--p3-glow);
 }
 
 html[data-persona="p3"] .tm-xp-fill {
