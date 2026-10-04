@@ -88,9 +88,10 @@ export function MapDetails({ info }: { info: MapInfo | null }) {
       {/* Always present, so the scroll script finds it even before the map has been charted */}
       <div data-saga="map-row" className="flex flex-wrap justify-center gap-1.5 max-w-2xl">
         {info && <span className={cn(CAPTION, "w-full max-sm:hidden")}>Adjacent areas</span>}
-        {info?.stops.map((stop, i) => (
-          <span key={stop.name} className={cn("px-2.5 py-1 rounded-full border border-tm-blue-gray/20 text-tiny font-mono font-semibold uppercase tracking-[0.08em] text-foreground/90", i > 2 && "max-sm:hidden", i > 1 && "[@media(max-height:720px)]:max-sm:hidden")}>
-            {stop.icon} {stop.name}
+        {info?.stops.map(stop => (
+          // Phones show all five as icons only; the names come back from sm up
+          <span key={stop.name} title={stop.name} aria-label={stop.name} className="px-2.5 py-1 max-sm:px-2 max-sm:text-base rounded-full border border-tm-blue-gray/20 text-tiny font-mono font-semibold uppercase tracking-[0.08em] text-foreground/90">
+            <span aria-hidden>{stop.icon}</span><span className="max-sm:hidden" aria-hidden> {stop.name}</span>
           </span>
         ))}
       </div>

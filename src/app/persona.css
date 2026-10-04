@@ -1,0 +1,494 @@
+/* ============================================================
+   PERSONA DAYS — a full takeover on <html data-persona="p3|p4|p5"> (see lib/persona.ts).
+   These rules are deliberately unlayered so they beat Tailwind utilities, and the token blocks
+   use html:root:root to outrank the era/rank palettes (the strongest is
+   :root[data-rank]:not(.dark)): on a Persona day nothing of the normal look shows. Backdrops are static fixed
+   layers; only small elements animate (transform/opacity), per the mobile limits.
+   ============================================================ */
+
+/* Game faces. Bundled (see CREDITS.md): Earwig Factory (the P5 ransom-note look), Persona5main (a
+   fan recreation of P5's menu lettering) and BM Space (P3 Reload's HUD labels). The commercial ones the games use (Fontworks Skip Std B, FOT-NewRodin Pro)
+   are picked up if installed locally or dropped into public/fonts/persona; otherwise the Google
+   lookalikes (loaded by the init script on Persona days only) take over. */
+@font-face { font-family: "P5 Ransom"; src: local("Earwig Factory"), url("/fonts/persona/p5-ransom.otf") format("opentype"); font-display: swap; }
+@font-face { font-family: "P5 Menu"; src: local("Persona5main"), url("/fonts/persona/p5-menu.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "P3 HUD"; src: local("BM Space"), url("/fonts/persona/p3-hud.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "P4 Display"; src: local("Skip Std B"), local("SkipStd-B"), local("FOT-Skip Std B"); font-display: swap; }
+@font-face { font-family: "P3 Display"; src: local("FOT-NewRodin Pro M"), local("FOT-NewRodinPro-M"), local("Futura PT"); font-display: swap; }
+@font-face { font-family: "P5 Display"; src: local("FOT-Rodin Pro EB"), local("FOT-RodinPro-EB"); font-display: swap; }
+
+/* ---------- Shared ---------- */
+
+html[data-persona] .tm-normal-only { display: none !important; }
+html[data-persona] .tm-card-fx { display: none; }
+
+html:root:root[data-persona] {
+  /* Pause-menu faces: P3 Reload's menu is Rodin Pro UB, heavy and italic; P4 Revival's is a heavy serif */
+  --font-p3-menu: "Rodin Pro UB", "FOT-RodinPro-UB", "M PLUS 1p", "Arial Black", sans-serif;
+  --font-p4-menu: "Playfair Display", "Rockwell", Georgia, serif;
+  --font-p5-menu: "P5 Menu", "Anton", Impact, sans-serif;
+  --card-blur: 0px;
+  --ambient-opacity: 0;
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 3px;
+  --radius-2xl: 4px;
+  --radius-3xl: 4px;
+}
+
+html[data-persona] body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans);
+}
+
+/* The style's backdrop: one static fixed layer behind everything (on <html>, so body::before stays
+   free for the rotate-your-phone notice in globals.css) */
+html[data-persona]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+html[data-persona] .tm-card {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background-image: none;
+}
+
+html[data-persona] ::-webkit-scrollbar { width: 10px; height: 6px; }
+html[data-persona] ::-webkit-scrollbar-track { background: transparent; }
+
+/* ============================================================
+   P5 — Phantom Thieves: red, black, white. Hard edges, tilted panels, offset shadows.
+   ============================================================ */
+
+html:root:root[data-persona="p5"] {
+  --p5-red: #e5001b;
+  --p5-red-hot: #ff1d38;
+  --p5-black: #0b0b0b;
+  --background: #0b0b0b;
+  --foreground: #ffffff;
+  --tm-yellow: #ff1d38;
+  --tm-orange-light: #ff5a6e;
+  --tm-orange-dark: #ff1d38;
+  --tm-blue-gray: #c8c8c8;
+  --tm-purple-dark: #0b0b0b;
+  --tm-red: #ff1d38;
+  --tm-on-accent: #ffffff;
+  --font-geist-sans: "Oswald", "Arial Narrow", sans-serif;
+  --font-space-grotesk: "P5 Display", "Anton", "Impact", sans-serif;
+  --font-geist-mono: "Oswald", "Arial Narrow", sans-serif;
+  --radius-xs: 0px; --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px;
+  --radius-xl: 0px; --radius-2xl: 0px; --radius-3xl: 0px;
+  color-scheme: dark;
+}
+
+/* Red stays at the edges so the red accents read against black in the middle */
+html[data-persona="p5"]::before {
+  background:
+    /* halftone (shows on the red only) */
+    radial-gradient(circle, rgb(0 0 0 / 0.34) 1.3px, transparent 1.8px) 0 0 / 9px 9px,
+    /* left band with a white edge */
+    linear-gradient(108deg, var(--p5-red) 0 13%, #fff 13% 13.5%, transparent 13.5%),
+    /* bottom-right shard with a white edge */
+    linear-gradient(198deg, transparent 0 84%, #fff 84% 84.5%, var(--p5-red) 84.5%),
+    var(--p5-black);
+}
+/* Starburst from the top-right corner, fading out before the content */
+html[data-persona="p5"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: repeating-conic-gradient(from 0deg at 100% 0%, rgb(229 0 27 / 0.75) 0 5deg, transparent 5deg 13deg);
+  -webkit-mask-image: radial-gradient(55% 45% at 100% 0%, #000 25%, transparent 100%);
+  mask-image: radial-gradient(55% 45% at 100% 0%, #000 25%, transparent 100%);
+}
+@media (max-width: 640px) {
+  html[data-persona="p5"]::before {
+    background:
+      radial-gradient(circle, rgb(0 0 0 / 0.34) 1.2px, transparent 1.7px) 0 0 / 8px 8px,
+      linear-gradient(100deg, var(--p5-red) 0 7%, #fff 7% 7.8%, transparent 7.8%),
+      linear-gradient(196deg, transparent 0 88%, #fff 88% 88.6%, var(--p5-red) 88.6%),
+      var(--p5-black);
+  }
+  html[data-persona="p5"]::after {
+    -webkit-mask-image: radial-gradient(80% 30% at 100% 0%, #000 20%, transparent 100%);
+    mask-image: radial-gradient(80% 30% at 100% 0%, #000 20%, transparent 100%);
+  }
+}
+
+html[data-persona="p5"] .tm-card {
+  background-color: var(--p5-black);
+  border: 3px solid #fff;
+  border-radius: 0;
+  box-shadow: 8px 8px 0 var(--p5-red), 8px 8px 0 3px #000;
+  rotate: -0.6deg;
+}
+html[data-persona="p5"] .tm-card:nth-of-type(even) { rotate: 0.5deg; box-shadow: -8px 8px 0 var(--p5-red), -8px 8px 0 3px #000; }
+
+/* Arbitrary radii (rounded-[1.5rem]) don't read the radius tokens */
+html[data-persona="p5"] [class*="rounded-["],
+html[data-persona="p3"] [class*="rounded-["] { border-radius: 0; }
+
+html[data-persona="p5"] h1,
+html[data-persona="p5"] h2,
+html[data-persona="p5"] h3,
+html[data-persona="p5"] .font-display {
+  font-family: var(--font-space-grotesk);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  font-style: italic;
+}
+html[data-persona="p5"] h1 { text-shadow: 3px 3px 0 #000, 5px 5px 0 rgb(255 255 255 / 0.85); }
+html[data-persona="p5"] .tm-card h2,
+html[data-persona="p5"] .tm-card h3 {
+  display: inline-block;
+  transform: skewX(-8deg);
+}
+
+html[data-persona="p5"] button,
+html[data-persona="p5"] a { -webkit-tap-highlight-color: transparent; }
+
+html[data-persona="p5"] input,
+html[data-persona="p5"] textarea,
+html[data-persona="p5"] select {
+  background-color: #fff;
+  color: #0b0b0b;
+  border: 2px solid #000;
+  border-radius: 0;
+}
+
+html[data-persona="p5"] .tm-xp-fill {
+  background: repeating-linear-gradient(-55deg, #fff 0 5px, var(--p5-red-hot) 5px 10px);
+}
+html[data-persona="p5"] ::selection { background: var(--p5-red); color: #fff; }
+html[data-persona="p5"] ::-webkit-scrollbar-thumb { background: var(--p5-red); }
+
+/* ============================================================
+   P4 — Inaba: TV yellow, black ink, orange accents, chunky rounded panels, scanlines.
+   Light only for now.
+   ============================================================ */
+
+html:root:root[data-persona="p4"] {
+  --p4-yellow: #ffe100;
+  --p4-ink: #181512;
+  --p4-orange: #ef5f00;
+  --background: #ffe100;
+  --foreground: #181512;
+  --tm-yellow: #181512;
+  /* Dark enough to read on the yellow page as well as on the cream cards */
+  --tm-orange-light: #b45309;
+  --tm-orange-dark: #c2410c;
+  --tm-blue-gray: #5a4f3a;
+  --tm-purple-dark: #181512;
+  --tm-red: #e03131;
+  --tm-on-accent: #ffe100;
+  --font-geist-sans: "M PLUS Rounded 1c", "Arial Rounded MT Bold", sans-serif;
+  --font-space-grotesk: "P4 Display", "Archivo Black", "Arial Black", sans-serif;
+  --font-geist-mono: "M PLUS Rounded 1c", sans-serif;
+  --radius-xs: 3px; --radius-sm: 4px; --radius-md: 6px; --radius-lg: 8px;
+  --radius-xl: 10px; --radius-2xl: 12px; --radius-3xl: 14px;
+  color-scheme: light;
+}
+
+html[data-persona="p4"]::before {
+  background:
+    /* scanlines */
+    repeating-linear-gradient(0deg, transparent 0 3px, rgb(0 0 0 / 0.045) 3px 4px),
+    /* bottom amber band with a stripe of orange (not ink: dark headings scroll over it) */
+    linear-gradient(176deg, transparent 0 88%, var(--p4-orange) 88% 89.2%, #ffb300 89.2%),
+    var(--p4-yellow);
+}
+/* Soft orange halftone fading out from the top-left */
+html[data-persona="p4"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle, rgb(239 95 0 / 0.28) 1.6px, transparent 2.2px) 0 0 / 14px 14px;
+  -webkit-mask-image: radial-gradient(70% 60% at 0% 0%, #000, transparent);
+  mask-image: radial-gradient(70% 60% at 0% 0%, #000, transparent);
+}
+
+html[data-persona="p4"] .tm-card {
+  background-color: #fffdf2;
+  border: 3px solid var(--p4-ink);
+  border-radius: 12px;
+  box-shadow: 6px 6px 0 var(--p4-ink);
+}
+
+html[data-persona="p4"] h1,
+html[data-persona="p4"] h2,
+html[data-persona="p4"] h3,
+html[data-persona="p4"] .font-display {
+  font-family: var(--font-space-grotesk);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+html[data-persona="p4"] .tm-card h2 {
+  color: var(--p4-ink);
+  background: var(--p4-yellow);
+  padding: 0.05em 0.45em;
+  border-radius: 6px;
+  box-shadow: 3px 3px 0 var(--p4-ink);
+}
+html[data-persona="p4"] h1 { color: var(--p4-ink); text-shadow: 4px 4px 0 #fff; }
+
+html[data-persona="p4"] input,
+html[data-persona="p4"] textarea,
+html[data-persona="p4"] select {
+  background-color: #fff;
+  color: var(--p4-ink);
+  border: 2px solid var(--p4-ink);
+}
+
+/* P4's accent and its dark ink are the same black, so accent-on-ink (crests, badges) would vanish:
+   on an ink surface, accent and ink text turn TV yellow instead */
+html[data-persona="p4"] .bg-tm-purple-dark,
+html[data-persona="p4"] .bg-tm-purple-dark.text-tm-yellow,
+html[data-persona="p4"] .bg-tm-purple-dark .text-tm-yellow,
+html[data-persona="p4"] .bg-tm-purple-dark .text-tm-purple-dark,
+html[data-persona="p4"] .bg-tm-purple-dark .text-foreground {
+  color: var(--p4-yellow);
+}
+/* The same the other way round: ink text on a solid accent fill */
+html[data-persona="p4"] .bg-tm-yellow,
+html[data-persona="p4"] .bg-tm-yellow .text-tm-yellow,
+html[data-persona="p4"] .bg-tm-yellow .text-tm-purple-dark,
+html[data-persona="p4"] .bg-tm-yellow .text-foreground {
+  color: var(--p4-yellow);
+}
+
+html[data-persona="p4"] .tm-xp-fill {
+  background: repeating-linear-gradient(-45deg, var(--p4-ink) 0 6px, var(--p4-orange) 6px 12px);
+}
+html[data-persona="p4"] ::selection { background: var(--p4-ink); color: var(--p4-yellow); }
+html[data-persona="p4"] ::-webkit-scrollbar-thumb { background: var(--p4-ink); border-radius: 6px; }
+
+/* ============================================================
+   P3 — SEES. Day: cool blue water and white glass panels with cut corners.
+   Night (dark): the Dark Hour, sickly green under a swollen moon.
+   ============================================================ */
+
+html:root:root[data-persona="p3"] {
+  --p3-cut: 16px;
+  --font-geist-sans: "P3 Display", "Jost", "Century Gothic", sans-serif;
+  --font-space-grotesk: "P3 Display", "Jost", "Century Gothic", sans-serif;
+  --font-geist-mono: "P3 Display", "Jost", sans-serif;
+  --background: #e4f3ff;
+  --foreground: #06204a;
+  --tm-yellow: #1463d6;
+  --tm-orange-light: #2aa7ff;
+  --tm-orange-dark: #0a3d91;
+  --tm-blue-gray: #46658f;
+  --tm-purple-dark: #06204a;
+  --tm-red: #00a6ff;
+  --tm-on-accent: #ffffff;
+  --p3-panel: rgb(255 255 255 / 0.84);
+  --p3-edge: #1a73ff;
+  --p3-glow: #7fd4ff;
+  color-scheme: light;
+}
+
+html.dark:root:root[data-persona="p3"] {
+  --background: #020a05;
+  --foreground: #d6ffe2;
+  --tm-yellow: #5cff9a;
+  --tm-orange-light: #8dffbf;
+  --tm-orange-dark: #b9ff66;
+  --tm-blue-gray: #7fa98d;
+  --tm-purple-dark: #020a05;
+  --tm-red: #ff4257;
+  --tm-on-accent: #021208;
+  --p3-panel: rgb(3 22 11 / 0.82);
+  --p3-edge: #5cff9a;
+  --p3-glow: #5cff9a;
+  color-scheme: dark;
+}
+
+html[data-persona="p3"]::before {
+  background:
+    /* thin diagonal light lines */
+    repeating-linear-gradient(118deg, transparent 0 46px, rgb(255 255 255 / 0.35) 46px 47px, transparent 47px 120px),
+    /* water caustics */
+    radial-gradient(40% 30% at 18% 22%, rgb(255 255 255 / 0.7), transparent 70%),
+    radial-gradient(35% 25% at 82% 68%, rgb(127 212 255 / 0.5), transparent 70%),
+    /* deep blue sweep from the bottom right */
+    linear-gradient(150deg, #f4fbff 0%, #bfe2ff 42%, #5aa8f0 78%, #1a5ed1 100%);
+}
+
+/* Dark Hour: green murk, the moon, and the puddles */
+html.dark[data-persona="p3"]::before {
+  background:
+    /* the moon */
+    radial-gradient(circle at 82% 14%, #f4ffc8 0 5.5vmin, rgb(200 255 140 / 0.55) 6vmin, rgb(92 255 154 / 0.18) 13vmin, transparent 24vmin),
+    /* blood puddles */
+    radial-gradient(9vmin 2.2vmin at 22% 86%, rgb(120 0 18 / 0.55), transparent 100%),
+    radial-gradient(6vmin 1.6vmin at 31% 90%, rgb(120 0 18 / 0.45), transparent 100%),
+    radial-gradient(7vmin 1.8vmin at 74% 93%, rgb(120 0 18 / 0.4), transparent 100%),
+    /* green fog rising */
+    radial-gradient(120% 60% at 50% 110%, rgb(60 200 110 / 0.35), transparent 70%),
+    linear-gradient(180deg, #03140a 0%, #021006 55%, #04200f 100%);
+}
+
+html[data-persona="p3"] .tm-card {
+  background-color: var(--p3-panel);
+  border: 0;
+  border-left: 4px solid var(--p3-edge);
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: polygon(0 0, calc(100% - var(--p3-cut)) 0, 100% var(--p3-cut), 100% 100%, 0 100%);
+}
+html.dark[data-persona="p3"] .tm-card {
+  border-top: 1px solid rgb(92 255 154 / 0.25);
+}
+
+html[data-persona="p3"] h1,
+html[data-persona="p3"] h2,
+html[data-persona="p3"] h3,
+html[data-persona="p3"] .font-display {
+  font-family: var(--font-space-grotesk);
+  font-style: italic;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+html[data-persona="p3"] h1 { font-weight: 300; letter-spacing: 0.02em; }
+html.dark[data-persona="p3"] h1 { text-shadow: 0 0 18px rgb(92 255 154 / 0.45); }
+
+html[data-persona="p3"] input,
+html[data-persona="p3"] textarea,
+html[data-persona="p3"] select {
+  border-radius: 0;
+}
+
+/* Accent on the dark ink surface: the day palette's blue is too close to navy, so use the glow */
+html[data-persona="p3"]:not(.dark) .bg-tm-purple-dark,
+html[data-persona="p3"]:not(.dark) .bg-tm-purple-dark.text-tm-yellow,
+html[data-persona="p3"]:not(.dark) .bg-tm-purple-dark .text-tm-yellow {
+  color: var(--p3-glow);
+}
+
+html[data-persona="p3"] .tm-xp-fill {
+  background: linear-gradient(90deg, var(--p3-edge), var(--p3-glow));
+}
+html[data-persona="p3"] ::selection { background: var(--p3-edge); color: #fff; }
+html.dark[data-persona="p3"] ::selection { color: #021208; }
+html[data-persona="p3"] ::-webkit-scrollbar-thumb { background: var(--p3-edge); }
+
+/* ============================================================
+   Calendar: a Persona day's whole box, on normal days too. Background images only, so the
+   selected/hover tints (background-color utilities) still show through.
+   ============================================================ */
+
+.p-day { isolation: isolate; overflow: hidden; }
+.p-day > * { position: relative; z-index: 1; }
+.p-day::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* P3: water-blue with the menu's light streaks and a cyan edge */
+.p-day-p3 {
+  background-image: linear-gradient(160deg, rgb(22 207 251 / 0.22), rgb(1 95 204 / 0.32));
+  box-shadow: inset 3px 0 0 #16cffb;
+}
+.p-day-p3::before {
+  background:
+    repeating-linear-gradient(118deg, transparent 0 18px, rgb(255 255 255 / 0.28) 18px 19px, transparent 19px 44px),
+    radial-gradient(60% 40% at 20% 0%, rgb(255 255 255 / 0.35), transparent 70%);
+}
+.p-day-p3::after {
+  content: "";
+  position: absolute;
+  right: -18%;
+  bottom: -30%;
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid rgb(22 207 251 / 0.35);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* P4: TV yellow with scanlines and an ink frame */
+.p-day-p4 {
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgb(0 0 0 / 0.06) 3px 4px),
+    linear-gradient(170deg, rgb(255 225 0 / 0.55), rgb(255 176 0 / 0.4));
+  box-shadow: inset 0 0 0 2px #181512;
+}
+.p-day-p4::before {
+  background: radial-gradient(circle, rgb(239 95 0 / 0.35) 1.4px, transparent 1.9px) 0 0 / 10px 10px;
+  -webkit-mask-image: linear-gradient(200deg, #000, transparent 60%);
+  mask-image: linear-gradient(200deg, #000, transparent 60%);
+}
+
+/* P5: red slash, halftone and a white-and-black edge */
+.p-day-p5 {
+  background-image: linear-gradient(115deg, rgb(229 0 27 / 0.5) 0 62%, rgb(11 11 11 / 0.55) 62%);
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 4px #0b0b0b;
+}
+.p-day-p5::before {
+  background:
+    radial-gradient(circle, rgb(0 0 0 / 0.3) 1.3px, transparent 1.8px) 0 0 / 8px 8px,
+    linear-gradient(115deg, transparent 0 61.2%, #fff 61.2% 62.4%, transparent 62.4%);
+}
+
+/* ============================================================
+   Persona components (nav, HUD, ceremonies, transitions): shared bits
+   ============================================================ */
+
+.p-ransom { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.06em; line-height: 1; }
+.p-ransom > span {
+  display: inline-block;
+  padding: 0.04em 0.12em 0.02em;
+  font-family: "P5 Ransom", "Anton", "Impact", sans-serif;
+  text-transform: uppercase;
+}
+
+.p3-hud { font-family: "P3 HUD", var(--font-geist-mono); letter-spacing: 0.08em; }
+
+.p-static {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -0.2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 120px 120px;
+}
+
+@keyframes p-static-jitter {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-14px, 9px); }
+  50% { transform: translate(11px, -13px); }
+  75% { transform: translate(-7px, -6px); }
+  100% { transform: translate(0, 0); }
+}
+.p-static-jitter { animation: p-static-jitter 0.18s steps(1) infinite; }
+
+@keyframes p-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.p-blink { animation: p-blink 1.4s ease-in-out infinite; }
+
+/* P3: the moon glyph pulses very slightly during the Dark Hour */
+@keyframes p3-moon {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+.p3-moon-pulse { animation: p3-moon 4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .p-static-jitter, .p-blink, .p3-moon-pulse { animation: none !important; }
+}
