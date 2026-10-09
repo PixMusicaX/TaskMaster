@@ -71,7 +71,7 @@ interface SettingsPanelProps {
 
 export default function SettingsPanel({ notificationPermission, locationPermission, onEnableNotifications, onEnableLocation }: SettingsPanelProps) {
   const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
-  const personaOff = useSyncExternalStore(subscribePersonaSetting, isPersonaOff, () => false);
+  const personaOff = useSyncExternalStore(subscribePersonaSetting, isPersonaOff, () => true);
   const personaToday = usePersona();
   const next = nextPersonaDay();
   const personaStatus = personaOff

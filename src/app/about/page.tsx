@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { format, subDays } from "date-fns";
-import { Database, Download, AlertTriangle, ExternalLink, Library, Palette } from "lucide-react";
+import { Database, Download, AlertTriangle, ExternalLink, Github, Heart, UserRound } from "lucide-react";
 import GlassCard from "@/components/glass-card";
 import TabularViewModal from "@/components/TabularViewModal";
 import VaultHero from "@/components/vault/vault-hero";
@@ -21,6 +21,11 @@ import type { PrepTipRow, ReliefRow, SmartMissionRow, TimelineSeason } from "@/l
 
 const flip = <T extends { id: string; completed: boolean }>(list: T[], id: string) =>
   list.map(item => item.id === id ? { ...item, completed: !item.completed } : item);
+
+const CREDITS = [
+  { href: "https://pinakipsingha.vercel.app", icon: UserRound, title: "Creator", description: "Made by Pinaki AKA PiX." },
+  { href: "https://github.com/PixMusicaX/TaskMaster", icon: Github, title: "GitHub", description: "Browse the TaskMaster source code." },
+];
 
 const noopSubscribe = () => () => {};
 const readNotificationPermission = () => ("Notification" in window ? Notification.permission : "default");
@@ -243,27 +248,31 @@ export default function AboutPage() {
         </GlassCard>
       </VaultSection>
 
-      <VaultSection icon={Palette} iconClassName="text-tm-red" title="Gallery">
-        <a href="https://pinakipsingha.vercel.app" target="_blank" rel="noopener noreferrer" className="block group">
-          <GlassCard className="p-5 md:p-6 hover:border-tm-orange-light/40 transition-colors">
-            <div className="flex items-center gap-5">
-              <div className="w-12 h-12 rounded-2xl bg-tm-orange-light/20 text-tm-orange-light flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                <Library size={24} />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-lg font-bold text-foreground leading-tight">Library</h4>
-                <p className="text-sm text-tm-blue-gray font-medium mt-1">Explore the curated collection of assets and resources.</p>
-              </div>
-              <ExternalLink size={20} className="text-tm-blue-gray group-hover:text-tm-orange-light group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-            </div>
-          </GlassCard>
-        </a>
+      <VaultSection icon={Heart} iconClassName="text-tm-red" title="Credits">
+        <div className="space-y-4">
+          {CREDITS.map(({ href, icon: Icon, title, description }) => (
+            <a key={href} href={href} target="_blank" rel="noopener noreferrer" className="block group">
+              <GlassCard className="p-5 md:p-6 hover:border-tm-orange-light/40 transition-colors">
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-2xl bg-tm-orange-light/20 text-tm-orange-light flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <Icon size={24} />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-lg font-bold text-foreground leading-tight">{title}</h4>
+                    <p className="text-sm text-tm-blue-gray font-medium mt-1">{description}</p>
+                  </div>
+                  <ExternalLink size={20} className="text-tm-blue-gray group-hover:text-tm-orange-light group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                </div>
+              </GlassCard>
+            </a>
+          ))}
+        </div>
       </VaultSection>
 
       {/* Footer */}
       <div className="pt-12 text-center border-t border-tm-blue-gray/10">
         <p className="text-xs font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">
-          Version 7.0.0 • TaskMaster • By Pinaki AKA PiX
+          Version 7.1.0b • TaskMaster • By Pinaki AKA PiX
         </p>
       </div>
 

@@ -1,6 +1,6 @@
 import { ERAS } from "./eras";
 import { DEV_TOOLS_ENABLED } from "./dev-xp";
-import { DEV_PERSONA_KEY, PERSONA_OFF_KEY, PERSONA_FONTS_URL, PERSONA_FORCED_THEME, pickPersonaDays } from "./persona";
+import { DEV_PERSONA_KEY, PERSONA_ON_KEY, PERSONA_FONTS_URL, PERSONA_FORCED_THEME, pickPersonaDays } from "./persona";
 
 const ERA_LABELS = Object.fromEntries(ERAS.map(e => [e.id, [e.numeral, e.name]]));
 
@@ -10,12 +10,12 @@ const ERA_LABELS = Object.fromEntries(ERAS.map(e => [e.id, [e.numeral, e.name]])
 // A rank saved before v6 has no period; it's shown until the profile loads and re-saves it.
 // The rank name, era numeral and era name are also published as CSS variables, so their labels
 // (.tm-rank-label / .tm-era-label / .tm-era-name) are right before the app hydrates.
-// On a Persona day (lib/persona.ts), unless the player turned them off, it also sets data-persona,
+// On a Persona day (lib/persona.ts), if the player turned them on, it also sets data-persona,
 // pins that style's theme and starts loading its fonts.
 export const themeInitScript = `(function(){try{
 var d=document.documentElement,n=new Date(),h=n.getHours();
 var pick=${pickPersonaDays.toString()};
-var ps=localStorage.getItem(${JSON.stringify(PERSONA_OFF_KEY)})==='1'?null:(pick(n.getFullYear(),n.getMonth())[n.getDate()]||null);
+var ps=localStorage.getItem(${JSON.stringify(PERSONA_ON_KEY)})==='1'?(pick(n.getFullYear(),n.getMonth())[n.getDate()]||null):null;
 var o=${JSON.stringify(DEV_TOOLS_ENABLED)}?localStorage.getItem(${JSON.stringify(DEV_PERSONA_KEY)}):null;
 if(o==='off')ps=null;else if(o==='p3'||o==='p4'||o==='p5')ps=o;
 var pt=ps?${JSON.stringify(PERSONA_FORCED_THEME)}[ps]:null;

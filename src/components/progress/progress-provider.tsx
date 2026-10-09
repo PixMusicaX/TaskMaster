@@ -40,6 +40,9 @@ interface ProgressContextType {
   // Opens last season's recap on demand (the dev tools use this to preview it)
   openRecap: () => void;
   era: EraStanding | null;
+  // True once the rank and era have been placed (or their requests failed). Server actions run one
+  // at a time, so slow ones (the AI calls) wait for this rather than hold the theme up.
+  themeReady: boolean;
 }
 
 const ProgressContext = createContext<ProgressContextType | null>(null);
@@ -90,6 +93,7 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const [recapOpen, setRecapOpen] = useState(false);
   const [eraShift, setEraShift] = useState<EraShift | null>(null);
   const [eraStanding, setEraStanding] = useState<EraStanding | null>(null);
+  const [themeReady, setThemeReady] = useState(false);
 
   const prevRef = useRef<ProfileSnapshot | null>(null);
   const requestRef = useRef(0);
@@ -281,8 +285,9 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
 
   // Refresh on navigation (e.g. an event's XP lands once its time passes)
   useEffect(() => {
-    load(prevRef.current !== null);
-    ensureEraProgress().catch(err => console.error("Era progress failed:", err));
+    const loaded = load(prevRef.current !== null);
+    const placed = ensureEraProgress().catch(err => console.error("Era progress failed:", err));
+    Promise.allSettled([loaded, placed]).then(() => setThemeReady(true));
   }, [pathname, load, ensureEraProgress]);
 
   const setManual = useCallback((manual: boolean) => {
@@ -304,7 +309,7 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ProgressContext.Provider value={{ profile, pulse, isManual, refresh, setManual, openRecap, era: eraStanding }}>
+    <ProgressContext.Provider value={{ profile, pulse, isManual, refresh, setManual, openRecap, era: eraStanding, themeReady }}>
       <EraStandingContext.Provider value={eraStanding}>
         {children}
       </EraStandingContext.Provider>

@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   DEV_PERSONA_KEY,
-  PERSONA_OFF_KEY,
+  PERSONA_ON_KEY,
   nextPersonaDay,
   daysToFullMoon,
   moonPhaseIndex,
@@ -95,15 +95,15 @@ describe("persona in the init script", () => {
 
   it("sets the day's style, pins its theme and loads its fonts", () => {
     vi.setSystemTime(new Date(2026, 9, personaDay[0], 21)); // 9pm would normally be dark
+    localStorage.setItem(PERSONA_ON_KEY, "1");
     run();
     expect(root().getAttribute("data-persona")).toBe("p4");
     expect(root().classList.contains("dark")).toBe(false);
     expect(document.head.querySelector("link[rel=stylesheet]")).not.toBeNull();
   });
 
-  it("stays off when the player turned Persona days off", () => {
+  it("stays off until the player turns Persona days on", () => {
     vi.setSystemTime(new Date(2026, 9, personaDay[0], 21));
-    localStorage.setItem(PERSONA_OFF_KEY, "1");
     run();
     expect(root().hasAttribute("data-persona")).toBe(false);
     expect(root().classList.contains("dark")).toBe(true);
@@ -113,6 +113,7 @@ describe("persona in the init script", () => {
 
   it("leaves a normal day alone", () => {
     vi.setSystemTime(new Date(2026, 9, normalDay, 21));
+    localStorage.setItem(PERSONA_ON_KEY, "1");
     root().setAttribute("data-persona", "p5");
     run();
     expect(root().hasAttribute("data-persona")).toBe(false);

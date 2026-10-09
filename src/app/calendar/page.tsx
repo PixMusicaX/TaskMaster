@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import GlassCard from "@/components/glass-card";
 import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Coins, RotateCw, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
@@ -17,7 +17,7 @@ import { SPRING } from "@/lib/motion";
 import TabularViewModal from "@/components/TabularViewModal";
 import type { EventRow, MoodEntry, Profile, ReliefRow } from "@/lib/types";
 import { Search } from "lucide-react";
-import { PERSONA_NAMES, scheduledPersona } from "@/lib/persona";
+import { PERSONA_NAMES, isPersonaOff, scheduledPersona, subscribePersonaSetting } from "@/lib/persona";
 import { PersonaDayBadge } from "@/components/persona/persona-day-badge";
 
 export default function CalendarPage() {
@@ -28,6 +28,9 @@ export default function CalendarPage() {
   const [moods, setMoods] = useState<MoodEntry[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Until Persona days are switched on (About → Settings) the calendar doesn't mark them either
+  const personaOff = useSyncExternalStore(subscribePersonaSetting, isPersonaOff, () => true);
+  const dayPersona = (day: Date) => (personaOff ? null : scheduledPersona(day));
   const [showAdd, setShowAdd] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventRow | null>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -540,7 +543,7 @@ export default function CalendarPage() {
                         return 0;
                       });
                     const dayMood = moods.find(m => m.date === format(day, "yyyy-MM-dd"))?.mood;
-                    const persona = scheduledPersona(day);
+                    const persona = dayPersona(day);
 
                     return (
                       <button
@@ -689,7 +692,7 @@ export default function CalendarPage() {
                   const specialDays = dayEvents.filter(e => e.type === "special_day");
                   const hasSpecialDay = specialDays.length > 0;
                   const sdColor = hasSpecialDay ? getSpecialDayColors() : null;
-                  const persona = scheduledPersona(day);
+                  const persona = dayPersona(day);
 
                   return (
                     <button
@@ -728,10 +731,10 @@ export default function CalendarPage() {
                   <h3 className="text-xl font-bold tracking-tight">{format(selectedDate, "MMMM d")}</h3>
                   <p className="text-xs font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] flex items-center gap-2">
                     {format(selectedDate, "EEEE")}
-                    {scheduledPersona(selectedDate) && (
+                    {dayPersona(selectedDate) && (
                       <span className="inline-flex items-center gap-1.5">
-                        <PersonaDayBadge style={scheduledPersona(selectedDate)!} size={10} />
-                        {PERSONA_NAMES[scheduledPersona(selectedDate)!]} day
+                        <PersonaDayBadge style={dayPersona(selectedDate)!} size={10} />
+                        {PERSONA_NAMES[dayPersona(selectedDate)!]} day
                       </span>
                     )}
                   </p>

@@ -17,6 +17,7 @@ import { getReliefRecommendation, toggleReliefRecommendation, regenerateReliefRe
 import { getPreparationTip, togglePreparationTip, regeneratePreparationTip } from "@/app/actions/preparation";
 import { getSpecialDayColors } from "@/lib/utils";
 import { personaForToday } from "@/lib/persona";
+import { useProgress } from "@/components/progress/progress-provider";
 import type { EventRow, HabitWithLogs, NoteRow, PrepTipRow, Profile, Relief, SeasonPace, SmartMissionRow } from "@/lib/types";
 import TaskmasterDialog from "@/components/taskmaster-dialog";
 import DailyMissionsCard from "@/components/home/daily-missions-card";
@@ -126,6 +127,8 @@ export default function Home() {
 
   const specialDays = tasks.filter(isTimedSpecialDay);
 
+  const { themeReady } = useProgress();
+
   const heroRef = useRef<HTMLDivElement>(null);
   useScrollDissolve(heroRef);
 
@@ -226,8 +229,15 @@ export default function Home() {
         // Combine scores (Average of Task and Habit success)
         setCompletionScore(((taskRatio * 100) + (habitRatio * 100)) / 2);
       });
+    }
+    fetchData();
+  }, [today, todayStr, habitLogsSince]);
 
-      // 5. AI Guidance (Parallelized for better performance)
+  // 5. AI Guidance, once the rank and era are on screen: the day's first visit generates it, which
+  // is slow, and every request queued behind it would wait
+  useEffect(() => {
+    if (!themeReady) return;
+    async function fetchGuidance() {
       setAiLoading(true);
       try {
         const [smartData, prepData, quoteData] = await Promise.all([
@@ -246,8 +256,8 @@ export default function Home() {
         setAiLoading(false);
       }
     }
-    fetchData();
-  }, [today, todayStr, habitLogsSince]);
+    fetchGuidance();
+  }, [todayStr, themeReady]);
 
   // Dev tools: re-read the profile when the spoofed XP changes (never fires in production)
   useEffect(() => {
