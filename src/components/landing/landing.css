@@ -16,6 +16,55 @@
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }
+/* The Persona menus read their typefaces from variables that persona.css only sets on Persona
+   days; the landing page shows the menus on any day */
+.tm-persona-frame {
+  --font-p3-menu: "Rodin Pro UB", "FOT-RodinPro-UB", "M PLUS 1p", "Arial Black", sans-serif;
+  --font-p4-menu: "Playfair Display", "Rockwell", Georgia, serif;
+  --font-p5-menu: "P5 Menu", "Anton", Impact, sans-serif;
+  animation: tm-persona-in 0.45s ease-out;
+}
+/* The era backdrops behind the scenes: the same strength whatever era the visitor's browser
+   remembers, and visible even where a Persona day would switch the app's ambience off */
+.tm-landing-ambient {
+  --ambient-opacity: 0.4;
+}
+@keyframes tm-persona-in {
+  from { opacity: 0; }
+}
 .tm-face-back {
   transform: rotateY(180deg);
+}
+
+/* Sign in: a spiral in Google's four colours. A stack of rings, each a four-colour pie turned a
+   step further than the ring outside it, grows from the centre until it covers the screen; on
+   the login page it winds back down into the middle. The disc is wider than the screen's
+   diagonal so its rim never shows. */
+.tm-spiral {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150vmax;
+  height: 150vmax;
+  margin: -75vmax 0 0 -75vmax;
+}
+.tm-spiral-in {
+  transform: scale(0) rotate(-200deg);
+  animation: tm-spiral-in 0.7s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+}
+.tm-spiral-out {
+  animation: tm-spiral-out 0.7s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+}
+.tm-spiral-ring {
+  position: absolute;
+  border-radius: 50%;
+  background: conic-gradient(#4285f4 0 25%, #ea4335 0 50%, #fbbc05 0 75%, #34a853 0);
+  transform: rotate(var(--turn, 0deg));
+}
+@keyframes tm-spiral-in {
+  to { transform: scale(1) rotate(0deg); }
+}
+@keyframes tm-spiral-out {
+  from { transform: scale(1) rotate(0deg); }
+  to { transform: scale(0) rotate(200deg); }
 }

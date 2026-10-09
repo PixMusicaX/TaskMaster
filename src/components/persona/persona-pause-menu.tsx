@@ -117,6 +117,15 @@ interface MenuProps {
   onClose: () => void;
   level?: number;
   xp?: number;
+  // The landing page shows a menu with its own words in place of the app's pages
+  labels?: string[];
+  descriptions?: string[];
+}
+
+function menuItems(labels: string[] | undefined, style: PersonaStyle) {
+  return labels
+    ? labels.map((label, i) => ({ href: PERSONA_MENU_ITEMS[i % PERSONA_MENU_ITEMS.length].href, label }))
+    : PERSONA_MENU_ITEMS.map(item => ({ href: item.href, label: item.labels[style] }));
 }
 
 // ======================= P3 Reload =======================
@@ -136,7 +145,8 @@ const P3_COLORS = ["#16CFFB", "#7DE6FD", "#77FEFC"];
 const P3_CURSOR = "polygon(4% 96%, 100% 4%, 84% 100%)";
 const P3_CURSOR_BACK = "polygon(-6% 100%, 104% 0%, 82% 98%)";
 
-function P3Menu({ selected, select, onClose, dark }: MenuProps & { dark: boolean }) {
+// Exported so the landing page can show the menus as they are (see components/landing)
+export function P3Menu({ selected, select, onClose, dark, labels, descriptions }: MenuProps & { dark: boolean }) {
   // Phones: Makoto keeps the top of the screen and the list gets the deep water below him, spaced
   // out and tilted less (the game's fanned list is drawn for widescreen)
   const [narrow] = useState(() => !window.matchMedia("(min-width: 768px)").matches);
@@ -174,7 +184,7 @@ function P3Menu({ selected, select, onClose, dark }: MenuProps & { dark: boolean
       </div>
 
       <nav className="absolute left-[12%] top-[48%] md:left-[40%] md:top-1/2 md:-translate-y-1/2 flex flex-col" aria-label="Menu">
-        {PERSONA_MENU_ITEMS.map((item, i) => {
+        {menuItems(labels, "p3").map((item, i) => {
           const on = selected === i;
           const l = P3_LAYOUT[i];
           return (
@@ -212,7 +222,7 @@ function P3Menu({ selected, select, onClose, dark }: MenuProps & { dark: boolean
                   animate={on ? { scale: [1, 1.18, 1.08] } : { scale: 1 }}
                   transition={{ duration: 0.22 }}
                 >
-                  {item.labels.p3}
+                  {item.label}
                 </motion.span>
                 {/* Where the white slash crosses the word it turns red */}
                 {on && (
@@ -223,7 +233,7 @@ function P3Menu({ selected, select, onClose, dark }: MenuProps & { dark: boolean
                     animate={{ scale: [1, 1.18, 1.08] }}
                     transition={{ duration: 0.22 }}
                   >
-                    {item.labels.p3}
+                    {item.label}
                   </motion.span>
                 )}
               </Link>
@@ -234,7 +244,7 @@ function P3Menu({ selected, select, onClose, dark }: MenuProps & { dark: boolean
 
       {/* Command caption, bottom right */}
       <div className="absolute bottom-4 right-0 flex flex-col items-start text-white" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
-        <p className="italic text-[20px] md:text-[30px] pr-6 md:pr-20 font-bold">{P3_DESCRIPTIONS[selected]}</p>
+        <p className="italic text-[20px] md:text-[30px] pr-6 md:pr-20 font-bold">{(descriptions ?? P3_DESCRIPTIONS)[selected]}</p>
         <div className="flex items-center w-full gap-1 text-[11px]">
           <span>Command</span>
           <span className="grow h-px bg-white shadow-[0_1px_6px_rgba(0,0,0,0.5)]" />
@@ -290,7 +300,7 @@ function supportsAlphaVideo() {
   return !webkitOnly && document.createElement("video").canPlayType('video/webm; codecs="vp9"') !== "";
 }
 
-function P4Menu({ selected, select, onClose, xp }: MenuProps) {
+export function P4Menu({ selected, select, onClose, xp, labels, descriptions }: MenuProps) {
   const [alphaVideo] = useState(supportsAlphaVideo);
   // Tall screens only see the middle of the stage, so Yu moves in over the list there
   const [portrait] = useState(() => window.matchMedia("(max-aspect-ratio: 1/1)").matches);
@@ -374,7 +384,7 @@ function P4Menu({ selected, select, onClose, xp }: MenuProps) {
         </svg>
 
         <nav aria-label="Menu" className="absolute inset-0">
-          {PERSONA_MENU_ITEMS.map((item, i) => {
+          {menuItems(labels, "p4").map((item, i) => {
             const on = selected === i;
             const row = P4_ROWS[i];
             return (
@@ -404,7 +414,7 @@ function P4Menu({ selected, select, onClose, xp }: MenuProps) {
                         : P4_TONES[row.zone]),
                     }}
                   >
-                    {item.labels.p4}
+                    {item.label}
                   </span>
                 </Link>
               </motion.div>
@@ -428,7 +438,7 @@ function P4Menu({ selected, select, onClose, xp }: MenuProps) {
         initial={{ opacity: 0, x: 12 }}
         animate={{ opacity: 1, x: 0 }}
       >
-        ✦ {P4_DESCRIPTIONS[selected]}
+        ✦ {(descriptions ?? P4_DESCRIPTIONS)[selected]}
       </motion.p>
     </div>
   );
@@ -539,7 +549,7 @@ function P5Selector() {
   );
 }
 
-function P5Menu({ selected, select, onClose }: MenuProps) {
+export function P5Menu({ selected, select, onClose, labels, descriptions }: MenuProps) {
   return (
     <div className="absolute inset-0 overflow-hidden bg-black">
       {/* Fills whatever the stage leaves uncovered on tall phones */}
@@ -565,7 +575,7 @@ function P5Menu({ selected, select, onClose }: MenuProps) {
         <img src="/persona/p5-menu-bg.webp" alt="" className="absolute inset-0 h-full w-full" draggable={false} />
 
         <nav aria-label="Menu" className="absolute inset-0">
-          {PERSONA_MENU_ITEMS.map((item, i) => {
+          {menuItems(labels, "p5").map((item, i) => {
             const on = selected === i;
             const row = P5_ROWS[i];
             return (
@@ -577,9 +587,9 @@ function P5Menu({ selected, select, onClose }: MenuProps) {
                 animate={{ x: 0, opacity: 1, rotate: on ? row.tilt - 3 : row.tilt, scale: on ? 1.08 : 1 }}
                 transition={{ delay: 0.16 + i * 0.04, type: "spring", stiffness: 520, damping: 22 }}
               >
-                <Link href={item.href} onClick={onClose} onMouseEnter={() => select(i)} onFocus={() => select(i)} className="relative flex outline-none" aria-label={item.labels.p5}>
+                <Link href={item.href} onClick={onClose} onMouseEnter={() => select(i)} onFocus={() => select(i)} className="relative flex outline-none" aria-label={item.label}>
                   {on && <P5Selector />}
-                  <P5Sticker text={item.labels.p5.toUpperCase()} on={on} />
+                  <P5Sticker text={item.label.toUpperCase()} on={on} />
                 </Link>
               </motion.div>
             );
@@ -606,7 +616,7 @@ function P5Menu({ selected, select, onClose }: MenuProps) {
           initial={{ opacity: 0, x: -8 }}
           animate={{ opacity: 1, x: 0 }}
         >
-          {P5_DESCRIPTIONS[selected]}
+          {(descriptions ?? P5_DESCRIPTIONS)[selected]}
         </motion.p>
       </motion.div>
 
@@ -617,7 +627,7 @@ function P5Menu({ selected, select, onClose }: MenuProps) {
         initial={{ opacity: 0, x: 12 }}
         animate={{ opacity: 1, x: 0 }}
       >
-        {P5_DESCRIPTIONS[selected]}
+        {(descriptions ?? P5_DESCRIPTIONS)[selected]}
       </motion.p>
     </div>
   );

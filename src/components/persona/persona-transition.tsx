@@ -42,7 +42,7 @@ export default function PersonaTransition({ style, dark }: { style: PersonaStyle
 }
 
 // Black and red shards slash across, with a white streak riding the first one
-function P5Wipe() {
+export function P5Wipe() {
   const bars = [
     { top: "-10%", color: "#0b0b0b", delay: 0 },
     { top: "18%", color: "#e5001b", delay: 0.04 },
@@ -73,7 +73,7 @@ function P5Wipe() {
 }
 
 // Channel change: a burst of TV static and a white scan line collapsing to the middle
-function P4Static() {
+export function P4Static() {
   return (
     <>
       <motion.div
@@ -93,7 +93,7 @@ function P4Static() {
 }
 
 // A diagonal sheet of light washes over, cyan by day and green in the Dark Hour
-function P3Sweep({ dark }: { dark: boolean }) {
+export function P3Sweep({ dark }: { dark: boolean }) {
   const glow = dark ? "#5cff9a" : "#7fd4ff";
   const deep = dark ? "#021006" : "#0a3d91";
   return (

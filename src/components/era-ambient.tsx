@@ -40,7 +40,7 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
 }
 
 // Era particles. Capped at 30fps, DPR 1.5, fewer on phones, paused when the tab is hidden.
-function ParticleCanvas({ kind, count, multicolor }: { kind: ParticleKind; count: number; multicolor: boolean }) {
+export function ParticleCanvas({ kind, count, multicolor }: { kind: ParticleKind; count: number; multicolor: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -147,7 +147,8 @@ function ParticleCanvas({ kind, count, multicolor }: { kind: ParticleKind; count
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />;
 }
 
-function Layer({ layer }: { layer: AmbientLayer }) {
+// Exported with the particles so the landing page can borrow an era's ambience per scene
+export function Layer({ layer }: { layer: AmbientLayer }) {
   switch (layer) {
     case "hearth":
       return <><div className="tm-hearth" /><div className="tm-vignette" /></>;

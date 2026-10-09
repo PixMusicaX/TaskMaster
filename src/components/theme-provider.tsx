@@ -36,12 +36,19 @@ const subscribe = (listener: () => void) => {
 const notify = () => listeners.forEach(l => l());
 const readTheme = (): Theme => (document.documentElement.classList.contains("dark") ? "dark" : "light");
 const readPersona = (): PersonaStyle | null => (document.documentElement.getAttribute("data-persona") as PersonaStyle | null);
+// The signed-out pages (landing, login) follow the browser's light/dark setting instead of the
+// clock: they count themselves in and out with useBrowserTheme()
+let browserThemed = 0;
+const THEME_SOURCE_EVENT = "tm-theme-source";
+const browserDark = () => window.matchMedia("(prefers-color-scheme: dark)");
+
 // Dark from 6pm to 6am, light otherwise (same rule as lib/theme-init.ts), unless today's Persona
-// style pins a theme
+// style pins a theme or the page follows the browser
 const clockTheme = (): Theme => {
   const persona = readPersona();
   const forced = persona ? PERSONA_FORCED_THEME[persona] : null;
   if (forced) return forced;
+  if (browserThemed > 0) return browserDark().matches ? "dark" : "light";
   const h = new Date().getHours();
   return h < 6 || h >= 18 ? "dark" : "light";
 };
@@ -109,6 +116,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("focus", sync);
     window.addEventListener(DEV_PERSONA_EVENT, sync);
     window.addEventListener(PERSONA_SETTING_EVENT, sync);
+    window.addEventListener(THEME_SOURCE_EVENT, sync);
     // React owns <html>'s className and writes it back without "dark" whenever it re-renders the
     // root (after a hydration mismatch, for one), so put the class back if it goes missing
     const observer = new MutationObserver(apply);
@@ -121,6 +129,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("focus", sync);
       window.removeEventListener(DEV_PERSONA_EVENT, sync);
       window.removeEventListener(PERSONA_SETTING_EVENT, sync);
+      window.removeEventListener(THEME_SOURCE_EVENT, sync);
     };
   }, []);
 
@@ -160,6 +169,23 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       </MotionConfig>
     </ThemeContext.Provider>
   );
+}
+
+// While a component using this is mounted, the theme starts from the browser's light/dark
+// setting (and follows it if it changes) rather than the time of day. The toggle still works.
+export function useBrowserTheme() {
+  React.useEffect(() => {
+    const changed = () => window.dispatchEvent(new Event(THEME_SOURCE_EVENT));
+    const query = browserDark();
+    browserThemed++;
+    changed();
+    query.addEventListener("change", changed);
+    return () => {
+      browserThemed--;
+      query.removeEventListener("change", changed);
+      changed();
+    };
+  }, []);
 }
 
 export function useTheme() {

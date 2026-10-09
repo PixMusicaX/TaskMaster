@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { animate, createScope, createTimeline, onScroll, stagger, utils, type AnimationParams } from "animejs";
 import {
-  ArrowDown, ArrowRight, Bot, Calendar, Check, CheckSquare, Database, FileText, Flame, Github, KeyRound, Lock,
-  Moon, Shield, Sparkles, TrendingUp, Tv, UserRound, VenetianMask, WifiOff, Zap, type LucideIcon,
+  ArrowDown, ArrowRight, Bot, Calendar, Check, CheckCircle2, CheckSquare, ChevronLeft, ChevronRight, Database, FileText, Flame,
+  Github, KeyRound, Lock, Moon, Play, Shield, Sparkles, Sun, TrendingUp, UserRound, WifiOff, Zap, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { prefersReducedMotion } from "@/lib/scroll-fx";
@@ -14,6 +15,16 @@ import { useMounted } from "@/lib/use-mounted";
 import { RPG_TITLES } from "@/lib/constants";
 import { RankCrest } from "@/lib/rank-icons";
 import { APP_VERSION, CREATOR_URL, REPO_URL } from "@/lib/version";
+import { AnimatePresence, motion } from "framer-motion";
+import { PERSONA_FONTS_URL, PERSONA_NAMES, PERSONA_STYLES, type PersonaStyle } from "@/lib/persona";
+import type { AmbientLayer } from "@/lib/eras";
+import { Layer } from "@/components/era-ambient";
+import LandingBackdrop, { type BackdropMode } from "./landing-backdrop";
+import { P3Sweep, P4Static, P5Wipe } from "@/components/persona/persona-transition";
+import { useBrowserTheme, useTheme } from "@/components/theme-provider";
+import HabitIconRender from "@/components/HabitIconRender";
+import { P3Menu, P4Menu, P5Menu } from "@/components/persona/persona-pause-menu";
+import { GOOGLE_WIPE_MS, GoogleSpiral, markGoogleWipe } from "./google-reveal";
 import "./landing.css";
 
 // The front door, as one pinned scroll sequence (the same idea as the home page's Growth Orbit).
@@ -21,7 +32,10 @@ import "./landing.css";
 // to the scroll position, flies each feature in as a 3D prop built from the app's own cards,
 // plays it, and flies it out again: a calendar lying in space with its busy days lifting off,
 // a stack of note sheets, habit tokens that flip, ranks on a turning carousel, a quest card that
-// turns over, two doors, a hand of Persona cards. Scrolling back rewinds all of it.
+// turns over, two doors. The calendar, notes and habits props are the app's own screens, copied
+// class for class with sample data; the Themes scene shows one of the real Persona menus; and
+// each scene sits on the ambience of one of the app's five eras.
+// Scrolling back rewinds all of it.
 //
 // One prop is on stage at a time and the others are hidden outright, which keeps the number of
 // live 3D layers small on phones. With reduced motion there is no stage: the sections are a list.
@@ -62,7 +76,7 @@ const FEATURES: { id: Exclude<SceneId, "top" | "version">; label: string; icon: 
   {
     id: "themes", label: "Themes", icon: Sparkles, number: "07", eyebrow: "Themes", title: "Some days it dresses up", side: "right",
     body: "Six days a month, if you switch them on, the app turns into Persona 3, 4 or 5: fonts, menus, ceremonies, even the AI's voice. Light by day and dark by night the rest of the time.",
-    points: ["Persona days: a full takeover, never the same dates twice", "Ranks and eras restyle everything as you level", "Special days are next"],
+    points: ["Persona days: a full takeover, never the same dates twice", "Ranks and eras restyle everything as you level", "Go to accounts and turn it on!"],
   },
 ];
 
@@ -72,18 +86,51 @@ const SCENES: { id: SceneId; label: string }[] = [
   { id: "version", label: "Version" },
 ];
 
-// The script's clock. The opening leaves by HERO_OUT; after that a scene starts every STEP,
-// plays for a little longer than that, and overlaps the next one's arrival.
-const FIRST_AT = 60;
-const STEP = 90;
-const sceneStart = (index: number) => (index === 0 ? 0 : FIRST_AT + (index - 1) * STEP);
+// The script's clock: how long each scene holds the stage. A scene plays a little past its span,
+// overlapping the next one's arrival.
+const SPANS: Record<SceneId, number> = { top: 60, calendar: 90, notes: 90, habits: 90, seasons: 90, guide: 90, privacy: 90, themes: 112, version: 60 };
+const STARTS = SCENES.reduce<number[]>((starts, scene, i) => [...starts, i === 0 ? 0 : starts[i - 1] + SPANS[SCENES[i - 1].id]], []);
+const sceneStart = (index: number) => STARTS[index];
+const sceneSpan = (index: number) => SPANS[SCENES[index].id];
 // Where a scene is at rest, for the dots to jump to
 const sceneRest = (index: number) => (index === 0 ? 0 : sceneStart(index) + 52);
-const SCROLL_PER_UNIT = 1.25; // vh of scrolling per unit of script
+// How quickly the script catches up with the scroll position: 1 is locked to it, lower glides.
+// A mouse wheel moves the page in jumps; this is what turns those into one continuous motion.
+const SCROLL_SMOOTHING = 0.3;
+const SCROLL_PER_UNIT = 1.6; // vh of scrolling per unit of script
+
+// Inside the Themes scene, a Persona menu is up whose options spell the scene's heading, lit one
+// after another as the scroll moves through it
+const THEMES_INDEX = SCENES.findIndex(scene => scene.id === "themes");
+const SEASONS_INDEX = SCENES.findIndex(scene => scene.id === "seasons");
+const THEME_WORDS = ["Some", "Days", "It", "Dresses", "Up"];
+const THEME_NOTES = ["Six days a month", "Never the same dates twice", "Fonts, menus, ceremonies", "Even the AI changes its voice", "Only if you switch it on"];
+type PersonaShow = { style: PersonaStyle; selected: number } | null;
+function personaAt(time: number, style: PersonaStyle): PersonaShow {
+  const local = time - sceneStart(THEMES_INDEX);
+  const from = 8;
+  const until = SPANS.themes - 6;
+  if (local < from || local > until) return null;
+  const word = Math.floor(((local - from) / (until - from)) * THEME_WORDS.length);
+  return { style, selected: Math.min(THEME_WORDS.length - 1, word) };
+}
 
 const LABEL = "text-caption font-mono font-semibold uppercase tracking-[0.12em]";
 const CTA = cn(LABEL, "inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-tm-yellow text-tm-purple-dark text-sm transition-transform hover:scale-[1.03] active:scale-95");
 const BOARD = "tm-card tm-board relative border border-tm-blue-gray/10 dark:border-white/10";
+
+// A look around without an account. Not built yet: the button is here so the layout has its place.
+function DemoButton({ className }: { className?: string }) {
+  return (
+    <button
+      type="button"
+      title="Demo coming soon"
+      className={cn(LABEL, "inline-flex items-center gap-2 border border-tm-blue-gray/30 text-tm-purple-dark dark:text-tm-yellow hover:border-tm-yellow/60 hover:bg-tm-yellow/10 transition-colors active:scale-95", className)}
+    >
+      <Play size={14} /> Demo
+    </button>
+  );
+}
 
 const subscribeReducedMotion = (onChange: () => void) => {
   const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -97,18 +144,51 @@ const scatter = (i: number, salt: number, spread: number) => Math.sin(i * 12.989
 export default function Landing() {
   const reduced = useSyncExternalStore(subscribeReducedMotion, prefersReducedMotion, () => false);
   const mounted = useMounted();
+  const { theme, toggleTheme } = useTheme();
+  // Light or dark as the visitor's browser prefers (the app itself goes by the time of day)
+  useBrowserTheme();
+
+  // Signing in is with Google, so the way out to the login page is in Google's four colours:
+  // a spiral closes over the page, then the route changes underneath it
+  const router = useRouter();
+  const [leaving, setLeaving] = useState(false);
+  const signIn = useCallback((event: React.MouseEvent) => {
+    // Leave modified clicks (new tab) and reduced motion to the plain link
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0 || prefersReducedMotion()) return;
+    event.preventDefault();
+    setLeaving(true);
+    setTimeout(() => {
+      // The login page winds the spiral back down (see google-reveal.tsx)
+      markGoogleWipe();
+      router.push("/login");
+    }, GOOGLE_WIPE_MS);
+  }, [router]);
   const root = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
   const total = useRef(1);
   const [active, setActive] = useState(0);
+  // What the Themes scene should be showing, and the setter <PersonaStage> hands us
+  // One game per visit, picked when the page loads
+  const personaStyle = useRef<PersonaStyle>("p5");
+  const personaKey = useRef("");
+  const personaShow = useRef<PersonaShow>(null);
+  const setPersona = useRef<((show: PersonaShow) => void) | null>(null);
+  const registerPersona = useCallback((set: (show: PersonaShow) => void) => {
+    setPersona.current = set;
+    set(personaShow.current);
+  }, []);
 
   useLayoutEffect(() => {
     const el = root.current;
     const trackEl = track.current;
     if (!el || !trackEl || reduced) return;
+    personaStyle.current = PERSONA_STYLES[Math.floor(Math.random() * PERSONA_STYLES.length)];
+    // The caption card is placed per game (see the Themes scene's markup)
+    el.querySelector<HTMLElement>('[data-scene="themes"]')?.setAttribute("data-game", personaStyle.current);
 
     const layers = SCENES.map(scene => el.querySelector<HTMLElement>(`[data-scene="${scene.id}"]`));
+    const ring = el.querySelector<HTMLElement>('[data-scene="seasons"] [data-obj]');
     const within = (id: SceneId) => (selector: string) => Array.from(el.querySelectorAll<HTMLElement>(`[data-scene="${id}"] ${selector}`));
     let shown = -1;
 
@@ -118,15 +198,31 @@ export default function Landing() {
       layers.forEach((layer, i) => {
         if (!layer) return;
         const from = sceneStart(i) - 1;
-        const until = i === 0 ? FIRST_AT + 12 : i === SCENES.length - 1 ? Infinity : sceneStart(i) + STEP + 12;
+        const until = i === SCENES.length - 1 ? Infinity : sceneStart(i) + sceneSpan(i) + 12;
         const on = time >= from && time <= until;
         layer.style.visibility = on ? "visible" : "hidden";
         // Clickable only while it is at rest, not while flying in or out
-        const settled = i === 0 ? time <= 22 : time >= from + 22 && (i === SCENES.length - 1 || time <= from + 80);
+        const settled = i === 0 ? time <= 22 : time >= from + 22 && (i === SCENES.length - 1 || time <= from + sceneSpan(i) - 10);
         layer.style.pointerEvents = on && settled ? "auto" : "none";
         if (time >= from + 1) current = i;
       });
       if (current !== shown) { shown = current; setActive(current); }
+      // The Persona menus are mounted only while they are up (they play video)
+      // The rank ring shows only the ranks on its near side (again, not left to the browser)
+      if (ring && layers[SEASONS_INDEX]?.style.visibility === "visible") {
+        const turned = parseFloat(String(utils.get(ring, "rotateY"))) || 0;
+        Array.from(ring.children).forEach((card, i) => {
+          const facing = (((i * 36 + turned) % 360) + 360) % 360;
+          (card as HTMLElement).style.visibility = facing < 100 || facing > 260 ? "" : "hidden";
+        });
+      }
+      const persona = personaAt(time, personaStyle.current);
+      const key = persona ? `${persona.style}${persona.selected}` : "";
+      if (key !== personaKey.current) {
+        personaKey.current = key;
+        personaShow.current = persona;
+        setPersona.current?.(persona);
+      }
       if (bar.current) bar.current.style.transform = `scaleX(${Math.min(1, time / total.current)})`;
     };
 
@@ -139,15 +235,24 @@ export default function Landing() {
       // A timeline only applies a tween's starting values once it reaches it, so hide the later beats up front
       utils.set("[data-line], [data-title], [data-obj], [data-x], [data-row]", { opacity: 0 });
       utils.set("[data-grow]", { scaleX: 0 });
-      utils.set("[data-card]", { translateY: "110%" });
+      // Two-sided props: the script swaps the faces at the half-turn itself (see `turnOver`)
+      utils.set("[data-back]", { opacity: 0 });
 
       const timeline = createTimeline({
         defaults: { ease: "out(3)" },
-        autoplay: onScroll({ target: trackEl, enter: "top top", leave: "bottom bottom", sync: 0.8 }),
+        autoplay: onScroll({ target: trackEl, enter: "top top", leave: "bottom bottom", sync: SCROLL_SMOOTHING }),
         onUpdate: ({ currentTime }) => stage(currentTime),
       });
       const add = (targets: HTMLElement[], params: AnimationParams, at: number) => {
         if (targets.length) timeline.add(targets, params, at);
+      };
+      // Turn a two-faced prop over. Browsers don't reliably hide the far side of a card whose
+      // faces are themselves styled cards, so the faces change places exactly as it passes edge-on.
+      const turnOver = (prop: HTMLElement, at: number, duration: number, ease: string) => {
+        add([prop], { rotateY: [0, 180], duration, ease }, at);
+        const edgeOn = at + duration / 2 - 0.3;
+        add(Array.from(prop.querySelectorAll<HTMLElement>(":scope > [data-front]")), { opacity: [1, 0], duration: 0.6, ease: "linear" }, edgeOn);
+        add(Array.from(prop.querySelectorAll<HTMLElement>(":scope > [data-back]")), { opacity: [0, 1], duration: 0.6, ease: "linear" }, edgeOn);
       };
 
       // ── Opening: the title's letters blow apart and the rest lifts away
@@ -167,17 +272,18 @@ export default function Landing() {
         const at = sceneStart(i);
         const q = within(scene.id);
         const last = i === SCENES.length - 1;
+        const out = at + sceneSpan(i) - 12;
         add(q("[data-title]"), { opacity: [0, 1], rotateX: [-85, 0], translateY: [40, 0], duration: 22, ease: "out(4)" }, at + 6);
         add(q("[data-line]"), { opacity: [0, 1], translateY: [40, 0], duration: 16, delay: stagger(3) }, at + 10);
         add(q("[data-obj]"), { opacity: [0, 1], duration: 9, ease: "linear" }, at);
         if (last) return;
-        add(q("[data-title]"), { opacity: [1, 0], rotateX: [0, 70], translateY: [0, -40], duration: 14, ease: "in(2)" }, at + 78);
-        add(q("[data-line]"), { opacity: [1, 0], translateY: [0, -40], duration: 12, delay: stagger(1.5), ease: "in(2)" }, at + 78);
-        add(q("[data-obj]"), { opacity: [1, 0], duration: 9, ease: "linear" }, at + STEP + 1);
+        add(q("[data-title]"), { opacity: [1, 0], rotateX: [0, 70], translateY: [0, -40], duration: 14, ease: "in(2)" }, out);
+        add(q("[data-line]"), { opacity: [1, 0], translateY: [0, -40], duration: 12, delay: stagger(1.5), ease: "in(2)" }, out);
+        add(q("[data-obj]"), { opacity: [1, 0], duration: 9, ease: "linear" }, at + sceneSpan(i) + 1);
       });
 
-      // ── Calendar: a month lying in space, sliding in from the corner. The busy days lift off
-      // its surface like pins, today highest, then it tips up and leaves over the top.
+      // ── Calendar: the app's month view lying in space, sliding in from the corner. The events
+      // lift off the page like pins, today's date highest, then it tips up and leaves over the top.
       {
         const at = sceneStart(1);
         const q = within("calendar");
@@ -211,7 +317,7 @@ export default function Landing() {
         const at = sceneStart(3);
         const q = within("habits");
         add(q("[data-obj]"), { translateX: ["-80%", "0%"], rotateY: [78, 26], rotateX: [0, 8], duration: 32 }, at);
-        add(q("[data-flip]"), { rotateY: [0, 180], duration: 14, delay: stagger(1.7), ease: "inOut(2)" }, at + 26);
+        q("[data-flip]").forEach((token, i) => turnOver(token, at + 26 + i * 1.7, 14, "inOut(2)"));
         add(q("[data-obj]"), { rotateY: [26, 12], duration: 42, ease: "linear" }, at + 32);
         add(q("[data-x]"), { opacity: [0, 1], scale: [0.3, 1], duration: 10, delay: stagger(4) }, at + 56);
         add(q("[data-obj]"), { translateX: ["0%", "-110%"], rotateY: [12, -84], duration: 24, ease: "in(2)" }, at + 76);
@@ -236,7 +342,7 @@ export default function Landing() {
         const q = within("guide");
         add(q("[data-obj]"), { translateY: ["90%", "0%"], rotateY: [-46, 0], rotateX: [34, 6], duration: 30 }, at);
         add(q("[data-x]"), { opacity: [0, 1], scale: [0.3, 1], duration: 10, delay: stagger(3) }, at + 26);
-        add(q("[data-obj]"), { rotateY: [0, 180], duration: 24, ease: "inOut(3)" }, at + 42);
+        q("[data-obj]").forEach(card => turnOver(card, at + 42, 24, "inOut(3)"));
         add(q("[data-x]"), { opacity: [1, 0], duration: 8, ease: "linear" }, at + 76);
         add(q("[data-obj]"), { translateY: ["0%", "-150%"], rotateX: [6, -46], duration: 24, ease: "in(2)" }, at + 76);
       }
@@ -252,18 +358,13 @@ export default function Landing() {
         add(q("[data-door]"), { translateZ: [0, -700], translateY: ["0%", "40%"], duration: 24, delay: stagger(3), ease: "in(2)" }, at + 76);
       }
 
-      // ── Themes: a hand of three cards fans open, each lifts in turn, then they are thrown
+      // ── Themes: a real Persona menu takes over the whole stage (mounted by <PersonaStage>,
+      // driven from stage() above). Only the caption card is scripted.
       {
-        const at = sceneStart(7);
+        const at = sceneStart(THEMES_INDEX);
         const q = within("themes");
-        q("[data-card]").forEach((card, i) => {
-          const spread = (i - 1) * 19;
-          add([card], { translateY: ["110%", "0%"], rotateZ: [0, spread], duration: 28, ease: "out(4)" }, at + 2 + i * 4);
-          add([card], { translateY: ["0%", "-12%", "0%"], duration: 16, ease: "inOut(2)" }, at + 38 + i * 9);
-          add([card], { translateX: ["0%", `${(i - 1) * 190}%`], translateY: ["0%", "-170%"], rotateZ: [spread, (i - 1) * 80], duration: 22, ease: "in(2)" }, at + 76 + i * 2);
-        });
-        add(q("[data-x]"), { opacity: [0, 1], scale: [0.3, 1], duration: 10, delay: stagger(2) }, at + 30);
-        add(q("[data-x]"), { opacity: [1, 0], duration: 8, ease: "linear" }, at + 76);
+        add(q("[data-obj]"), { translateY: [60, 0], duration: 20, ease: "out(4)" }, at);
+        add(q("[data-obj]"), { translateY: [0, 60], duration: 12, ease: "in(2)" }, at + SPANS.themes - 10);
       }
 
       // ── Version: the number arrives from far away and stays
@@ -319,10 +420,21 @@ export default function Landing() {
       </div>
       <header className="fixed top-0 inset-x-0 z-40 flex items-center justify-between px-5 py-3 md:px-8">
         <button onClick={() => goTo(0)} className="font-display font-bold tracking-tight uppercase text-tm-purple-dark dark:text-tm-yellow">TaskMaster</button>
-        <Link href="/login" className={cn(LABEL, "inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-tm-yellow text-tm-purple-dark transition-transform hover:scale-[1.04] active:scale-95")}>
-          Sign in <ArrowRight size={14} />
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="p-2 rounded-lg text-tm-purple-dark dark:text-tm-yellow hover:bg-tm-yellow/15 transition-colors active:scale-90"
+          >
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <DemoButton className="hidden sm:inline-flex px-4 py-2 rounded-lg" />
+          <Link href="/login" onClick={signIn} className={cn(LABEL, "inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-tm-yellow text-tm-purple-dark transition-transform hover:scale-[1.04] active:scale-95")}>
+            Sign in <ArrowRight size={14} />
+          </Link>
+        </div>
       </header>
+      {leaving && <GoogleSpiral phase="in" />}
       <nav aria-label="Sections" className="hidden md:flex fixed right-5 top-1/2 -translate-y-1/2 z-40 flex-col gap-3">
         {SCENES.map((scene, i) => (
           <button key={scene.id} onClick={() => goTo(i)} aria-label={scene.label} aria-current={active === i} className="group flex items-center justify-end gap-3">
@@ -347,20 +459,26 @@ export default function Landing() {
   return (
     <div ref={root} className="flex-1">
       {chrome}
-      <div ref={track} style={{ height: `${(sceneStart(SCENES.length - 1) + 60) * SCROLL_PER_UNIT}vh` }}>
+      <div ref={track} style={{ height: `${(sceneStart(SCENES.length - 1) + SPANS.version) * SCROLL_PER_UNIT}vh` }}>
         <div className="sticky top-0 h-[100svh] overflow-hidden">
+          <LandingAmbient scene={SCENES[active].id} />
 
           {/* Opening */}
           <div data-scene="top" className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
             <div className="space-y-7 max-w-4xl [perspective:1200px]">
               <div data-intro="rise"><p data-hero-line className={cn(LABEL, "text-tm-blue-gray")}>Your personal planner</p></div>
-              <h1 aria-label="TaskMaster" className="tm-3d text-[15vw] leading-none md:text-9xl font-display font-bold tracking-tight uppercase text-tm-purple-dark dark:text-tm-yellow">
+              <h1 aria-label="TaskMaster" className="tm-3d whitespace-nowrap text-[12.5vw] leading-none md:text-9xl font-display font-bold tracking-tight uppercase text-tm-purple-dark dark:text-tm-yellow">
                 {"TaskMaster".split("").map((letter, i) => (
                   <span key={i} aria-hidden data-intro="letter" className="tm-3d inline-block"><span data-letter className="inline-block">{letter}</span></span>
                 ))}
               </h1>
               <div data-intro="rise"><p data-hero-line className="max-w-xl mx-auto text-base md:text-xl font-medium text-tm-blue-gray">Habits, notes and a calendar that turn your month into a season worth winning.</p></div>
-              <div data-intro="rise"><div data-hero-line><Link href="/login" className={CTA}>Sign in <ArrowRight size={18} /></Link></div></div>
+              <div data-intro="rise">
+                <div data-hero-line className="flex flex-wrap items-center justify-center gap-3">
+                  <Link href="/login" onClick={signIn} className={CTA}>Sign in <ArrowRight size={18} /></Link>
+                  <DemoButton className="px-8 py-4 rounded-xl text-sm" />
+                </div>
+              </div>
             </div>
             <div data-intro="rise" className="absolute bottom-8 inset-x-0 flex justify-center">
               <button data-hero-line onClick={() => goTo(1)} className={cn(LABEL, "flex flex-col items-center gap-2 text-tm-blue-gray")}>
@@ -373,7 +491,7 @@ export default function Landing() {
           {/* Calendar: lying in the bottom corner, cropped by the edge of the screen */}
           <FeatureScene feature={FEATURES[0]}>
             <div className="absolute left-[-24vw] bottom-[-6svh] w-[150vw] md:left-[-7vw] md:bottom-[-16vh] md:w-[60vw] max-w-[940px] [perspective:1600px]">
-              <div data-obj className={cn(BOARD, "tm-board-3d p-4 md:p-7")}>
+              <div data-obj className={cn(BOARD, "tm-board-3d flex flex-col")}>
                 <CardFx />
                 <CalendarProp />
               </div>
@@ -382,7 +500,7 @@ export default function Landing() {
 
           {/* Notes */}
           <FeatureScene feature={FEATURES[1]}>
-            <div className="absolute right-[4vw] bottom-[5svh] w-[70vw] md:right-[9vw] md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:w-[30vw] max-w-[420px] [perspective:1400px]">
+            <div className="absolute right-[4vw] bottom-[5svh] w-[min(70vw,36svh)] md:right-[9vw] md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:w-[30vw] max-w-[420px] [perspective:1400px]">
               <div data-obj className="tm-3d relative aspect-[4/5]">
                 <NotesProp />
               </div>
@@ -392,7 +510,7 @@ export default function Landing() {
           {/* Habits */}
           <FeatureScene feature={FEATURES[2]}>
             <div className="absolute left-[5vw] bottom-[6svh] w-[90vw] md:left-[7vw] md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:w-[36vw] max-w-[520px] [perspective:1400px]">
-              <div data-obj className={cn(BOARD, "tm-board-3d p-4 md:p-6")}>
+              <div data-obj className={cn(BOARD, "tm-board-3d px-3 py-5 sm:p-6")}>
                 <CardFx />
                 <HabitsProp />
               </div>
@@ -401,14 +519,14 @@ export default function Landing() {
 
           {/* Seasons */}
           <FeatureScene feature={FEATURES[3]}>
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-[9svh] md:left-auto md:translate-x-0 md:right-[13vw] md:bottom-auto md:top-1/2 md:-translate-y-1/2 w-[150px] md:w-[180px]">
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-[9svh] md:left-auto md:translate-x-0 md:right-[13vw] md:bottom-auto md:top-1/2 md:-translate-y-1/2 w-[min(150px,19svh)] md:w-[180px]">
               <SeasonsProp />
             </div>
           </FeatureScene>
 
           {/* AI guide */}
           <FeatureScene feature={FEATURES[4]}>
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-[7svh] w-[84vw] md:left-[9vw] md:translate-x-0 md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:w-[32vw] max-w-[440px]">
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-[7svh] w-[min(84vw,46svh)] md:left-[9vw] md:translate-x-0 md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:w-[32vw] max-w-[440px]">
               <GuideProp />
             </div>
           </FeatureScene>
@@ -416,16 +534,34 @@ export default function Landing() {
           {/* Privacy */}
           <FeatureScene feature={FEATURES[5]}>
             <div className="absolute left-1/2 -translate-x-1/2 bottom-[7svh] w-[90vw] md:left-auto md:translate-x-0 md:right-[8vw] md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:w-[38vw] max-w-[540px]">
-              <PrivacyProp />
+              <PrivacyProp onSignIn={signIn} />
             </div>
           </FeatureScene>
 
-          {/* Themes */}
-          <FeatureScene feature={FEATURES[6]}>
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-[10svh] md:left-[23vw] md:bottom-auto md:top-1/2 md:-translate-y-1/2 w-[150px] md:w-[200px]">
-              <ThemesProp />
+          {/* Themes: a game's menu fills the stage; the words ride on a card over it */}
+          <div data-scene="themes" className="group invisible absolute inset-0">
+            <PersonaStage register={registerPersona} />
+            {/* Bottom left on wide screens, except on a Persona 3 day: that is where Makoto's face is,
+                so the card moves to the open water at the top right. On a phone it is at the top,
+                except on a Persona 4 day, where the first option is: there it goes under the list. */}
+            <div className={cn(
+              "absolute top-16 inset-x-4 md:top-auto md:inset-x-auto md:left-[4vw] md:bottom-[7vh] md:w-[32vw] md:max-w-md",
+              "max-md:group-data-[game=p4]:top-[66svh]",
+              "md:group-data-[game=p3]:left-auto md:group-data-[game=p3]:bottom-auto md:group-data-[game=p3]:right-[6vw] md:group-data-[game=p3]:top-[12vh] md:group-data-[game=p3]:w-[28vw]"
+            )}>
+              <div data-obj className={cn(BOARD, "p-4 md:p-6 space-y-2 md:space-y-3 bg-background/90 [perspective:900px]")}>
+                <CardFx />
+                {/* No heading here: the menu behind spells it out */}
+                <p data-line className={cn(LABEL, "flex items-center gap-3 text-tm-blue-gray")}>
+                  <span className="text-tm-yellow">{FEATURES[6].number}</span>
+                  <span className="h-px w-8 bg-tm-blue-gray/30" />
+                  <Sparkles size={14} /> {FEATURES[6].eyebrow}
+                </p>
+                <p data-line className="text-xs md:text-sm font-medium text-tm-blue-gray">{FEATURES[6].body}</p>
+                <p data-line className={cn(LABEL, "hidden md:inline-block px-3 py-1.5 rounded-full border border-dashed border-tm-blue-gray/30 text-tm-blue-gray")}>Special days · soon</p>
+              </div>
             </div>
-          </FeatureScene>
+          </div>
 
           {/* Version */}
           <div data-scene="version" className="invisible absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
@@ -433,7 +569,7 @@ export default function Landing() {
               <p data-line className={cn(LABEL, "text-tm-blue-gray")}>Version</p>
               <p data-obj className="text-7xl md:text-9xl font-display font-bold tracking-tight text-tm-purple-dark dark:text-tm-yellow">{APP_VERSION}</p>
               <p data-x className="text-base md:text-lg font-medium text-tm-blue-gray">Accounts, your own AI key and this front door are new in this one. Made by Pinaki, also known as PiX.</p>
-              <div data-x><Link href="/login" className={CTA}>Start your season <ArrowRight size={18} /></Link></div>
+              <div data-x><Link href="/login" onClick={signIn} className={CTA}>Start your season <ArrowRight size={18} /></Link></div>
               <VersionLinks />
             </div>
           </div>
@@ -465,8 +601,8 @@ function FeatureCopy({ feature, staged }: { feature: (typeof FEATURES)[number]; 
         <span className="h-px w-8 bg-tm-blue-gray/30" />
         <Icon size={14} /> {feature.eyebrow}
       </p>
-      <h2 data-title className="origin-bottom text-4xl md:text-6xl font-display font-bold tracking-tight uppercase leading-[1.05] text-tm-purple-dark dark:text-tm-yellow">{feature.title}</h2>
-      <p data-line className="text-sm md:text-lg font-medium text-tm-blue-gray max-w-lg">{feature.body}</p>
+      <h2 data-title className="origin-bottom text-3xl md:text-6xl font-display font-bold tracking-tight uppercase leading-[1.05] text-tm-purple-dark dark:text-tm-yellow">{feature.title}</h2>
+      <p data-line className={cn("text-sm md:text-lg font-medium text-tm-blue-gray max-w-lg", staged && "max-md:line-clamp-4")}>{feature.body}</p>
       {/* On a phone the stage is short: the points give way to the prop */}
       <ul className={cn("space-y-2.5 pt-1", staged && "hidden md:block")}>
         {feature.points.map(point => (
@@ -485,7 +621,7 @@ function FeatureScene({ feature, children }: { feature: (typeof FEATURES)[number
   return (
     <div data-scene={feature.id} className="invisible absolute inset-0">
       <div className={cn(
-        "absolute top-20 inset-x-6 space-y-3 md:space-y-5 [perspective:900px]",
+        "absolute top-[4.5rem] inset-x-6 space-y-2.5 md:space-y-5 [perspective:900px]",
         "md:top-1/2 md:-translate-y-1/2 md:inset-x-auto md:w-[36vw] md:max-w-xl",
         feature.side === "right" ? "md:right-[9vw]" : "md:left-[8vw]"
       )}>
@@ -511,7 +647,7 @@ function PlainLanding() {
     <>
       <section data-scene="top" className="min-h-[100svh] flex flex-col items-center justify-center px-6 pt-20 pb-10 text-center space-y-7">
         <p className={cn(LABEL, "text-tm-blue-gray")}>Your personal planner</p>
-        <h1 className="text-[15vw] leading-none md:text-9xl font-display font-bold tracking-tight uppercase text-tm-purple-dark dark:text-tm-yellow">TaskMaster</h1>
+        <h1 className="whitespace-nowrap text-[12.5vw] leading-none md:text-9xl font-display font-bold tracking-tight uppercase text-tm-purple-dark dark:text-tm-yellow">TaskMaster</h1>
         <p className="max-w-xl mx-auto text-base md:text-xl font-medium text-tm-blue-gray">Habits, notes and a calendar that turn your month into a season worth winning.</p>
         <Link href="/login" className={CTA}>Sign in <ArrowRight size={18} /></Link>
       </section>
@@ -533,44 +669,80 @@ function PlainLanding() {
 }
 
 // ─── The props ────────────────────────────────────────────────────────────────
+// Calendar, notes and habits are the app's own screens: the markup and classes below are copied
+// from app/(app)/calendar, notes and habits, filled with sample data and with the buttons made
+// inert. Change the design there, change it here.
 
-// Day of month → what is on it
-const CALENDAR_MARKS: Record<number, string[]> = {
-  3: ["task"], 6: ["event"], 12: ["special"], 14: ["task"], 17: ["task", "event"],
-  20: ["event"], 23: ["task"], 26: ["task", "event"], 29: ["special"],
+type SampleEvent = { title: string; type: "task" | "event" | "special_day"; completed?: boolean };
+// October 2026 (it starts on a Thursday), as the desktop calendar would show it
+const CALENDAR_EVENTS: Record<number, SampleEvent[]> = {
+  2: [{ title: "Gandhi Jayanti", type: "special_day" }],
+  5: [{ title: "Pay rent", type: "task", completed: true }],
+  7: [{ title: "Dentist", type: "event" }],
+  9: [{ title: "Ship release", type: "task" }, { title: "Guitar class", type: "event" }],
+  12: [{ title: "Weekend trek", type: "event" }],
+  14: [{ title: "Tax papers", type: "task" }],
+  17: [{ title: "Riya's birthday", type: "special_day" }, { title: "Buy a gift", type: "task", completed: true }],
+  20: [{ title: "Dussehra", type: "special_day" }],
+  23: [{ title: "Demo day", type: "event" }],
+  27: [{ title: "Renew passport", type: "task" }],
+  30: [{ title: "Movie night", type: "event" }],
 };
-const MARK_COLOR: Record<string, string> = { task: "bg-tm-yellow", event: "bg-tm-orange-light", special: "bg-tm-red" };
-const TODAY = 9;
+const CALENDAR_MOODS: Record<number, string> = { 3: "😇", 5: "😐", 6: "😇", 8: "😢" };
+const CALENDAR_TODAY = 9;
 
 function CalendarProp() {
   return (
     <>
-      <div className="flex items-center justify-between mb-3 md:mb-5">
-        <p className="font-display font-bold text-xl md:text-3xl uppercase text-tm-purple-dark dark:text-tm-yellow">October</p>
-        <p className={cn(LABEL, "text-tm-blue-gray")}>3 quests today</p>
+      <div className="p-3 md:p-6 border-b border-tm-blue-gray/10 flex items-center justify-between">
+        <h2 className="text-xl md:text-2xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow">October 2026</h2>
+        <div className="flex items-center gap-2">
+          <span className="p-2 rounded-xl"><ChevronLeft size={24} /></span>
+          <span className="px-4 py-2 rounded-xl font-bold text-sm">Today</span>
+          <span className="p-2 rounded-xl"><ChevronRight size={24} /></span>
+        </div>
       </div>
-      <div className="tm-3d grid grid-cols-7 gap-1.5 md:gap-2.5">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
-          <span key={day} className={cn(LABEL, "text-center text-tm-blue-gray/60 pb-1")}>{day}</span>
+
+      <div className="grid grid-cols-7 border-b border-tm-blue-gray/10 bg-tm-blue-gray/5">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+          <div key={day} className="py-2 md:py-3 text-center text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray/60">{day}</div>
         ))}
+      </div>
+
+      <div className="tm-3d flex-1 grid grid-cols-7 auto-rows-fr">
         {Array.from({ length: 35 }, (_, i) => {
-          const day = i - 2; // the month starts on a Thursday
-          const inMonth = day >= 1 && day <= 31;
-          const marks = CALENDAR_MARKS[day];
-          const today = day === TODAY;
+          const date = i - 3; // Sep 27 … Oct 31
+          const inMonth = date >= 1;
+          const day = inMonth ? date : 30 + date;
+          const today = inMonth && date === CALENDAR_TODAY;
+          const events = inMonth ? CALENDAR_EVENTS[date] ?? [] : [];
           return (
-            <div key={i} data-pin={marks && !today ? "" : undefined} data-today={today ? "" : undefined} className={cn(
-              "aspect-[5/4] rounded-xl flex flex-col items-center justify-center gap-1 text-sm md:text-lg font-bold border",
-              !inMonth ? "border-transparent text-tm-blue-gray/20"
-                : today ? "bg-tm-orange-dark border-tm-orange-dark text-white shadow-lg shadow-tm-orange-dark/30"
-                  : marks ? "bg-background border-tm-yellow/40 text-foreground shadow-md" : "bg-tm-blue-gray/5 border-tm-blue-gray/5 text-foreground/70"
+            <div key={i} className={cn(
+              "tm-3d relative p-1 md:p-2 border-r border-b border-tm-blue-gray/5 text-left flex flex-col gap-1 min-h-[56px] md:min-h-[86px]",
+              !inMonth ? "text-tm-blue-gray/20 bg-tm-blue-gray/5" : "text-foreground",
+              today && "bg-tm-yellow/10"
             )}>
-              {inMonth ? day : ""}
-              <span className="flex gap-1 h-1.5">
-                {(today ? ["task", "event", "task"] : marks ?? []).map((mark, n) => (
-                  <span key={n} className={cn("w-1.5 h-1.5 rounded-full", today ? "bg-white" : MARK_COLOR[mark])} />
+              <div className="tm-3d flex justify-between items-start">
+                <span data-today={today ? "" : undefined} className={cn(
+                  "text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full",
+                  today ? "bg-tm-orange-dark text-white shadow-lg shadow-tm-orange-dark/20 scale-110" : ""
+                )}>{day}</span>
+                {inMonth && CALENDAR_MOODS[date] && <span className="text-sm opacity-80">{CALENDAR_MOODS[date]}</span>}
+              </div>
+              <div className="tm-3d flex flex-col gap-1 mt-1">
+                {events.map(event => (
+                  <div key={event.title} data-pin className={cn(
+                    "px-1.5 py-0.5 rounded text-micro font-bold truncate border-l-2",
+                    event.type === "special_day"
+                      ? "bg-tm-orange-dark/20 text-tm-orange-dark border-tm-orange-dark"
+                      : event.type === "task"
+                        ? (event.completed ? "bg-tm-blue-gray/10 text-tm-blue-gray/50 border-tm-blue-gray/30" : "bg-tm-yellow/20 text-tm-purple-dark border-tm-yellow")
+                        : "bg-tm-orange-light/20 text-tm-orange-dark border-tm-orange-light"
+                  )}>
+                    {event.title}
+                  </div>
                 ))}
-              </span>
+              </div>
             </div>
           );
         })}
@@ -579,77 +751,130 @@ function CalendarProp() {
   );
 }
 
-const NOTE_LINES = ["Shipped the release before lunch", "Walked the long way home", "Called Ma. She sounded happy", "Guitar: finally got that bridge"];
+const NOTE_MOODS = [
+  { val: "good", icon: "😇", color: "text-tm-yellow", bg: "bg-tm-yellow/20" },
+  { val: "neutral", icon: "😐", color: "text-tm-blue-gray", bg: "bg-white/10" },
+  { val: "bad", icon: "😢", color: "text-tm-orange-dark", bg: "bg-tm-orange-dark/20" },
+];
+// Bottom of the stack first; the last one is the sheet on top
+const NOTE_SHEETS = [
+  { date: "October 7", mood: "neutral", saved: "22:10", lines: [["○", "Slow start, long meetings"], ["✅", "Booked the dentist"], ["○", "Early night"]] },
+  { date: "October 8", mood: "bad", saved: "23:02", lines: [["📍", "Release slipped a day"], ["○", "Skipped the walk"], ["💡", "Split the migration in two"]] },
+  { date: "October 9", mood: "good", saved: "21:40", lines: [["✅", "Shipped the release before lunch"], ["○", "Walked the long way home"], ["✨", "Called Ma. She sounded happy"], ["🔥", "Guitar: finally got that bridge"]] },
+];
 
 function NotesProp() {
   return (
     <>
-      {[0, 1, 2].map(sheet => (
-        <div key={sheet} data-sheet className={cn(BOARD, "absolute inset-0 p-5 md:p-6 flex flex-col gap-4")}>
-          <CardFx />
-          {sheet === 2 ? (
-            <>
-              <div className="flex items-center justify-between">
-                <p className="font-display font-bold text-lg uppercase text-tm-purple-dark dark:text-tm-yellow">Thursday, Oct 9</p>
-                <p className={cn(LABEL, "text-tm-yellow")}>+40 XP</p>
+      {NOTE_SHEETS.map((sheet, index) => {
+        const top = index === NOTE_SHEETS.length - 1;
+        return (
+          <div key={sheet.date} data-sheet className={cn(
+            BOARD, "absolute inset-0 flex flex-col overflow-hidden bg-background shadow-xl shadow-tm-purple-dark/5 dark:shadow-black/40",
+            sheet.mood === "good" ? "border-tm-yellow/40 shadow-[0_0_20px_rgba(242,194,48,0.15)]"
+              : sheet.mood === "bad" ? "border-tm-orange-dark/40 shadow-[0_0_20px_rgba(191,49,0,0.15)]" : "border-tm-yellow/20"
+          )}>
+            <CardFx />
+            <div className="border-b border-tm-blue-gray/10 p-3 md:p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-tm-blue-gray">
+                <Calendar size={16} />
+                <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em]">{sheet.date} Entry</span>
               </div>
-              <ul className="space-y-3 flex-1">
-                {NOTE_LINES.map(line => (
-                  <li key={line} data-row className="flex items-center gap-3 text-sm font-medium text-foreground/85">
-                    <span className="w-2 h-2 rounded-full border-2 border-tm-yellow shrink-0" />
-                    {line}
-                  </li>
-                ))}
-              </ul>
               <div className="flex items-center gap-2">
-                {["Good", "Neutral", "Bad"].map((mood, i) => (
-                  <span key={mood} data-x className={cn(LABEL, "px-3 py-1.5 rounded-full border", i === 0 ? "bg-tm-yellow text-tm-purple-dark border-tm-yellow" : "border-tm-blue-gray/20 text-tm-blue-gray")}>{mood}</span>
-                ))}
+                <div className="flex p-1 md:mr-2">
+                  {NOTE_MOODS.map(m => (
+                    <span key={m.val} className={cn("relative p-2 rounded-full flex items-center justify-center w-9 h-9", sheet.mood === m.val ? m.color : "text-tm-blue-gray/70")}>
+                      {sheet.mood === m.val && <span data-x={top ? "" : undefined} className={cn("absolute inset-0 rounded-full shadow-inner", m.bg)} />}
+                      <span className={cn("relative text-xl", sheet.mood !== m.val && "grayscale-[0.6]")}>{m.icon}</span>
+                    </span>
+                  ))}
+                </div>
+                <span data-x={top ? "" : undefined} className="hidden md:flex text-caption text-tm-blue-gray font-bold italic items-center gap-1">
+                  <CheckCircle2 size={12} /> Saved {sheet.saved}
+                </span>
               </div>
-            </>
-          ) : (
-            // The sheets underneath: yesterday and the day before, already filled
-            <div className="space-y-3 opacity-40">
-              <div className="h-4 w-1/2 rounded bg-tm-blue-gray/30" />
-              {[0.9, 0.7, 0.8, 0.5].map((width, i) => <div key={i} className="h-2.5 rounded bg-tm-blue-gray/20" style={{ width: `${width * 100}%` }} />)}
             </div>
-          )}
-        </div>
-      ))}
+            <div className="flex-1 p-4 sm:p-8 space-y-2">
+              {sheet.lines.map(([bullet, text]) => (
+                <div key={text} data-row={top ? "" : undefined} className="flex items-start gap-3">
+                  <div className="relative mt-1"><span className="w-6 h-6 flex items-center justify-center rounded-lg text-lg">{bullet}</span></div>
+                  <p className="flex-1 text-sm md:text-lg leading-relaxed font-medium">{text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </>
   );
 }
 
-const HABITS = [
-  { name: "Read 10 pages", done: [1, 1, 1, 1, 1, 1, 1], streak: 21 },
-  { name: "Guitar practice", done: [1, 1, 0, 1, 1, 1, 1], streak: 4 },
-  { name: "Morning walk", done: [1, 0, 1, 1, 0, 1, 1], streak: 2 },
+// A week ending today (Friday the 9th), as the habit tracker lays it out
+const HABIT_DAYS = [["Sat", 3], ["Sun", 4], ["Mon", 5], ["Tue", 6], ["Wed", 7], ["Thu", 8], ["Fri", 9]] as const;
+// Per day: 1 done, 0 not done, null = not scheduled that day
+const HABIT_ROWS: { name: string; icon: string; frequency: string; streak: number; week: (0 | 1 | null)[] }[] = [
+  { name: "Read 10 pages", icon: "Book", frequency: "Daily", streak: 21, week: [1, 1, 1, 1, 1, 1, 1] },
+  { name: "Guitar practice", icon: "Music", frequency: "Daily", streak: 4, week: [1, 1, 0, 1, 1, 1, 1] },
+  { name: "Morning walk", icon: "Dumbbell", frequency: "Weekdays", streak: 2, week: [null, null, 1, 0, 0, 1, 1] },
 ];
+const HABIT_COLUMNS = { gridTemplateColumns: "minmax(0, 36%) repeat(7, 1fr)" };
 
 function HabitsProp() {
   return (
-    <div className="tm-3d space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="font-display font-bold text-xl uppercase text-tm-yellow">Daily missions</p>
-        <p className={cn(LABEL, "text-tm-blue-gray")}>This week</p>
-      </div>
-      {HABITS.map(habit => (
-        <div key={habit.name} className="tm-3d space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-bold text-foreground">{habit.name}</p>
-            <p data-x className={cn(LABEL, "flex items-center gap-1", habit.streak > 2 ? "text-tm-orange-dark" : "text-tm-blue-gray/60")}><Flame size={12} /> {habit.streak}</p>
+    <div className="tm-3d min-w-full">
+      <div className="grid mb-6 md:mb-8" style={HABIT_COLUMNS}>
+        <div className="font-mono font-semibold text-tm-blue-gray text-caption sm:text-xs uppercase tracking-[0.12em] pl-1 sm:pl-4">Habit</div>
+        {HABIT_DAYS.map(([name, date], i) => (
+          <div key={name} className="text-center space-y-1">
+            <p className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">{name}</p>
+            <div className={cn(
+              "w-7 h-7 sm:w-9 sm:h-9 mx-auto rounded-full flex items-center justify-center font-bold text-sm",
+              i === HABIT_DAYS.length - 1 ? "bg-tm-orange-dark text-white shadow-lg shadow-tm-orange-dark/20" : "text-tm-blue-gray bg-tm-blue-gray/5"
+            )}>{date}</div>
           </div>
-          <div className="tm-3d grid grid-cols-7 gap-1.5 md:gap-2">
-            {habit.done.map((done, day) => (
-              // A token with two faces: an empty ring, and the tick it turns over to
-              <span key={day} data-flip={done ? "" : undefined} className="tm-3d relative block aspect-square">
-                <span className="tm-face absolute inset-0 rounded-full border-2 border-dashed border-tm-blue-gray/30" />
-                <span className="tm-face tm-face-back absolute inset-0 rounded-full bg-tm-yellow text-tm-purple-dark flex items-center justify-center shadow-md"><Check size={16} /></span>
-              </span>
+        ))}
+      </div>
+
+      <div className="tm-3d space-y-5 md:space-y-6">
+        {HABIT_ROWS.map(habit => (
+          <div key={habit.name} className="tm-3d grid items-center" style={HABIT_COLUMNS}>
+            <div className="flex items-center gap-2 sm:gap-4 pl-1 sm:pl-4 relative">
+              <div className="w-10 h-10 bg-tm-yellow/10 rounded-xl hidden sm:flex items-center justify-center shrink-0">
+                <HabitIconRender icon={habit.icon} size={20} className="text-tm-yellow" />
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <p className="font-bold text-xs sm:text-sm truncate leading-tight">{habit.name}</p>
+                  {habit.streak >= 2 && (
+                    <span data-x className="flex items-center gap-0.5 shrink-0 text-tm-orange-dark">
+                      <Flame size={12} className="tm-flame fill-current" />
+                      <span className="text-tiny font-mono font-semibold">{habit.streak}</span>
+                    </span>
+                  )}
+                </div>
+                <p className="text-micro sm:text-caption text-tm-blue-gray uppercase font-mono font-semibold tracking-[0.12em] truncate mt-0.5">{habit.frequency}</p>
+              </div>
+            </div>
+            {habit.week.map((done, day) => (
+              <div key={day} className="tm-3d flex justify-center">
+                {done === null ? (
+                  <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl border-2 border-transparent bg-tm-blue-gray/5 opacity-20" />
+                ) : (
+                  // The app's check box as a token with two faces: empty, and the ticked one it turns over to
+                  <span data-flip={done ? "" : undefined} className="tm-3d relative block w-8 h-8 sm:w-10 sm:h-10">
+                    <span data-front className="tm-face absolute inset-0 rounded-2xl border-2 border-tm-blue-gray/10 bg-white/5" />
+                    <span data-back className="tm-face tm-face-back absolute inset-0 rounded-2xl border-2 bg-tm-yellow border-tm-yellow shadow-lg shadow-tm-yellow/20 flex items-center justify-center">
+                      <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" className="text-tm-purple-dark">
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                    </span>
+                  </span>
+                )}
+              </div>
             ))}
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -665,7 +890,7 @@ function SeasonsProp() {
           <div data-obj className="tm-3d relative w-full h-full">
             {RPG_TITLES.map((rank, i) => (
               <div key={rank.title} className="tm-face absolute inset-0" style={{ transform: `rotateY(${i * 36}deg) translateZ(${RING_RADIUS}px)` }}>
-                <div className={cn(BOARD, "h-full p-3 flex flex-col items-center justify-center gap-3 text-center")}>
+                <div className={cn(BOARD, "h-full p-3 flex flex-col items-center justify-center gap-3 text-center bg-background")}>
                   <CardFx />
                   <span className="w-14 h-14 rounded-full bg-tm-purple-dark text-tm-yellow flex items-center justify-center"><RankCrest rank={rank.title} size={26} strokeWidth={1.5} /></span>
                   <span className="font-display font-bold uppercase text-sm md:text-base leading-none text-tm-purple-dark dark:text-tm-yellow">{rank.title}</span>
@@ -707,7 +932,7 @@ function GuideProp() {
 
 function QuestFace({ tag, icon: Icon, title, text, back }: { tag: string; icon: LucideIcon; title: string; text: string; back?: boolean }) {
   return (
-    <div className={cn(BOARD, "tm-face absolute inset-0 p-5 md:p-6 flex flex-col gap-3 border-tm-yellow/30 bg-tm-yellow/5", back && "tm-face-back")}>
+    <div data-front={back ? undefined : ""} data-back={back ? "" : undefined} className={cn(BOARD, "tm-face absolute inset-0 p-5 md:p-6 flex flex-col gap-3 border-tm-yellow/30 bg-tm-yellow/5", back && "tm-face-back")}>
       <CardFx />
       <div className="flex items-center justify-between">
         <p className={cn(LABEL, "flex items-center gap-2 text-tm-yellow")}><Zap size={12} /> Smart mission</p>
@@ -720,12 +945,12 @@ function QuestFace({ tag, icon: Icon, title, text, back }: { tag: string; icon: 
   );
 }
 
-function PrivacyProp() {
+function PrivacyProp({ onSignIn }: { onSignIn: (event: React.MouseEvent) => void }) {
   const door = cn(BOARD, "group h-full p-4 md:p-6 flex flex-col gap-3 hover:border-tm-yellow/40 transition-colors");
   return (
     <div className="relative">
       <div data-obj className="grid grid-cols-2 gap-3 md:gap-4 [perspective:1300px]">
-        <Link data-door="left" href="/login" className={cn(door, "origin-left")}>
+        <Link data-door="left" href="/login" onClick={onSignIn} className={cn(door, "origin-left")}>
           <CardFx />
           <span className="w-11 h-11 rounded-2xl bg-tm-yellow/10 text-tm-yellow flex items-center justify-center"><UserRound size={20} /></span>
           <span className="font-black text-foreground leading-tight">Set up your account</span>
@@ -745,34 +970,117 @@ function PrivacyProp() {
   );
 }
 
-// Each game's own colours, whatever theme the page is in
-const PERSONA_CARDS = [
-  { name: "Persona 3", note: "Dark Hour", icon: Moon, className: "bg-[#0b2a5c] text-[#7fd1ff]" },
-  { name: "Persona 4", note: "Midnight Channel", icon: Tv, className: "bg-[#f5c400] text-[#1a1a1a]" },
-  { name: "Persona 5", note: "Take your time", icon: VenetianMask, className: "bg-[#d90018] text-white" },
-];
+const noop = () => {};
 
-function ThemesProp() {
+// The Themes scene's backdrop: one of the app's real Persona pause menus, full size, with the
+// scene's heading as its options. The landing script decides when it is up and which word is lit
+// (see personaAt); this mounts it. It arrives and leaves behind that game's own page wipe, the
+// one the app plays between pages on a Persona day. The menu is for looking at: inert and silent.
+function PersonaStage({ register }: { register: (set: (show: PersonaShow) => void) => void }) {
+  const [show, setShow] = useState<PersonaShow>(null);
+  // Which option is lit. Kept apart from `show`, so it stays put while the menu wipes away
+  // instead of jumping back to the first one
+  const [selected, setSelected] = useState(0);
+  const { theme } = useTheme();
+  const dark = theme === "dark";
+  const want = show?.style ?? null;
+
+  // `up` trails `want`: the wipe starts first and the menu changes underneath it
+  const [up, setUp] = useState<PersonaStyle | null>(null);
+  const [wipe, setWipe] = useState<{ style: PersonaStyle; run: number } | null>(null);
+  const [prevWant, setPrevWant] = useState(want);
+  if (want !== prevWant) {
+    setPrevWant(want);
+    const style = want ?? prevWant;
+    if (style) setWipe(current => ({ style, run: (current?.run ?? 0) + 1 }));
+  }
+
+  useEffect(() => {
+    register(next => {
+      setShow(next);
+      if (next) setSelected(next.selected);
+    });
+  }, [register]);
+
+  useEffect(() => {
+    const swap = setTimeout(() => setUp(want), 230);
+    const done = setTimeout(() => setWipe(null), 780);
+    return () => { clearTimeout(swap); clearTimeout(done); };
+  }, [want]);
+
+  // The games' typefaces are normally loaded on Persona days only
+  const needed = want !== null;
+  useEffect(() => {
+    if (!needed || document.querySelector(`link[href="${PERSONA_FONTS_URL}"]`)) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = PERSONA_FONTS_URL;
+    document.head.appendChild(link);
+  }, [needed]);
+
+  if (!up && !wipe) return null;
+  const menu = { selected, select: noop, onClose: noop, level: 12, xp: 1240, labels: THEME_WORDS, descriptions: THEME_NOTES };
+
   return (
-    <div className="space-y-8">
-      <div data-obj className="relative aspect-[3/4]">
-        {PERSONA_CARDS.map(({ name, note, icon: Icon, className }) => (
-          // Pivoting from a point below the card, like cards held in a hand
-          <div key={name} data-card className={cn("absolute inset-0 rounded-2xl p-4 flex flex-col justify-between shadow-xl [transform-origin:50%_135%]", className)}>
-            <Icon size={26} />
-            <div>
-              <p className="font-display font-bold uppercase leading-none text-base md:text-xl">{name}</p>
-              <p className="text-[10px] font-mono font-semibold uppercase tracking-[0.12em] opacity-80 mt-1.5">{note}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center justify-center gap-2 w-[80vw] max-w-[340px] -ml-[calc((min(80vw,340px)_-_100%)/2)]">
-        {["I", "II", "III", "IV", "V"].map(era => (
-          <span key={era} data-x className="w-8 h-8 rounded-full border-2 border-tm-yellow/40 text-tm-yellow font-serif font-bold text-xs flex items-center justify-center shrink-0">{era}</span>
-        ))}
-        <span data-x className={cn(LABEL, "px-3 py-1.5 rounded-full border border-dashed border-tm-blue-gray/30 text-tm-blue-gray whitespace-nowrap")}>Special days · soon</span>
-      </div>
+    <div className="absolute inset-0 overflow-hidden select-none pointer-events-none">
+      {up && (
+        <div key={up} inert className="tm-persona-frame absolute inset-0 overflow-hidden">
+          {up === "p3" && <P3Menu {...menu} dark={dark} />}
+          {up === "p4" && <P4Menu {...menu} />}
+          {up === "p5" && <P5Menu {...menu} />}
+          <p className="absolute top-16 right-4 md:top-5 md:right-auto md:left-1/2 md:-translate-x-1/2 z-10 px-3 py-1.5 rounded-full bg-black/70 text-white text-caption font-mono font-semibold uppercase tracking-[0.12em]">
+            The menu on a {PERSONA_NAMES[up]} day
+          </p>
+        </div>
+      )}
+      {wipe && (
+        <div key={wipe.run} className="absolute inset-0 z-20 overflow-hidden" aria-hidden>
+          {wipe.style === "p5" && <P5Wipe />}
+          {wipe.style === "p4" && <P4Static />}
+          {wipe.style === "p3" && <P3Sweep dark={dark} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Backdrops ────────────────────────────────────────────────────────────────
+// Two layers behind every scene. A wash of colour borrowed from the app's eras (the layers from
+// components/era-ambient, styled in app/eras.css), and over it a quiet canvas show of its own
+// where one suits (see landing-backdrop.tsx); the calendar and the AI guide keep only the wash. The Themes scene has neither; the game's
+// menu is its backdrop.
+const AMBIENT: Partial<Record<SceneId, { wash: AmbientLayer[]; show: BackdropMode | null }>> = {
+  top: { wash: ["hearth"], show: "embers" },
+  calendar: { wash: ["mesh"], show: null },
+  notes: { wash: ["rays"], show: "ribbons" },
+  habits: { wash: ["mesh"], show: "ripples" },
+  seasons: { wash: ["aurora", "prism"], show: "warp" },
+  guide: { wash: ["aurora"], show: null },
+  privacy: { wash: ["mesh"], show: "lattice" },
+  version: { wash: ["aurora"], show: "sparks" },
+};
+
+function LandingAmbient({ scene }: { scene: SceneId }) {
+  const kit = AMBIENT[scene];
+  return (
+    <div className="tm-landing-ambient absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+      <div className="tm-grain" />
+      <AnimatePresence>
+        {kit && (
+          <motion.div
+            key={scene}
+            className="absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.1, ease: "easeInOut" }}
+          >
+            {kit.wash.map(layer => <Layer key={layer} layer={layer} />)}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* One canvas for the whole page: it cross-fades between shows itself */}
+      <LandingBackdrop mode={kit?.show ?? null} />
     </div>
   );
 }

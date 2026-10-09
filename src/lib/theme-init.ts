@@ -5,8 +5,10 @@ import { DEV_PERSONA_KEY, PERSONA_ON_KEY, PERSONA_FONTS_URL, PERSONA_FORCED_THEM
 const ERA_LABELS = Object.fromEntries(ERAS.map(e => [e.id, [e.numeral, e.name]]));
 
 // Runs in <head> before first paint so the page never flashes the wrong theme, rank or era.
-// Theme follows the clock on every load; a stored rank or era only applies within the month it was
-// set (a new season starts at Novice, and the era is placed again once the pace data loads).
+// Theme follows the clock on every load, except on the signed-out pages (/ and /login), which
+// follow the browser's light/dark setting (see useBrowserTheme). A stored rank or era only applies
+// within the month it was set (a new season starts at Novice, and the era is placed again once
+// the pace data loads).
 // A rank saved before v6 has no period; it's shown until the profile loads and re-saves it.
 // The rank name, era numeral and era name are also published as CSS variables, so their labels
 // (.tm-rank-label / .tm-era-label / .tm-era-name) are right before the app hydrates.
@@ -19,7 +21,9 @@ var ps=localStorage.getItem(${JSON.stringify(PERSONA_ON_KEY)})==='1'?(pick(n.get
 var o=${JSON.stringify(DEV_TOOLS_ENABLED)}?localStorage.getItem(${JSON.stringify(DEV_PERSONA_KEY)}):null;
 if(o==='off')ps=null;else if(o==='p3'||o==='p4'||o==='p5')ps=o;
 var pt=ps?${JSON.stringify(PERSONA_FORCED_THEME)}[ps]:null;
-d.classList.toggle('dark',pt?pt==='dark':(h<6||h>=18));
+var pub=location.pathname==='/'||location.pathname==='/login';
+var sys=pub&&window.matchMedia?matchMedia('(prefers-color-scheme: dark)').matches:null;
+d.classList.toggle('dark',pt?pt==='dark':sys!==null?sys:(h<6||h>=18));
 if(ps){d.setAttribute('data-persona',ps);var f=document.createElement('link');f.rel='stylesheet';f.href=${JSON.stringify(PERSONA_FONTS_URL)};document.head.appendChild(f);}else d.removeAttribute('data-persona');
 var p=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
 var r=localStorage.getItem('rank');
