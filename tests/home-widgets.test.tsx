@@ -95,7 +95,7 @@ describe("ChronicleCard", () => {
     date, notes: [], events: [], specialDays: [], tasks: [], habits: [], relief: null, ...overrides,
   });
   const note = (content: string, mood = "neutral") =>
-    ({ id: "n", content, mood, date: "", createdAt: new Date(), updatedAt: new Date() });
+    ({ id: "n", userId: "u", content, mood, date: "", createdAt: new Date(), updatedAt: new Date() });
 
   it("lists each past year with its note and links to that day in History", () => {
     render(<ChronicleCard todayStr="2026-09-28" days={[

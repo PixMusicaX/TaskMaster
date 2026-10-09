@@ -4,43 +4,35 @@ import { db } from "@/db";
 import { note } from "@/db/schema";
 import { revalidatePath } from "next/cache";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
-import { invalidateSeasonSnapshots } from "./gamification";
+import { requireUserId } from "@/lib/current-user";
+import { saveNoteFor } from "@/lib/data/notes";
 
 export async function getNoteByDate(date: string) {
+  const userId = await requireUserId();
   return await db.query.note.findFirst({
-    where: eq(note.date, date),
+    where: and(eq(note.userId, userId), eq(note.date, date)),
   });
 }
 
 export async function saveNote(date: string, content: string, mood: string = "neutral") {
-  const [savedNote] = await db.insert(note)
-    .values({
-      date,
-      content,
-      mood,
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: [note.date],
-      set: { content, mood, updatedAt: new Date() },
-    })
-    .returning();
-  await invalidateSeasonSnapshots(date);
-    
+  const savedNote = await saveNoteFor(await requireUserId(), date, content, mood);
+
   revalidatePath("/notes");
-  revalidatePath("/");
+  revalidatePath("/home");
   return savedNote;
 }
 
 // Moods for every note in [startDate, endDate] (YYYY-MM-DD), for calendar views
 export async function getMoodsByDateRange(startDate: string, endDate: string) {
+  const userId = await requireUserId();
   return await db.select({ date: note.date, mood: note.mood }).from(note)
-    .where(and(gte(note.date, startDate), lte(note.date, endDate)));
+    .where(and(eq(note.userId, userId), gte(note.date, startDate), lte(note.date, endDate)));
 }
 
 export async function getRecentNotes(limit: number = 7) {
+  const userId = await requireUserId();
   return await db.select().from(note)
+    .where(eq(note.userId, userId))
     .orderBy(desc(note.date))
     .limit(limit);
 }
-

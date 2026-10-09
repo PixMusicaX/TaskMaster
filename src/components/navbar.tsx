@@ -17,12 +17,12 @@ import { RPG_TITLES } from "@/lib/constants";
 import { isMuted, setMuted, subscribeMuted } from "@/lib/sfx";
 
 const navItems = [
-  { href: "/", label: "Home", icon: Home },
+  { href: "/home", label: "Home", icon: Home },
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/notes", label: "Notes", icon: FileText },
   { href: "/habits", label: "Habits", icon: CheckSquare },
   { href: "/history", label: "History", icon: History },
-  { href: "/about", label: "About", icon: Info },
+  { href: "/account", label: "Account", icon: Info },
 ];
 
 function EraBadge({ className }: { className?: string }) {

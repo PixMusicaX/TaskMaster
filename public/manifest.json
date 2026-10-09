@@ -2,7 +2,7 @@
   "name": "TaskMaster",
   "short_name": "TaskMaster",
   "description": "Your Personal RPG-Themed Planner",
-  "start_url": "/",
+  "start_url": "/home",
   "display": "standalone",
   "background_color": "#0F0912",
   "theme_color": "#0F0912",

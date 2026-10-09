@@ -7,13 +7,15 @@ import { format, subDays } from "date-fns";
 import { getReliefRecommendationPrompt } from "@/lib/prompts";
 import { isRepeat, rollReliefBrief } from "@/lib/relief-dice";
 import { resolvePersonaStyle } from "@/lib/persona";
-import { invalidateSeasonSnapshots } from "./gamification";
-import { getEventsByDateRange } from "./events";
+import { requireUserId } from "@/lib/current-user";
+import { invalidateSnapshots } from "@/lib/data/stats";
+import { eventsByDateRange } from "@/lib/data/events";
+import { reliefsWithCarriedLocation } from "@/lib/data/relief";
 import { safeGenerateContent } from "@/lib/ai-utils";
+import { AiNotConfiguredError } from "@/lib/ai-config";
+import { OFFLINE_TAG, pickOfflineRelief } from "@/lib/offline-missions";
 import { parseNoteLines, type ReliefAlternative } from "@/lib/types";
-import { eq, desc, gte, lte, lt, ne, asc, and, isNotNull } from "drizzle-orm";
-
-const GEMINI_API_KEY = process.env.gemini_key;
+import { eq, desc, gte, ne, and } from "drizzle-orm";
 
 // How far back the Tavern remembers what it has already suggested
 const RELIEF_MEMORY_DAYS = 120;
@@ -21,9 +23,23 @@ const RELIEF_MEMORY_DAYS = 120;
 type ReliefPick = { title: string; type: string; description: string };
 
 // `persona` is the Persona style the client is showing (null for a normal day; left out, the
-// calendar decides). `exclude` lists titles to treat as already suggested (a regenerate passes
-// the picks it just threw away).
+// calendar decides).
 export async function getReliefRecommendation(
+  lat?: number,
+  lon?: number,
+  clientDateStr?: string,
+  cachedLocation?: string,
+  cachedWeather?: string,
+  cachedTemp?: string,
+  persona?: string | null
+) {
+  return reliefFor(await requireUserId(), lat, lon, clientDateStr, cachedLocation, cachedWeather, cachedTemp, persona);
+}
+
+// `exclude` lists titles to treat as already suggested (a regenerate passes the picks it just
+// threw away)
+async function reliefFor(
+  userId: string,
   lat?: number,
   lon?: number,
   clientDateStr?: string,
@@ -37,7 +53,7 @@ export async function getReliefRecommendation(
 
   try {
     let recommendation = await db.query.reliefRecommendation.findFirst({
-      where: eq(reliefRecommendation.date, today)
+      where: and(eq(reliefRecommendation.userId, userId), eq(reliefRecommendation.date, today))
     });
 
     if (!recommendation) {
@@ -49,7 +65,7 @@ export async function getReliefRecommendation(
 
       if (!cachedLocation || cachedLocation === "No location found") {
         const lastValid = await db.query.reliefRecommendation.findFirst({
-           where: ne(reliefRecommendation.location, "No location found"),
+           where: and(eq(reliefRecommendation.userId, userId), ne(reliefRecommendation.location, "No location found")),
            orderBy: [desc(reliefRecommendation.date)]
         });
         if (lastValid) {
@@ -100,16 +116,16 @@ export async function getReliefRecommendation(
         }
       }
 
-      if (GEMINI_API_KEY) {
+      {
         try {
           const clientNow = new Date(today);
           const twoWeeksAgo = subDays(clientNow, 14);
           const twoWeeksAgoStr = format(twoWeeksAgo, "yyyy-MM-dd");
           // Mood comes from the last two weeks; the do-not-repeat list reaches back four months
           const [taskData, notesData, history] = await Promise.all([
-            getEventsByDateRange(twoWeeksAgo, clientNow),
-            db.select().from(note).where(gte(note.date, twoWeeksAgoStr)),
-            getReliefHistory(format(subDays(clientNow, RELIEF_MEMORY_DAYS), "yyyy-MM-dd"))
+            eventsByDateRange(userId, twoWeeksAgo, clientNow),
+            db.select().from(note).where(and(eq(note.userId, userId), gte(note.date, twoWeeksAgoStr))),
+            reliefHistoryFor(userId, format(subDays(clientNow, RELIEF_MEMORY_DAYS), "yyyy-MM-dd"))
           ]);
 
           const past = [
@@ -118,7 +134,7 @@ export async function getReliefRecommendation(
               { title: r.title, type: r.type },
               ...((r.alternatives as ReliefAlternative[] | null) || []).map((alt) => ({ title: alt.title, type: alt.type }))
             ]),
-          ].filter(h => !h.title.includes("[OFF]"));
+          ].filter(h => !h.title.includes(OFFLINE_TAG));
           const pastTitles = past.map(h => h.title);
           // The model is bad at dice, so today's types and angles are rolled here
           const brief = rollReliefBrief(history.map(r => r.type));
@@ -137,6 +153,7 @@ export async function getReliefRecommendation(
               rejected,
               persona: resolvePersonaStyle(persona, today),
             }), {
+              userId,
               model: "gemini-3.1-flash-lite",
               responseMimeType: "application/json",
               temperature: 1.15,
@@ -161,6 +178,7 @@ export async function getReliefRecommendation(
           if (picks.main) {
             const main = picks.main;
             const [newRec] = await db.insert(reliefRecommendation).values({
+              userId,
               date: today,
               title: main.title,
               description: main.description,
@@ -175,23 +193,24 @@ export async function getReliefRecommendation(
             recommendation = newRec;
           }
         } catch (error) {
-          console.error("Relief AI Error:", error);
+          // No key on this account is expected; anything else is worth a log line
+          if (!(error instanceof AiNotConfiguredError)) console.error("Relief AI Error:", error);
         }
       }
 
       if (!recommendation) {
+        const recent = await reliefHistoryFor(userId, format(subDays(new Date(today), 30), "yyyy-MM-dd"));
+        const offline = pickOfflineRelief(weatherInfo.weather, [...exclude, ...recent.map(r => r.title)]);
         const [fallbackRec] = await db.insert(reliefRecommendation).values({
+          userId,
           date: today,
-          title: "Listen to 'Lo-fi Girl' Radio [OFF]",
-          description: "Perfect background for unwinding after a productive day.",
-          type: "song",
+          title: offline.title,
+          description: offline.description,
+          type: offline.type,
           location: weatherInfo.location,
           weather: weatherInfo.weather,
           temp: weatherInfo.temp ? weatherInfo.temp.split('°')[0] : "22", // Store only the max temp for display
-          alternatives: [
-            { title: "Quick 5-min Stretch", type: "activity" },
-            { title: "Hot Herbal Tea", type: "food" }
-          ],
+          alternatives: offline.alternatives,
           xpReward: 10,
           stat: "charisma"
         }).returning();
@@ -207,6 +226,7 @@ export async function getReliefRecommendation(
 }
 
 export async function toggleReliefRecommendation(id: string, completed: boolean, index: number = 0) {
+  const userId = await requireUserId();
   try {
     const updateData: Partial<typeof reliefRecommendation.$inferInsert> = {};
     if (index === 0) updateData.completed = completed;
@@ -215,10 +235,10 @@ export async function toggleReliefRecommendation(id: string, completed: boolean,
 
     const [updated] = await db.update(reliefRecommendation)
       .set(updateData)
-      .where(eq(reliefRecommendation.id, id))
+      .where(and(eq(reliefRecommendation.id, id), eq(reliefRecommendation.userId, userId)))
       .returning({ date: reliefRecommendation.date });
-    await invalidateSeasonSnapshots(updated?.date);
-    revalidatePath("/");
+    await invalidateSnapshots(userId, updated?.date);
+    revalidatePath("/home");
     return { success: true };
   } catch (e) {
     console.error("Error in toggleReliefRecommendation:", e);
@@ -226,48 +246,18 @@ export async function toggleReliefRecommendation(id: string, completed: boolean,
   }
 }
 
-// Relief rows in [fromDate, toDate] (ascending), with missing locations/weather carried
-// forward from the most recent earlier row that had a real location.
 export async function getReliefsWithCarriedLocation(fromDate: string, toDate?: string) {
-  const [rows, [seed]] = await Promise.all([
-    db.select().from(reliefRecommendation)
-      .where(toDate
-        ? and(gte(reliefRecommendation.date, fromDate), lte(reliefRecommendation.date, toDate))
-        : gte(reliefRecommendation.date, fromDate))
-      .orderBy(asc(reliefRecommendation.date)),
-    db.select().from(reliefRecommendation)
-      .where(and(
-        lt(reliefRecommendation.date, fromDate),
-        isNotNull(reliefRecommendation.location),
-        ne(reliefRecommendation.location, ""),
-        ne(reliefRecommendation.location, "No location found")
-      ))
-      .orderBy(desc(reliefRecommendation.date))
-      .limit(1)
-  ]);
-
-  let lastValidLocation = seed?.location || "No location found";
-  let lastValidWeather = seed?.weather || "Clear";
-  let lastValidTemp = seed?.temp || "22";
-
-  return rows.map(r => {
-    if (r.location && r.location !== "No location found") {
-      lastValidLocation = r.location;
-      lastValidWeather = r.weather || "Clear";
-      lastValidTemp = r.temp || "22";
-    } else {
-      r.location = lastValidLocation;
-      r.weather = lastValidWeather;
-      r.temp = lastValidTemp;
-    }
-    return r;
-  });
+  return reliefsWithCarriedLocation(await requireUserId(), fromDate, toDate);
 }
 
 export async function getReliefHistory(sinceDate?: string) {
+  return reliefHistoryFor(await requireUserId(), sinceDate);
+}
+
+async function reliefHistoryFor(userId: string, sinceDate?: string) {
   try {
     const since = sinceDate || format(subDays(new Date(), 14), "yyyy-MM-dd");
-    const processed = await getReliefsWithCarriedLocation(since);
+    const processed = await reliefsWithCarriedLocation(userId, since);
     return processed.sort((a, b) => b.date.localeCompare(a.date));
   } catch {
     return [];
@@ -283,13 +273,14 @@ export async function regenerateReliefRecommendation(
   cachedTemp?: string,
   persona?: string | null
 ) {
+  const userId = await requireUserId();
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   try {
     // The picks being thrown away must not come straight back
-    const discarded = await db.delete(reliefRecommendation).where(eq(reliefRecommendation.date, today))
+    const discarded = await db.delete(reliefRecommendation).where(and(eq(reliefRecommendation.userId, userId), eq(reliefRecommendation.date, today)))
       .returning({ title: reliefRecommendation.title, alternatives: reliefRecommendation.alternatives });
     const exclude = discarded.flatMap(r => [r.title, ...((r.alternatives as ReliefAlternative[] | null) || []).map(a => a.title)]);
-    return await getReliefRecommendation(lat, lon, clientDateStr, cachedLocation, cachedWeather, cachedTemp, persona, exclude);
+    return await reliefFor(userId, lat, lon, clientDateStr, cachedLocation, cachedWeather, cachedTemp, persona, exclude);
   } catch {
     return null;
   }

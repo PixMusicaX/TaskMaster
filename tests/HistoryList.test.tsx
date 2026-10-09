@@ -10,7 +10,7 @@ const day = (overrides: Partial<HistoryDay>): HistoryDay => ({
   date: "2026-09-18", notes: [], events: [], specialDays: [], tasks: [], habits: [], relief: null, ...overrides,
 });
 const noteRow = (content: string, mood = "neutral") => ({
-  id: `n-${content}`, content, mood, date: "2026-09-18", createdAt: new Date(), updatedAt: new Date(),
+  id: `n-${content}`, userId: "u", content, mood, date: "2026-09-18", createdAt: new Date(), updatedAt: new Date(),
 });
 const lines = (...texts: string[]) => JSON.stringify(texts.map((text, i) => ({ id: `l${i}`, bullet: "○", text })));
 

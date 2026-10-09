@@ -1,0 +1,21 @@
+/* The landing page's 3D props are the app's own cards (.tm-card), minus two things that don't
+   survive being tilted in space: the backdrop blur (costly under a 3D transform) and, for props
+   whose parts lift off the surface, the isolation that would flatten them. */
+.tm-board {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.tm-board-3d {
+  isolation: auto;
+  transform-style: preserve-3d;
+}
+.tm-3d {
+  transform-style: preserve-3d;
+}
+.tm-face {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+.tm-face-back {
+  transform: rotateY(180deg);
+}

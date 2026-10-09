@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { note } from "@/db/schema";
-import { invalidateSeasonSnapshots } from "@/app/actions/gamification";
+import { getUserId } from "@/lib/current-user";
+import { saveNoteFor } from "@/lib/data/notes";
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await getUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { date, content, mood = "neutral" } = body as {
       date: string;
@@ -16,14 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    await db
-      .insert(note)
-      .values({ date, content, mood, updatedAt: new Date() })
-      .onConflictDoUpdate({
-        target: [note.date],
-        set: { content, mood, updatedAt: new Date() },
-      });
-    await invalidateSeasonSnapshots(date);
+    await saveNoteFor(userId, date, content, mood);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

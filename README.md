@@ -53,18 +53,42 @@ Create a `.env` file in the root directory and add the following keys:
 # Database (Neon / Postgres)
 DATABASE_URL="postgresql://user:password@host/neondb?sslmode=require"
 
-# AI Engine (Google AI Studio)
-gemini_key="YOUR_GEMINI_API_KEY"
+# Sign-in (Auth.js + Google). Generate the secret with: npx auth secret
+AUTH_SECRET="a-long-random-string"
+AUTH_GOOGLE_ID="your-google-oauth-client-id"
+AUTH_GOOGLE_SECRET="your-google-oauth-client-secret"
+
+# Optional: a separate secret for encrypting players' AI keys (defaults to AUTH_SECRET).
+# Changing whichever one is in use makes every saved AI key unreadable.
+AI_KEY_SECRET="another-long-random-string"
+
+# Optional: holidays on the calendar (Calendarific)
+calendarific_key="YOUR_CALENDARIFIC_KEY"
 
 # Optional: Unpooled connection for direct scripts
 DATABASE_URL_UNPOOLED="postgresql://user:password@host/neondb?sslmode=require"
 ```
 
+**Google sign-in:** create an OAuth client (type "Web application") in the
+[Google Cloud console](https://console.cloud.google.com/apis/credentials) and add
+`http://localhost:3000/api/auth/callback/google` (plus the same path on your deployed domain)
+as an authorised redirect URI.
+
+**AI keys are per player, not in `.env`:** each account adds its own Gemini, Claude or Groq key
+under Account → AI Guide. Without one the AI cards fall back to their offline versions.
+
 ### 4. Database Setup
-Push the schema to your database using Drizzle:
+Push the schema to your database using Drizzle, then run the setup script once with the Google
+address you will sign in with. It creates the read-only role "Ask the Taskmaster" runs its
+queries as:
 ```bash
 npx drizzle-kit push
+node --env-file=.env scripts/migrate-multi-user.mjs you@gmail.com
 ```
+
+**Upgrading a database from before accounts existed (v7 and earlier):** skip `drizzle-kit push`
+and run only the script. It adds the sign-in tables and hands every existing record to that
+address. Try it with `--dry-run` first; it prints what it would do and changes nothing.
 
 ### 5. Run Locally
 ```bash
@@ -103,7 +127,7 @@ Each month, six calendar days are picked at random (two each for Persona 3, 4 an
 - **Map and music**: the realm map becomes Tartarus, the Midnight Channel or Mementos. Its music plays from `public/persona/p3.mp3`, `p4.mp3` and `p5.mp3`; the tracks aren't included, so add your own.
 - **AI voice**: missions, preparation tips, relief suggestions and the Taskmaster's answers are written in that game's style.
 - **Growth Orbit**: the orbit plays inside that game's device. Persona 3 is a disc in a music player, with earphones, a track number and an equalizer. Persona 4 is the picture on a TV: each scene is a channel, changed with the remote through static, a white screen and colour bars. Persona 5 is a smartphone that is shaken, spun or tossed while the scene is swiped away in an app switcher.
-- **Turning it off**: About → Settings → "Persona days".
+- **Turning it off**: Account → Settings → "Persona days".
 
 The schedule and helpers are in `src/lib/persona.ts`, the styles in `src/app/persona.css`, the menu and chrome in `src/components/persona/`, and the orbit animations in `src/components/home/saga-p3.tsx`, `saga-p4.tsx` and `saga-p5.tsx`. In development, the dev tools have a "Persona day" row that forces a style on any day.
 

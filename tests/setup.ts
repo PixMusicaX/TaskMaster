@@ -1,8 +1,16 @@
 import { vi, beforeAll, beforeEach, afterEach } from "vitest";
 
 // Modules read these at import time, so set them before anything imports the app
-process.env.gemini_key = "test-key";
 process.env.calendarific_key = "test-key";
+
+// No Google sign-in in tests: the actions answer for whichever test user is current
+vi.mock("@/lib/current-user", async () => {
+  const { currentUserId } = await import("./helpers/user");
+  return {
+    getUserId: vi.fn(async () => currentUserId()),
+    requireUserId: vi.fn(async () => currentUserId()),
+  };
+});
 
 // Swap the real Neon connection for an in-memory Postgres
 vi.mock("@/db", () => import("./helpers/test-db"));
@@ -13,7 +21,7 @@ vi.mock("next/cache", () => ({
   revalidateTag: vi.fn(),
 }));
 
-// Never call Gemini from tests. By default it fails like the real helper does when every
+// Never call an AI provider from tests. By default it fails like the real helper does when every
 // model is down (it throws); individual tests program the responses they need.
 vi.mock("@/lib/ai-utils", () => ({
   safeGenerateContent: vi.fn(async (): Promise<string> => {
@@ -45,15 +53,22 @@ beforeEach(async () => {
     const { resetDatabase } = await import("./helpers/schema");
     await resetDatabase();
   }
+  const { actAs, TEST_USER_ID } = await import("./helpers/user");
+  actAs(TEST_USER_ID);
   // Any network call a test didn't explicitly mock should fail loudly
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
     throw new Error(`Unexpected fetch in test: ${url}`);
   }));
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   // Also drops unused one-off responses (mockResolvedValueOnce) so they can't leak into the next test
   vi.resetAllMocks();
+  // resetAllMocks wipes the signed-in user mock's behaviour too; put it back
+  const { getUserId, requireUserId } = await import("@/lib/current-user");
+  const { currentUserId } = await import("./helpers/user");
+  vi.mocked(getUserId).mockImplementation(async () => currentUserId());
+  vi.mocked(requireUserId).mockImplementation(async () => currentUserId());
 });

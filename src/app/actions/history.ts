@@ -4,7 +4,8 @@ import { db } from "@/db";
 import { event, note, habitLog, reliefRecommendation } from "@/db/schema";
 import { and, gte, lte, or, eq, desc, ilike, inArray } from "drizzle-orm";
 import { format, subDays } from "date-fns";
-import { getReliefsWithCarriedLocation } from "./relief";
+import { requireUserId } from "@/lib/current-user";
+import { reliefsWithCarriedLocation } from "@/lib/data/relief";
 
 export type HistoryDay = {
   date: string;
@@ -27,6 +28,7 @@ const historyEventFilter = or(
 );
 
 export async function getHistory(endDateStr: string, limitDays: number = 28, query: string = "", clientDateStr?: string): Promise<HistoryDay[]> {
+  const userId = await requireUserId();
   if (query.trim() !== "") {
     // Search mode: Ignore limitDays, search all time up to yesterday
     const searchPattern = `%${query.trim()}%`;
@@ -43,12 +45,14 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
     const [matchedNotes, matchedEvents, matchedHabits] = await Promise.all([
       db.select({ date: note.date }).from(note).where(
         and(
+          eq(note.userId, userId),
           ilike(note.content, searchPattern),
           lte(note.date, yesterdayStr)
         )
       ),
       db.select({ date: event.date }).from(event).where(
         and(
+          eq(event.userId, userId),
           or(
             ilike(event.title, searchPattern),
             ilike(event.description, searchPattern)
@@ -59,6 +63,7 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
       ),
       db.select({ date: habitLog.date }).from(habitLog).where(
         and(
+          eq(habitLog.userId, userId),
           ilike(habitLog.habitName, searchPattern),
           eq(habitLog.completed, true),
           lte(habitLog.date, yesterdayStr)
@@ -76,7 +81,7 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
       uniqueDatesArray.push(parsedDateStr);
     }
     
-    return getHistoryForDates(uniqueDatesArray);
+    return historyForDates(userId, uniqueDatesArray);
   } else {
     const endDate = new Date(endDateStr);
     const startDate = subDays(endDate, limitDays - 1);
@@ -88,6 +93,7 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
       // Notes in range
       db.select().from(note).where(
         and(
+          eq(note.userId, userId),
           gte(note.date, startStr),
           lte(note.date, endStr)
         )
@@ -96,6 +102,7 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
       // Events and Tasks in range
       db.select().from(event).where(
         and(
+          eq(event.userId, userId),
           gte(event.date, startStr),
           lte(event.date, endStr),
           historyEventFilter
@@ -105,6 +112,7 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
       // Completed habits in range
       db.select().from(habitLog).where(
         and(
+          eq(habitLog.userId, userId),
           gte(habitLog.date, startStr),
           lte(habitLog.date, endStr),
           eq(habitLog.completed, true)
@@ -112,29 +120,30 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
       ).orderBy(desc(habitLog.date)),
 
       // Relief recommendations for the covered dates, with valid locations carried forward
-      getReliefsWithCarriedLocation(startStr, endStr)
+      reliefsWithCarriedLocation(userId, startStr, endStr)
     ]);
     return groupHistory(notesResult, eventsAndTasksResult, habitsResult, reliefs);
   }
 }
 
 // Everything recorded on a specific set of dates (YYYY-MM-DD), grouped like getHistory
-async function getHistoryForDates(dates: string[]): Promise<HistoryDay[]> {
+async function historyForDates(userId: string, dates: string[]): Promise<HistoryDay[]> {
   const uniqueDates = Array.from(new Set(dates)).sort();
   if (uniqueDates.length === 0) return [];
 
   const [notesResult, eventsAndTasksResult, habitsResult, reliefs] = await Promise.all([
-    db.select().from(note).where(inArray(note.date, uniqueDates)).orderBy(desc(note.createdAt)),
+    db.select().from(note).where(and(eq(note.userId, userId), inArray(note.date, uniqueDates))).orderBy(desc(note.createdAt)),
     db.select().from(event).where(
       and(
+        eq(event.userId, userId),
         inArray(event.date, uniqueDates),
         historyEventFilter
       )
     ).orderBy(desc(event.startTime)),
     db.select().from(habitLog).where(
-      and(inArray(habitLog.date, uniqueDates), eq(habitLog.completed, true))
+      and(eq(habitLog.userId, userId), inArray(habitLog.date, uniqueDates), eq(habitLog.completed, true))
     ).orderBy(desc(habitLog.date)),
-    getReliefsWithCarriedLocation(uniqueDates[0], uniqueDates[uniqueDates.length - 1])
+    reliefsWithCarriedLocation(userId, uniqueDates[0], uniqueDates[uniqueDates.length - 1])
   ]);
   return groupHistory(notesResult, eventsAndTasksResult, habitsResult, reliefs);
 }
@@ -145,7 +154,7 @@ export async function getOnThisDay(clientDateStr: string, yearsBack: number = 15
   const [year, month, day] = clientDateStr.split("-");
   const dates = Array.from({ length: yearsBack }, (_, i) => `${Number(year) - 1 - i}-${month}-${day}`);
 
-  const days = await getHistoryForDates(dates);
+  const days = await historyForDates(await requireUserId(), dates);
   return days
     .map(d => ({ ...d, specialDays: [], events: d.events.filter(e => !e.isApi) }))
     .filter(d => d.notes.length > 0 || d.tasks.length > 0 || d.events.length > 0 || d.habits.length > 0);
@@ -155,7 +164,7 @@ function groupHistory(
   notesResult: typeof note.$inferSelect[],
   eventsAndTasksResult: typeof event.$inferSelect[],
   habitsResult: typeof habitLog.$inferSelect[],
-  reliefs: Awaited<ReturnType<typeof getReliefsWithCarriedLocation>>
+  reliefs: Awaited<ReturnType<typeof reliefsWithCarriedLocation>>
 ): HistoryDay[] {
   const reliefMap = new Map(reliefs.map(r => [r.date, r]));
 

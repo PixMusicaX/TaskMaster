@@ -1,6 +1,6 @@
 // Persona days: six random days a month (two each for P3, P4 and P5) on which the whole app takes
 // on that game's look, whatever the rank, era or theme. Every other day the normal design runs.
-// They're opt-in: nothing changes until the player turns them on in About → Settings.
+// They're opt-in: nothing changes until the player turns them on in Account → Settings.
 //
 // The days come from a shuffle seeded by the month, so every device agrees and they never move
 // once the month starts. There's always a normal day between two Persona days, and the two days
@@ -125,7 +125,7 @@ export function setDevPersonaOverride(value: DevPersonaOverride) {
   window.dispatchEvent(new Event(DEV_PERSONA_EVENT));
 }
 
-// ---- The player's switch (About → Settings): Persona days are off until turned on on this device ----
+// ---- The player's switch (Account → Settings): Persona days are off until turned on on this device ----
 
 export const PERSONA_ON_KEY = "persona_on";
 export const PERSONA_SETTING_EVENT = "persona-setting-changed";

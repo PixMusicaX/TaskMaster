@@ -6,38 +6,45 @@ import { revalidatePath } from "next/cache";
 import { format, subDays } from "date-fns";
 import { getSmartMissionPrompt } from "@/lib/prompts";
 import { resolvePersonaStyle } from "@/lib/persona";
-import { getProfile, invalidateSeasonSnapshots } from "./gamification";
-import { getHabits } from "./habits";
-import { getEventsByDateRange } from "./events";
-import { getDailyQuote } from "./daily-quote";
+import { requireUserId } from "@/lib/current-user";
+import { profileFor, invalidateSnapshots } from "@/lib/data/stats";
+import { habitsFor } from "@/lib/data/habits";
+import { eventsByDateRange } from "@/lib/data/events";
+import { dailyQuoteFor } from "@/lib/data/daily-quote";
 import { safeGenerateContent } from "@/lib/ai-utils";
-import { eq, desc, gte } from "drizzle-orm";
-
-const GEMINI_API_KEY = process.env.gemini_key;
+import { AiNotConfiguredError } from "@/lib/ai-config";
+import { rollMissionBrief } from "@/lib/mission-dice";
+import { pickOfflineMission } from "@/lib/offline-missions";
+import { noteTextLines } from "@/lib/types";
+import { and, eq, desc, gte } from "drizzle-orm";
 
 // `persona` is the Persona style the client is showing (null for a normal day; left out, the
 // calendar decides), so the mission is written in that game's voice
 export async function getSmartMission(clientDateStr?: string, persona?: string | null) {
+  return missionFor(await requireUserId(), clientDateStr, persona);
+}
+
+async function missionFor(userId: string, clientDateStr?: string, persona?: string | null) {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
 
   try {
     let mission = await db.query.smartMission.findFirst({
-      where: eq(smartMission.date, today)
+      where: and(eq(smartMission.userId, userId), eq(smartMission.date, today))
     });
 
     if (!mission) {
-      if (GEMINI_API_KEY) {
+      {
         try {
           const clientNow = new Date(today);
           const twoWeeksAgo = subDays(clientNow, 14);
           const twoWeeksAgoStr = format(twoWeeksAgo, "yyyy-MM-dd");
 
           const [profile, habitData, taskData, notesData, history] = await Promise.all([
-            getProfile(today),
-            getHabits(today), // only names are needed, so skip log history
-            getEventsByDateRange(twoWeeksAgo, clientNow),
-            db.select().from(note).where(gte(note.date, twoWeeksAgoStr)),
-            getSmartMissionHistory(twoWeeksAgoStr)
+            profileFor(userId, today),
+            habitsFor(userId, today), // only names are needed, so skip log history
+            eventsByDateRange(userId, twoWeeksAgo, clientNow),
+            db.select().from(note).where(and(eq(note.userId, userId), gte(note.date, twoWeeksAgoStr))),
+            missionHistoryFor(userId, twoWeeksAgoStr)
           ]);
 
           const prompt = getSmartMissionPrompt({
@@ -46,28 +53,37 @@ export async function getSmartMission(clientDateStr?: string, persona?: string |
             stats: profile.stats,
             title: profile.title,
             habits: habitData.map((h) => h.name),
-            recentTasks: taskData.map((t) => ({
+            // Holidays and other system entries say nothing about what the player has been doing
+            recentTasks: taskData.filter((t) => !t.isApi).map((t) => ({
               title: t.title,
               type: t.type,
+              date: t.date,
               startTime: t.startTime,
               completed: t.completed
             })),
-            recentNotes: notesData.map((n) => n.content),
+            // Notes are stored as JSON bullet lines; the model gets their text, newest first
+            recentNotes: notesData
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .map((n) => ({ date: n.date, mood: n.mood, text: noteTextLines(n.content).join("; ") }))
+              .filter((n) => n.text)
+              .map((n) => `${n.date} (mood: ${n.mood}): ${n.text}`),
             missionHistory: history.map((m) => ({ title: m.title, completed: m.completed })),
+            brief: rollMissionBrief(history),
             today,
             persona: resolvePersonaStyle(persona, today),
           });
 
-          console.log("=== GEMINI SDK SMART MISSION PROMPT ===");
           const content = await safeGenerateContent(prompt, {
+            userId,
             model: "gemini-flash-latest",
             responseMimeType: "application/json"
           });
 
           if (content) {
             const data = JSON.parse(content);
-            const zenQuote = await getDailyQuote(today);
+            const zenQuote = await dailyQuoteFor(today);
             const [newMission] = await db.insert(smartMission).values({
+              userId,
               date: today,
               title: data.title,
               description: data.description,
@@ -78,28 +94,20 @@ export async function getSmartMission(clientDateStr?: string, persona?: string |
             mission = newMission;
           }
         } catch (error) {
-          console.error("Gemini SDK Error:", error);
+          // No key on this account is expected; anything else is worth a log line
+          if (!(error instanceof AiNotConfiguredError)) console.error("Smart mission AI error:", error);
         }
       }
 
-      // Fallback if Gemini fails or no key
+      // Fallback if the AI fails or the account has no key
       if (!mission) {
-        const zenQuoteFallback = await getDailyQuote(today);
-        const missions = [
-          { title: "Compliment a Stranger [OFF]", description: "Brighten someone's day with a sincere compliment. (AI Offline)" },
-          { title: "Network with a Peer [OFF]", description: "Reach out to a colleague or peer for a 5-minute chat. (AI Offline)" },
-          { title: "Host a Mini-Game [OFF]", description: "Suggest a quick fun activity for your team or friends. (AI Offline)" },
-          { title: "Active Listening [OFF]", description: "Practice active listening in your next conversation." },
-          { title: "Digital Declutter [OFF]", description: "Delete 10 unneeded files or emails to clear your mind. (AI Offline)" },
-          { title: "Hydration Hero [OFF]", description: "Drink a full glass of water right now for a quick health boost. (AI Offline)" },
-          { title: "Mindful Minute [OFF]", description: "Close your eyes and breathe deeply for 60 seconds. (AI Offline)" },
-          { title: "Gratitude Journal [OFF]", description: "Write down one thing you're genuinely thankful for today. (AI Offline)" },
-          { title: "Walk in Nature [OFF]", description: "Take a 5-minute walk outside to refresh your spirit. (AI Offline)" },
-          { title: "Quick Stretch [OFF]", description: "Spend 3 minutes stretching your body to release tension. (AI Offline)" }
-        ];
-        const selected = missions[Math.floor(Math.random() * missions.length)];
+        const zenQuoteFallback = await dailyQuoteFor(today);
+        // Nothing the player has been handed in the last six weeks
+        const recent = await missionHistoryFor(userId, format(subDays(new Date(today), 45), "yyyy-MM-dd"));
+        const selected = pickOfflineMission(recent.map(m => m.title));
 
         const [fallbackMission] = await db.insert(smartMission).values({
+          userId,
           date: today,
           title: selected.title,
           description: selected.description,
@@ -119,13 +127,14 @@ export async function getSmartMission(clientDateStr?: string, persona?: string |
 }
 
 export async function toggleSmartMission(id: string, completed: boolean) {
+  const userId = await requireUserId();
   try {
     const [updated] = await db.update(smartMission)
       .set({ completed })
-      .where(eq(smartMission.id, id))
+      .where(and(eq(smartMission.id, id), eq(smartMission.userId, userId)))
       .returning({ date: smartMission.date });
-    await invalidateSeasonSnapshots(updated?.date);
-    revalidatePath("/");
+    await invalidateSnapshots(userId, updated?.date);
+    revalidatePath("/home");
     return { success: true };
   } catch (e) {
     console.error("Error in toggleSmartMission:", e);
@@ -134,10 +143,14 @@ export async function toggleSmartMission(id: string, completed: boolean) {
 }
 
 export async function getSmartMissionHistory(sinceDate?: string) {
+  return missionHistoryFor(await requireUserId(), sinceDate);
+}
+
+async function missionHistoryFor(userId: string, sinceDate?: string) {
   try {
     const since = sinceDate || format(subDays(new Date(), 14), "yyyy-MM-dd");
     return await db.select().from(smartMission)
-      .where(gte(smartMission.date, since))
+      .where(and(eq(smartMission.userId, userId), gte(smartMission.date, since)))
       .orderBy(desc(smartMission.date));
   } catch (e) {
     console.error("Error fetching mission history:", e);
@@ -146,10 +159,11 @@ export async function getSmartMissionHistory(sinceDate?: string) {
 }
 
 export async function regenerateSmartMission(clientDateStr?: string, persona?: string | null) {
+  const userId = await requireUserId();
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
   try {
-    await db.delete(smartMission).where(eq(smartMission.date, today));
-    return await getSmartMission(clientDateStr, persona);
+    await db.delete(smartMission).where(and(eq(smartMission.userId, userId), eq(smartMission.date, today)));
+    return await missionFor(userId, clientDateStr, persona);
   } catch (e) {
     console.error("Error in regenerateSmartMission:", e);
     return null;

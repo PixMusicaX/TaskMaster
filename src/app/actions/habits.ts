@@ -3,23 +3,20 @@
 import { db } from "@/db";
 import { habit, habitLog } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { eq, and, asc, gte } from "drizzle-orm";
-import { invalidateSeasonSnapshots } from "./gamification";
+import { eq, and, asc } from "drizzle-orm";
+import { requireUserId } from "@/lib/current-user";
+import { invalidateSnapshots } from "@/lib/data/stats";
+import { habitsFor } from "@/lib/data/habits";
 
 // Pass `logsSince` (YYYY-MM-DD) to load only recent logs instead of each habit's full history
 export async function getHabits(logsSince?: string) {
-  return await db.query.habit.findMany({
-    where: eq(habit.archived, false),
-    with: {
-      logs: logsSince ? { where: gte(habitLog.date, logsSince) } : true,
-    },
-    orderBy: [asc(habit.createdAt)],
-  });
+  return habitsFor(await requireUserId(), logsSince);
 }
 
 export async function getArchivedHabits() {
+  const userId = await requireUserId();
   return await db.query.habit.findMany({
-    where: eq(habit.archived, true),
+    where: and(eq(habit.userId, userId), eq(habit.archived, true)),
     with: {
       logs: true,
     },
@@ -28,7 +25,9 @@ export async function getArchivedHabits() {
 }
 
 export async function addHabit(name: string, icon?: string, color?: string, frequency?: number[], stat?: string) {
+  const userId = await requireUserId();
   const [newHabit] = await db.insert(habit).values({
+    userId,
     name,
     icon,
     color,
@@ -41,9 +40,12 @@ export async function addHabit(name: string, icon?: string, color?: string, freq
 }
 
 export async function updateHabit(id: string, data: { name?: string; icon?: string; color?: string; frequency?: number[]; stat?: string }) {
+  const userId = await requireUserId();
+  // Only these fields can be edited, whatever the caller sends
+  const { name, icon, color, frequency, stat } = data;
   const [updatedHabit] = await db.update(habit)
-    .set(data)
-    .where(eq(habit.id, id))
+    .set({ name, icon, color, frequency, stat })
+    .where(and(eq(habit.id, id), eq(habit.userId, userId)))
     .returning();
 
   revalidatePath("/habits");
@@ -51,46 +53,52 @@ export async function updateHabit(id: string, data: { name?: string; icon?: stri
 }
 
 export async function archiveHabit(id: string) {
+  const userId = await requireUserId();
   await db.update(habit)
     .set({ archived: true })
-    .where(eq(habit.id, id));
+    .where(and(eq(habit.id, id), eq(habit.userId, userId)));
 
   revalidatePath("/habits");
 }
 
 export async function restoreHabit(id: string) {
+  const userId = await requireUserId();
   await db.update(habit)
     .set({ archived: false })
-    .where(eq(habit.id, id));
+    .where(and(eq(habit.id, id), eq(habit.userId, userId)));
 
   revalidatePath("/habits");
 }
 
 export async function deleteHabitPermanently(id: string) {
-  await db.delete(habit).where(eq(habit.id, id));
+  const userId = await requireUserId();
+  await db.delete(habit).where(and(eq(habit.id, id), eq(habit.userId, userId)));
   revalidatePath("/habits");
 }
 
 export async function toggleHabitLog(habitId: string, date: string, completed: boolean) {
-  // Fetch habit info to preserve metadata
+  const userId = await requireUserId();
+  // Fetch habit info to preserve metadata (and make sure the habit is this user's)
   const h = await db.query.habit.findFirst({
-    where: eq(habit.id, habitId),
+    where: and(eq(habit.id, habitId), eq(habit.userId, userId)),
   });
+  if (!h) return null;
 
   if (!completed) {
     await db.delete(habitLog)
-      .where(and(eq(habitLog.habitId, habitId), eq(habitLog.date, date)));
-    await invalidateSeasonSnapshots(date);
+      .where(and(eq(habitLog.userId, userId), eq(habitLog.habitId, habitId), eq(habitLog.date, date)));
+    await invalidateSnapshots(userId, date);
     revalidatePath("/habits");
-    revalidatePath("/");
+    revalidatePath("/home");
     return null;
   }
 
   const [log] = await db.insert(habitLog)
     .values({
+      userId,
       habitId,
-      habitName: h?.name,
-      habitIcon: h?.icon,
+      habitName: h.name,
+      habitIcon: h.icon,
       date,
       completed,
     })
@@ -98,21 +106,23 @@ export async function toggleHabitLog(habitId: string, date: string, completed: b
       target: [habitLog.habitId, habitLog.date],
       set: {
         completed,
-        habitName: h?.name,
-        habitIcon: h?.icon,
+        habitName: h.name,
+        habitIcon: h.icon,
       },
     })
     .returning();
 
-  await invalidateSeasonSnapshots(date);
+  await invalidateSnapshots(userId, date);
 
   revalidatePath("/habits");
-  revalidatePath("/");
+  revalidatePath("/home");
   return log;
 }
 
 export async function getHabitLogs() {
+  const userId = await requireUserId();
   return await db.query.habitLog.findMany({
+    where: eq(habitLog.userId, userId),
     orderBy: [asc(habitLog.date)],
   });
 }

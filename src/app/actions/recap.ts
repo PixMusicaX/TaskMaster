@@ -4,11 +4,13 @@ import { db } from "@/db";
 import { event, habit, habitLog, note, preparationTip, reliefRecommendation, smartMission } from "@/db/schema";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { eachDayOfInterval, endOfMonth, format, getDaysInMonth, startOfMonth, subMonths } from "date-fns";
-import { getSeasonTimeline } from "./gamification";
+import { requireUserId } from "@/lib/current-user";
+import { seasonTimelineFor } from "@/lib/data/stats";
 import { noteTextLines } from "@/lib/types";
 
 // Everything the season-end recap shows about last month, compared with the seasons before it
 export async function getSeasonRecap(clientDateStr: string) {
+  const userId = await requireUserId();
   const now = new Date(`${clientDateStr}T12:00:00`);
   const monthStart = startOfMonth(subMonths(now, 1));
   const monthEnd = endOfMonth(monthStart);
@@ -17,20 +19,20 @@ export async function getSeasonRecap(clientDateStr: string) {
 
   const [timeline, notes, logs, events, habits, missions, tips, reliefs] = await Promise.all([
     // [this month, last month, the month before, ...] — at least 13 so last month is ranked against a year
-    getSeasonTimeline(clientDateStr, 13),
+    seasonTimelineFor(userId, clientDateStr, 13),
     db.select({ date: note.date, content: note.content, mood: note.mood }).from(note)
-      .where(and(gte(note.date, from), lte(note.date, to))),
+      .where(and(eq(note.userId, userId), gte(note.date, from), lte(note.date, to))),
     db.select({ habitId: habitLog.habitId, habitName: habitLog.habitName, habitIcon: habitLog.habitIcon, date: habitLog.date })
-      .from(habitLog).where(and(gte(habitLog.date, from), lte(habitLog.date, to), eq(habitLog.completed, true))),
+      .from(habitLog).where(and(eq(habitLog.userId, userId), gte(habitLog.date, from), lte(habitLog.date, to), eq(habitLog.completed, true))),
     db.select({ type: event.type, tier: event.tier, completed: event.completed, startTime: event.startTime, date: event.date, isApi: event.isApi })
-      .from(event).where(and(gte(event.date, from), lte(event.date, to))),
-    db.select({ id: habit.id, frequency: habit.frequency, icon: habit.icon }).from(habit),
+      .from(event).where(and(eq(event.userId, userId), gte(event.date, from), lte(event.date, to))),
+    db.select({ id: habit.id, frequency: habit.frequency, icon: habit.icon }).from(habit).where(eq(habit.userId, userId)),
     db.select({ date: smartMission.date }).from(smartMission)
-      .where(and(gte(smartMission.date, from), lte(smartMission.date, to), eq(smartMission.completed, true))),
+      .where(and(eq(smartMission.userId, userId), gte(smartMission.date, from), lte(smartMission.date, to), eq(smartMission.completed, true))),
     db.select({ date: preparationTip.date }).from(preparationTip)
-      .where(and(gte(preparationTip.date, from), lte(preparationTip.date, to), eq(preparationTip.completed, true))),
+      .where(and(eq(preparationTip.userId, userId), gte(preparationTip.date, from), lte(preparationTip.date, to), eq(preparationTip.completed, true))),
     db.select({ date: reliefRecommendation.date, completed: reliefRecommendation.completed, alt1: reliefRecommendation.alt1Completed, alt2: reliefRecommendation.alt2Completed })
-      .from(reliefRecommendation).where(and(gte(reliefRecommendation.date, from), lte(reliefRecommendation.date, to))),
+      .from(reliefRecommendation).where(and(eq(reliefRecommendation.userId, userId), gte(reliefRecommendation.date, from), lte(reliefRecommendation.date, to))),
   ]);
 
   const [, season, previous] = timeline.seasons;

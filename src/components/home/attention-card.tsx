@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertCircle, Brain, Plus, RotateCw, TrendingUp, Users, Zap } from "lucide-react";
+import { AlertCircle, Brain, KeyRound, Plus, RotateCw, TrendingUp, Users, Zap } from "lucide-react";
 import CompletionCheck from "@/components/ui/completion-check";
 import StrikeText from "@/components/ui/strike-text";
 import { SkeletonRows } from "@/components/loader";
@@ -24,10 +24,12 @@ interface AttentionCardProps {
   relief: Relief | null;
   updatingRelief: Set<string>;
   onReliefToggle: (index: number) => void;
+  // True when this account has no AI key, so everything here is the offline version
+  aiKeyMissing?: boolean;
 }
 
 export default function AttentionCard(props: AttentionCardProps) {
-  const { charisma, aiLoading, missingInfo, prepTip, prepLoading, updatingPrep, onPrepToggle, onRegeneratePrep, smartMission, updatingSmart, onSmartToggle, onRegenerateSmart, relief, updatingRelief, onReliefToggle } = props;
+  const { charisma, aiLoading, missingInfo, prepTip, prepLoading, updatingPrep, onPrepToggle, onRegeneratePrep, smartMission, updatingSmart, onSmartToggle, onRegenerateSmart, relief, updatingRelief, onReliefToggle, aiKeyMissing } = props;
 
   return (
     <WidgetCard
@@ -48,7 +50,7 @@ export default function AttentionCard(props: AttentionCardProps) {
       loading={aiLoading}
       loadingMinHeight="min-h-[250px]"
       loadingContent={<SkeletonRows rows={3} caption="Syncing Intelligence..." />}
-      footerHref="/about"
+      footerHref="/account"
       footerLabel="Visit Logs"
       delay={0.6}
       className="overflow-visible"
@@ -244,6 +246,23 @@ export default function AttentionCard(props: AttentionCardProps) {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Why the cards above are the offline ones */}
+      {aiKeyMissing && (
+        <div className="p-5 rounded-[1.25rem] bg-tm-orange-dark/10 border border-tm-orange-dark/30 flex flex-col items-center text-center gap-3">
+          <KeyRound className="text-tm-orange-dark" size={24} />
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-foreground">No AI Key Added</p>
+            <p className="text-caption text-tm-blue-gray">Your quests, tips and Tavern picks are the offline ones. Add your own AI key to have them written for you.</p>
+          </div>
+          <Link
+            href="/account"
+            className="px-6 py-2 bg-tm-orange-dark/20 hover:bg-tm-orange-dark/40 text-tm-orange-dark text-tiny font-mono font-semibold uppercase rounded-xl transition-all border border-tm-orange-dark/20 flex items-center gap-2 tracking-[0.12em]"
+          >
+            <KeyRound size={12} /> Add AI Key
+          </Link>
         </div>
       )}
     </WidgetCard>

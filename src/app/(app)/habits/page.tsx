@@ -161,7 +161,7 @@ export default function HabitsPage() {
         if (existingLogIdx >= 0) {
           newLogs[existingLogIdx] = { ...newLogs[existingLogIdx], completed: newStatus };
         } else {
-          newLogs.push({ id: `optimistic-${toggleKey}`, habitId, habitName: h.name, habitIcon: h.icon, date: dateStr, completed: newStatus });
+          newLogs.push({ id: `optimistic-${toggleKey}`, userId: h.userId, habitId, habitName: h.name, habitIcon: h.icon, date: dateStr, completed: newStatus });
         }
         return { ...h, logs: newLogs };
       }

@@ -28,7 +28,7 @@ export default function CalendarPage() {
   const [moods, setMoods] = useState<MoodEntry[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // Until Persona days are switched on (About → Settings) the calendar doesn't mark them either
+  // Until Persona days are switched on (Account → Settings) the calendar doesn't mark them either
   const personaOff = useSyncExternalStore(subscribePersonaSetting, isPersonaOff, () => true);
   const dayPersona = (day: Date) => (personaOff ? null : scheduledPersona(day));
   const [showAdd, setShowAdd] = useState(false);
