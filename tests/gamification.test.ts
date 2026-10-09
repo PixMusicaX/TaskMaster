@@ -4,6 +4,7 @@ import { getProfile, getSeasonHistory, getSeasonPace, getSeasonTimeline, getEraP
 import { saveNote } from "@/app/actions/notes";
 import { toggleHabitLog } from "@/app/actions/habits";
 import { seasonSnapshot } from "@/db/schema";
+import { seasonEraLabel } from "@/lib/eras";
 import { db } from "./helpers/test-db";
 import {
   setToday, noteLines, insertNote, insertEvent, insertHabit, insertHabitLog,
@@ -159,6 +160,20 @@ describe("getSeasonTimeline", () => {
     expect(seasons.map(s => s.monthName)).toEqual(["September", "August", "July", "June"]);
     expect(seasons.map(s => [s.eraStart, s.eraEnd])).toEqual([[1, null], [2, 2], [1, 2], [0, 1]]);
     expect(currentStart).toBe(1);
+  });
+
+  it("marks the seasons that earned the next era up, as the Hall of Fame writes them", async () => {
+    await insertNote("2026-06-10", noteLines("a"));           // June: 10 XP, a first season beats nothing
+    await insertNote("2026-07-10", noteLines("a", "b", "c")); // July: 30 XP, beats June
+    await insertNote("2026-08-10", noteLines("a"));           // August: 10 XP, falls short
+
+    const before = await getSeasonTimeline("2026-09-28");
+    expect(before.seasons.map(seasonEraLabel)).toEqual(["II", "III", "II+", "I+"]);
+
+    // September passes August's final 10 XP, so it is now due a step up as well
+    await insertNote("2026-09-20", noteLines("a", "b"));
+    const after = await getSeasonTimeline("2026-09-28");
+    expect(after.seasons.map(seasonEraLabel)).toEqual(["II+", "III", "II+", "I+"]);
   });
 
   it("starts at Era I with no history", async () => {

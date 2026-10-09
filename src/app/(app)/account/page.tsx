@@ -9,10 +9,10 @@ import VaultHero from "@/components/vault/vault-hero";
 import HallOfFame from "@/components/vault/hall-of-fame";
 import Chronicle, { type ChronicleKind } from "@/components/vault/chronicle";
 import SettingsPanel from "@/components/vault/settings-panel";
-import AccountPanel from "@/components/vault/account-panel";
+import AccountPanel, { AiGuidePanel, useAccount } from "@/components/vault/account-panel";
 import VaultSection from "@/components/vault/vault-section";
 import { getSeasonTimeline } from "@/app/actions/gamification";
-import { eraAt } from "@/lib/eras";
+import { seasonEraLabel } from "@/lib/eras";
 import { getSmartMissionHistory, toggleSmartMission } from "@/app/actions/smart-missions";
 import { getReliefHistory, toggleReliefRecommendation } from "@/app/actions/relief";
 import { getPreparationTipHistory, togglePreparationTip } from "@/app/actions/preparation";
@@ -51,6 +51,7 @@ export default function AccountPage() {
   const [reliefHistory, setReliefHistory] = useState<ReliefRow[]>([]);
   const [preparationHistory, setPreparationHistory] = useState<PrepTipRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [account, reloadAccount] = useAccount();
 
   const [openTable, setOpenTable] = useState<"seasons" | ChronicleKind | null>(null);
   const [pruneLoading, setPruneLoading] = useState(false);
@@ -188,7 +189,7 @@ export default function AccountPage() {
     <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-5xl mx-auto space-y-16 pb-24">
       <VaultHero />
 
-      <AccountPanel />
+      <AccountPanel account={account} onReload={reloadAccount} />
 
       <HallOfFame seasons={seasonHistory} loading={loading} onViewAll={() => setOpenTable("seasons")} />
 
@@ -207,6 +208,8 @@ export default function AccountPage() {
         onEnableNotifications={handleEnableNotifications}
         onEnableLocation={handleEnableLocation}
       />
+
+      <AiGuidePanel account={account} />
 
       <VaultSection icon={Database} iconClassName="text-tm-blue-gray" title="Cloud Storage">
         <GlassCard className="p-5 md:p-8 relative overflow-hidden">
@@ -287,7 +290,7 @@ export default function AccountPage() {
         title="Hall of Fame"
         isOpen={openTable === "seasons"}
         onClose={closeTable}
-        data={seasonHistory.map(s => ({ ...s, era: eraAt(s.eraEnd ?? s.eraStart).numeral }))}
+        data={seasonHistory.map(s => ({ ...s, era: seasonEraLabel(s) }))}
         columns={[
           { header: "Year", key: "year" },
           { header: "Month", key: "monthName" },

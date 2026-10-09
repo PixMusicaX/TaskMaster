@@ -6,7 +6,7 @@ import type { StatName, Stats } from "@/lib/types";
 import { XP_VALUES, RPG_TITLES, LEVEL_UP_XP } from "@/lib/constants";
 import { startOfMonth, endOfMonth, endOfDay, format, subMonths, addDays, min, getDaysInMonth, differenceInCalendarMonths, parseISO } from "date-fns";
 import { and, or, gte, lte, eq, inArray, min as minOf } from "drizzle-orm";
-import { liveEraIndex, seasonEras } from "@/lib/eras";
+import { MAX_ERA, liveEraIndex, seasonEras } from "@/lib/eras";
 
 export async function statsForPeriod(userId: string, startDate: Date, endDate: Date, referenceDate: Date = new Date()) {
   try {
@@ -313,12 +313,18 @@ export async function seasonTimelineFor(userId: string, clientDateStr?: string, 
     ...season,
     eraStart: eras.seasons[i].start,
     eraEnd: eras.seasons[i].end as number | null,
+    // It beat the month before, so the season after it starts one era higher (Era V has no higher)
+    eraUp: eras.seasons[i].end > eras.seasons[i].start,
   })).reverse();
+
+  // The season in progress is due a step up once it has passed last month's final XP
+  const lastMonthXp = history[1]?.xp ?? 0;
+  const currentUp = history[0].xp > lastMonthXp && eras.nextStart < MAX_ERA;
 
   return {
     // Where the current season started
     currentStart: eras.nextStart,
-    seasons: [{ ...history[0], eraStart: eras.nextStart, eraEnd: null as number | null }, ...finishedWithEras],
+    seasons: [{ ...history[0], eraStart: eras.nextStart, eraEnd: null as number | null, eraUp: currentUp }, ...finishedWithEras],
   };
 }
 

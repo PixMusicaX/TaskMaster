@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Bot, ExternalLink, KeyRound, LogOut, MonitorSmartphone, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,14 +36,25 @@ function describeDevice(userAgent: string | null) {
   return os ? `${browser} on ${os}` : browser;
 }
 
-// Who is signed in, where, and which AI writes their quests
-export default function AccountPanel() {
+// The account page loads this once and hands it to the two panels below, which sit apart on the page
+export function useAccount() {
   const [account, setAccount] = useState<Account | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-
+  const reload = useCallback(async () => {
+    try {
+      setAccount(await getAccount());
+    } catch (err) {
+      console.error("Account failed to load:", err);
+    }
+  }, []);
   useEffect(() => {
     getAccount().then(setAccount).catch(err => console.error("Account failed to load:", err));
   }, []);
+  return [account, reload] as const;
+}
+
+// Who is signed in, and on which devices
+export default function AccountPanel({ account, onReload }: { account: Account | null; onReload: () => Promise<void> }) {
+  const [busy, setBusy] = useState<string | null>(null);
 
   async function handleSignOut() {
     setBusy("signout");
@@ -55,7 +66,7 @@ export default function AccountPanel() {
   async function handleSignOutDevice(id: string) {
     setBusy(id);
     await signOutDevice(id);
-    setAccount(await getAccount());
+    await onReload();
     setBusy(null);
   }
 
@@ -63,7 +74,7 @@ export default function AccountPanel() {
     if (!confirm("Sign out of every other device? They will need to sign in with Google again.")) return;
     setBusy("others");
     await signOutEverywhereElse();
-    setAccount(await getAccount());
+    await onReload();
     setBusy(null);
   }
 
@@ -71,7 +82,6 @@ export default function AccountPanel() {
   const sessions = account?.sessions ?? [];
 
   return (
-    <>
       <VaultSection icon={UserRound} iconClassName="text-tm-yellow" title="Account">
         <GlassCard className="p-5 md:p-8 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -125,11 +135,15 @@ export default function AccountPanel() {
           </div>
         </GlassCard>
       </VaultSection>
+  );
+}
 
-      <VaultSection icon={Bot} iconClassName="text-tm-orange-light" title="AI Guide">
-        {account && <AiSettingsCard initial={account.ai} />}
-      </VaultSection>
-    </>
+// Which AI writes this account's quests
+export function AiGuidePanel({ account }: { account: Account | null }) {
+  return (
+    <VaultSection icon={Bot} iconClassName="text-tm-orange-light" title="AI Guide">
+      {account && <AiSettingsCard initial={account.ai} />}
+    </VaultSection>
   );
 }
 

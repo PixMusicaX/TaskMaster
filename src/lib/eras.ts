@@ -69,6 +69,12 @@ export function liveEraIndex(startIndex: number, xp: number, lastMonthPaceXP: nu
   return clampEra(startIndex + (xp > lastMonthPaceXP ? 1 : 0));
 }
 
+// How a season's era is written in the Hall of Fame: the era it started in, with a "+" when the
+// season earned a step up (it beat the month before, so the next season starts one era higher)
+export function seasonEraLabel(season: { eraStart: number; eraUp: boolean }): string {
+  return eraAt(season.eraStart).numeral + (season.eraUp ? "+" : "");
+}
+
 export interface SeasonEras {
   start: number;
   end: number;

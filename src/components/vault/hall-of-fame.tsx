@@ -3,7 +3,7 @@
 import { Search, Trophy } from "lucide-react";
 import GlassCard from "@/components/glass-card";
 import { RankCrest } from "@/lib/rank-icons";
-import { eraAt } from "@/lib/eras";
+import { eraAt, seasonEraLabel } from "@/lib/eras";
 import { cn } from "@/lib/utils";
 import AnimatedNumber from "@/components/progress/animated-number";
 import type { TimelineSeason } from "@/lib/types";
@@ -15,7 +15,7 @@ interface HallOfFameProps {
   onViewAll: () => void;
 }
 
-// Most recent finished seasons, each with the crest and era it ended on
+// Most recent seasons, each with its crest and era ("III+" when it earned the next era up)
 export default function HallOfFame({ seasons, loading, onViewAll }: HallOfFameProps) {
   const best = seasons.reduce((max, s) => Math.max(max, s.xp), 0);
 
@@ -29,7 +29,7 @@ export default function HallOfFame({ seasons, loading, onViewAll }: HallOfFamePr
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {seasons.slice(0, 3).map((season, idx) => {
-              const era = eraAt(season.eraEnd ?? season.eraStart);
+              const era = eraAt(season.eraStart);
               const isBest = season.xp === best;
               return (
                 <GlassCard key={`${season.year}-${season.monthName}`} delay={idx * 0.1} className={cn("p-6 group", isBest && "border-tm-yellow/40")}>
@@ -63,7 +63,12 @@ export default function HallOfFame({ seasons, loading, onViewAll }: HallOfFamePr
                     <span className="px-2 py-1 bg-tm-blue-gray/10 rounded text-micro font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray border border-tm-blue-gray/20">
                       {season.title}
                     </span>
-                    <span className="ml-auto font-serif font-bold text-sm text-tm-blue-gray" title={`Era of ${era.name}`}>{era.numeral}</span>
+                    <span
+                      className={cn("ml-auto font-serif font-bold text-sm", season.eraUp ? "text-tm-yellow" : "text-tm-blue-gray")}
+                      title={season.eraUp ? `Era of ${era.name}, with the next era earned` : `Era of ${era.name}`}
+                    >
+                      {seasonEraLabel(season)}
+                    </span>
                   </div>
                 </GlassCard>
               );
