@@ -448,84 +448,42 @@ export function P4Menu({ selected, select, onClose, xp, labels, descriptions }: 
 
 // ======================= P5: the game's own menu screen =======================
 // The background is the game's pause menu (public/persona/p5-menu-bg.webp) with its menu words
-// painted out; our stickers sit exactly where they were. Everything is placed on a 16:9 stage, in
-// the screenshot's 1000×562.5 units, scaled to cover the screen and slid sideways on narrow ones
-// to keep the hand in view.
+// painted out; the buttons sit on the palm where they were. Everything is placed on a 16:9 stage,
+// in the screenshot's 1000×562.5 units, scaled to cover the screen and slid sideways on narrow
+// ones to keep the hand in view.
 
 const P5_DESCRIPTIONS = ["Lay low at the hideout", "Check the calendar", "Read your notes", "Visit your confidants", "Look back on records", "Change settings"];
-// Our six words on the palm: right edge, top and type size, in screenshot units. The two long
-// ones sit where the game's words spilled off the palm, so they cover those sticker shapes.
-const P5_ROWS = [
-  { right: 552, top: 136, fs: 40, tilt: -2 },
-  { right: 549, top: 214, fs: 44, tilt: 1 },
-  { right: 512, top: 266, fs: 30, tilt: -2 },
-  { right: 509, top: 300, fs: 38, tilt: 0 },
-  { right: 461, top: 344, fs: 28, tilt: 2 },
-  { right: 503, top: 375, fs: 30, tilt: -1 },
-];
 const UNIT_X = 100 / 1000;
 const UNIT_Y = 100 / 562.5;
 
-function seeded(text: string) {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
-  return () => {
-    h = Math.imul(h ^ (h >>> 13), 0x5bd1e995) >>> 0;
-    h ^= h >>> 15;
-    return (h >>> 0) / 4294967296;
-  };
-}
+// The buttons are the game's battle-menu commands, lettering and all (public/persona/p5-btn-*.webp,
+// see CREDITS.md), one per page in menu order: Guard for the hideout, Order for the calendar, Item
+// for notes, Persona for confidants, Sword for records and Gun for the system page. The one in
+// hand also shows the page's own name on a small tag. Sizes are the pictures' own, in pixels.
+const P5_BUTTONS = [
+  { src: "/persona/p5-btn-guard.webp", w: 951, h: 405 },
+  { src: "/persona/p5-btn-order.webp", w: 891, h: 540 },
+  { src: "/persona/p5-btn-item.webp", w: 873, h: 326 },
+  { src: "/persona/p5-btn-persona.webp", w: 1148, h: 477 },
+  { src: "/persona/p5-btn-sword.webp", w: 1170, h: 401 },
+  { src: "/persona/p5-btn-gun.webp", w: 892, h: 366 },
+];
+// Screenshot units per picture pixel
+const P5_BUTTON_SCALE = 0.15;
+// The buttons stay on the white of the palm, which narrows and drifts left as it goes down. Per
+// row: the edge it is pinned to (the palm's left edge for Notes and System, its right edge for the
+// rest), where its middle sits, and a tilt that undoes the lean the command was drawn with, so
+// every word reads along the same line.
+const P5_ROWS: { middle: number; tilt: number; left?: number; right?: number }[] = [
+  { right: 552, middle: 150, tilt: -11 },
+  { right: 546, middle: 205, tilt: -16 },
+  { left: 360, middle: 259, tilt: 0 },
+  { right: 508, middle: 313, tilt: 10 },
+  { right: 488, middle: 368, tilt: -9 },
+  { left: 314, middle: 421, tilt: -6 },
+];
 
 const P5_MENU_FACE = '"P5 Menu", Anton, sans-serif';
-const STICKER_FACES = [P5_MENU_FACE, '"Archivo Black", sans-serif', '"P5 Ransom", Anton, sans-serif', "Anton, Impact, sans-serif"];
-
-// A black edge drawn around the white cut (four hard drop-shadows)
-const CUT_EDGE = "drop-shadow(0.05em 0 0 #0b0b0b) drop-shadow(-0.05em 0 0 #0b0b0b) drop-shadow(0 0.05em 0 #0b0b0b) drop-shadow(0 -0.05em 0 #0b0b0b)";
-
-// One menu word as the game cuts it: mixed faces and case, letters bobbing, a white cut hugging the
-// letters with a black edge, the odd letter inverted. The selected word turns mint on a black cut,
-// with a red edge and the cyan pointer.
-function P5Sticker({ text, on }: { text: string; on: boolean }) {
-  const rand = seeded(text);
-  return (
-    <span className="relative inline-flex items-center whitespace-nowrap leading-none" style={{ filter: on ? "drop-shadow(-0.09em -0.07em 0 #e5001b)" : CUT_EDGE }}>
-      {on && <span aria-hidden className="absolute -inset-x-[0.14em] -inset-y-[0.1em] bg-[#0b0b0b]" style={{ clipPath: "polygon(1% 14%, 100% 0, 97% 100%, 0 90%)" }} />}
-      {Array.from(text).map((ch, i) => {
-        if (ch === " ") return <span key={i} aria-hidden className="inline-block w-[0.28em]" />;
-        const face = STICKER_FACES[Math.floor(rand() * STICKER_FACES.length)];
-        const lower = i > 0 && rand() < 0.35;
-        const size = 0.84 + rand() * 0.3;
-        const lift = (rand() - 0.5) * 0.12;
-        const tilt = (rand() - 0.5) * 12;
-        const invert = !on && rand() < 0.16;
-        const tight = face === P5_MENU_FACE;
-        return (
-          <span
-            key={i}
-            aria-hidden
-            className="relative inline-block"
-            style={{
-              fontFamily: face,
-              fontSize: `${size}em`,
-              transform: `translateY(${lift}em) rotate(${tilt.toFixed(1)}deg)`,
-              // The fan font's glyphs carry wide side bearings
-              letterSpacing: tight ? "-0.18em" : "-0.02em",
-              marginRight: tight ? "0.12em" : "0.01em",
-              ...(on
-                ? { color: "#d8ffe0", WebkitTextStroke: "0.09em #0b0b0b", paintOrder: "stroke fill" }
-                : invert
-                  ? { color: "#fff", background: "#0b0b0b", padding: "0 0.06em", boxShadow: "0 0 0 0.08em #fff" }
-                  : { color: "#0b0b0b", WebkitTextStroke: "0.22em #fff", paintOrder: "stroke fill" }),
-            }}
-          >
-            {lower ? ch.toLowerCase() : ch}
-          </span>
-        );
-      })}
-      {on && <span aria-hidden className="absolute left-full top-1/2 -translate-y-1/2 ml-[0.1em] w-[0.75em] h-[0.95em] bg-[#2be0ff]" style={{ clipPath: "polygon(0 0, 100% 45%, 0 100%)" }} />}
-    </span>
-  );
-}
 
 // The selector's jitter: a red and a cyan quad whose corners jump every 120ms, the cyan one
 // screen-blended over the red (after Drew Powers' "Persona 5 Menu UI" pen)
@@ -542,12 +500,15 @@ function P5Selector() {
     return () => clearInterval(id);
   }, []);
   return (
-    <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="absolute -inset-x-[8%] -inset-y-[30%] w-[116%] h-[160%] pointer-events-none opacity-75" aria-hidden>
+    <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="absolute -inset-x-[6%] -inset-y-[18%] w-[112%] h-[136%] pointer-events-none opacity-75" aria-hidden>
       <polygon points={quads[0]} fill="#ff0022" />
       <polygon points={quads[1]} fill="#1cfeff" style={{ mixBlendMode: "screen" }} />
     </svg>
   );
 }
+
+// A white edge round the selected banner (four hard drop-shadows)
+const P5_PICKED = "drop-shadow(0.55cqh 0 0 #fff) drop-shadow(-0.55cqh 0 0 #fff) drop-shadow(0 0.55cqh 0 #fff) drop-shadow(0 -0.55cqh 0 #fff)";
 
 export function P5Menu({ selected, select, onClose, labels, descriptions }: MenuProps) {
   return (
@@ -578,35 +539,46 @@ export function P5Menu({ selected, select, onClose, labels, descriptions }: Menu
           {menuItems(labels, "p5").map((item, i) => {
             const on = selected === i;
             const row = P5_ROWS[i];
+            const button = P5_BUTTONS[i];
+            const width = button.w * P5_BUTTON_SCALE;
+            const height = button.h * P5_BUTTON_SCALE;
+            const left = row.left ?? (row.right ?? 0) - width;
             return (
               <motion.div
                 key={item.href}
-                className="absolute flex justify-end"
-                style={{ right: `${100 - row.right * UNIT_X}%`, top: `${row.top * UNIT_Y}%`, fontSize: `${row.fs * UNIT_Y}cqh`, zIndex: on ? 5 : 1 }}
+                className="absolute pointer-events-none"
+                style={{ left: `${left * UNIT_X}%`, top: `${(row.middle - height / 2) * UNIT_Y}%`, width: `${width * UNIT_X}%`, aspectRatio: button.w / button.h, zIndex: on ? 5 : 1 }}
                 initial={{ x: "-30%", opacity: 0 }}
-                animate={{ x: 0, opacity: 1, rotate: on ? row.tilt - 3 : row.tilt, scale: on ? 1.08 : 1 }}
+                animate={{ x: 0, opacity: 1, rotate: on ? row.tilt - 3 : row.tilt, scale: on ? 1.14 : 1 }}
                 transition={{ delay: 0.16 + i * 0.04, type: "spring", stiffness: 520, damping: 22 }}
               >
-                <Link href={item.href} onClick={onClose} onMouseEnter={() => select(i)} onFocus={() => select(i)} className="relative flex outline-none" aria-label={item.label}>
-                  {on && <P5Selector />}
-                  <P5Sticker text={item.label.toUpperCase()} on={on} />
-                </Link>
+                {on && <P5Selector />}
+                {/* eslint-disable-next-line @next/next/no-img-element -- a static asset; next/image adds nothing here */}
+                <img src={button.src} alt="" className="absolute inset-0 h-full w-full" style={on ? { filter: P5_PICKED } : undefined} draggable={false} />
+                {/* The link is the middle of the button, so the shards of one never steal another's taps */}
+                <Link
+                  href={item.href}
+                  onClick={onClose}
+                  onMouseEnter={() => select(i)}
+                  onFocus={() => select(i)}
+                  aria-label={item.label}
+                  className="absolute inset-x-[8%] inset-y-[24%] outline-none pointer-events-auto"
+                />
+                {/* The page's own name, beside the one in hand (phones have no room: it leads the caption instead) */}
+                {on && (
+                  <span
+                    aria-hidden
+                    className="max-md:hidden absolute right-full top-1/2 -translate-y-1/2 mr-[1cqh] whitespace-nowrap leading-none px-[0.45em] py-[0.2em] text-[#0b0b0b] bg-[#d8ffe0]"
+                    style={{ fontFamily: P5_MENU_FACE, fontSize: `${15 * UNIT_Y}cqh`, letterSpacing: "-0.1em", boxShadow: "0 0 0 0.14em #0b0b0b" }}
+                  >
+                    {item.label.toUpperCase()}
+                  </span>
+                )}
+                {on && <span aria-hidden className="absolute left-full top-1/2 -translate-y-1/2 w-[4cqh] h-[5cqh] bg-[#2be0ff]" style={{ clipPath: "polygon(0 0, 100% 45%, 0 100%)" }} />}
               </motion.div>
             );
           })}
         </nav>
-
-        {/* Filler in the gap under the first row, as the game packs its list: Morgana's line */}
-        <motion.div
-          aria-hidden
-          className="absolute flex justify-end pointer-events-none"
-          style={{ right: `${100 - 545 * UNIT_X}%`, top: `${182 * UNIT_Y}%`, fontSize: `${24 * UNIT_Y}cqh` }}
-          initial={{ x: "-30%", opacity: 0 }}
-          animate={{ x: 0, opacity: 1, rotate: 2 }}
-          transition={{ delay: 0.2, type: "spring", stiffness: 520, damping: 22 }}
-        >
-          <P5Sticker text="TAKE YOUR TIME" on={false} />
-        </motion.div>
 
         {/* What the choice does, where the game prints it under COMMAND */}
         <motion.p
@@ -627,6 +599,7 @@ export function P5Menu({ selected, select, onClose, labels, descriptions }: Menu
         initial={{ opacity: 0, x: 12 }}
         animate={{ opacity: 1, x: 0 }}
       >
+        <span className="mr-2 text-[#ff2a3d]" style={{ fontFamily: P5_MENU_FACE, letterSpacing: "-0.08em" }}>{menuItems(labels, "p5")[selected]?.label.toUpperCase()}</span>
         {(descriptions ?? P5_DESCRIPTIONS)[selected]}
       </motion.p>
     </div>

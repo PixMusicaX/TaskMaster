@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import type { PersonaStyle } from "@/lib/persona";
 import { sfx } from "@/lib/sfx";
 
+// How long each style's wipe stays mounted
+export const PERSONA_WIPE_MS: Record<PersonaStyle, number> = { p3: 700, p4: 420, p5: 1400 };
+
 // A short wipe between pages, in the game's style. It plays over the page's own slide-in and
-// never blocks taps. Kept brief: the bars are big layers, so they exist for well under a second.
+// never blocks taps. Kept brief: the layers are big, so they exist for about a second at most.
 export default function PersonaTransition({ style, dark }: { style: PersonaStyle; dark: boolean }) {
   const pathname = usePathname();
   const [seenPath, setSeenPath] = useState(pathname);
@@ -22,12 +25,14 @@ export default function PersonaTransition({ style, dark }: { style: PersonaStyle
   useEffect(() => {
     if (run === null) return;
     sfx.swoosh();
-    const t = setTimeout(() => setRun(null), style === "p4" ? 420 : 700);
+    const t = setTimeout(() => setRun(null), PERSONA_WIPE_MS[style]);
     return () => clearTimeout(t);
   }, [run, style]);
 
   return (
     <div className="fixed inset-0 z-[300] pointer-events-none overflow-hidden" aria-hidden>
+      {/* Keeps the clip's cut in the browser's cache, so a wipe starts the moment it is asked for */}
+      {style === "p5" && <video className="hidden" src={`${P5_CLIP}#t=${P5_CUT.from}`} preload="auto" muted playsInline />}
       <AnimatePresence>
         {run !== null && (
           <motion.div key={run} className="absolute inset-0" exit={{ opacity: 0, transition: { duration: 0.15 } }}>
@@ -41,34 +46,48 @@ export default function PersonaTransition({ style, dark }: { style: PersonaStyle
   );
 }
 
-// Black and red shards slash across, with a white streak riding the first one
+// The game's own brushwork, cut from the "Take Your Heart" animation (public/persona/
+// p5-transition.mp4, see CREDITS.md): Joker's eyes in red, swept over by white swirls that turn the
+// screen black and white and then red. It fades out at the end to show the page.
+const P5_CLIP = "/persona/p5-transition.mp4";
+const P5_CUT = { from: 21.3, to: 23.3 };
+// The cut is sped up to fit the wipe
+const P5_RATE = 1.8;
+
 export function P5Wipe() {
-  const bars = [
-    { top: "-10%", color: "#0b0b0b", delay: 0 },
-    { top: "18%", color: "#e5001b", delay: 0.04 },
-    { top: "46%", color: "#0b0b0b", delay: 0.08 },
-    { top: "72%", color: "#e5001b", delay: 0.12 },
-  ];
+  const video = useRef<HTMLVideoElement>(null);
+  // Nothing shows until the first frame of the cut is on screen
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    const el = video.current;
+    if (!el) return;
+    el.playbackRate = P5_RATE;
+    el.play().catch(() => {});
+    // Hold the last frame of the cut
+    const hold = () => { if (el.currentTime >= P5_CUT.to) el.pause(); };
+    el.addEventListener("timeupdate", hold);
+    return () => el.removeEventListener("timeupdate", hold);
+  }, []);
+
   return (
-    <>
-      {bars.map((b, i) => (
-        <motion.div
-          key={i}
-          className="absolute left-0 h-[34%] w-[80vw]"
-          style={{ top: b.top, background: b.color, rotate: -14, clipPath: "polygon(6% 0, 100% 8%, 94% 100%, 0 90%)" }}
-          initial={{ x: "-110vw" }}
-          animate={{ x: "130vw" }}
-          transition={{ duration: 0.55, delay: b.delay, ease: [0.7, 0, 0.3, 1] }}
-        />
-      ))}
-      <motion.div
-        className="absolute left-0 top-[44%] h-2 w-[70vw] bg-white"
-        style={{ rotate: -14 }}
-        initial={{ x: "-90vw" }}
-        animate={{ x: "140vw" }}
-        transition={{ duration: 0.45, delay: 0.1, ease: [0.7, 0, 0.3, 1] }}
+    <motion.div
+      className="absolute inset-0"
+      initial={{ opacity: 1 }}
+      animate={{ opacity: [1, 1, 0] }}
+      transition={{ duration: PERSONA_WIPE_MS.p5 / 1000, times: [0, 0.83, 1], ease: "linear" }}
+    >
+      <video
+        ref={video}
+        className="absolute inset-0 h-full w-full object-cover"
+        style={{ opacity: playing ? 1 : 0 }}
+        src={`${P5_CLIP}#t=${P5_CUT.from}`}
+        preload="auto"
+        muted
+        playsInline
+        onPlaying={() => setPlaying(true)}
       />
-    </>
+    </motion.div>
   );
 }
 

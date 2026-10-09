@@ -20,7 +20,7 @@ import { PERSONA_FONTS_URL, PERSONA_NAMES, PERSONA_STYLES, type PersonaStyle } f
 import type { AmbientLayer } from "@/lib/eras";
 import { Layer } from "@/components/era-ambient";
 import LandingBackdrop, { type BackdropMode } from "./landing-backdrop";
-import { P3Sweep, P4Static, P5Wipe } from "@/components/persona/persona-transition";
+import { P3Sweep, P4Static, P5Wipe, PERSONA_WIPE_MS } from "@/components/persona/persona-transition";
 import { useBrowserTheme, useTheme } from "@/components/theme-provider";
 import HabitIconRender from "@/components/HabitIconRender";
 import { P3Menu, P4Menu, P5Menu } from "@/components/persona/persona-pause-menu";
@@ -1002,11 +1002,12 @@ function PersonaStage({ register }: { register: (set: (show: PersonaShow) => voi
     });
   }, [register]);
 
+  const wipeStyle = wipe?.style ?? null;
   useEffect(() => {
     const swap = setTimeout(() => setUp(want), 230);
-    const done = setTimeout(() => setWipe(null), 780);
+    const done = setTimeout(() => setWipe(null), Math.max(780, wipeStyle ? PERSONA_WIPE_MS[wipeStyle] : 0));
     return () => { clearTimeout(swap); clearTimeout(done); };
-  }, [want]);
+  }, [want, wipeStyle]);
 
   // The games' typefaces are normally loaded on Persona days only
   const needed = want !== null;

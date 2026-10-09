@@ -48,6 +48,27 @@ export default function PersonaNav({ style }: { style: PersonaStyle }) {
           animate={{ opacity: 1, x: 0 }}
           transition={{ type: "spring", stiffness: 420, damping: 24 }}
         >
+          {style === "p5" ? (
+            // The game's own MENU plate (public/persona/p5-menu-icon.webp), with the level tucked beside it
+            <motion.button
+              data-xp-target
+              animate={pulseControls}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open menu"
+              aria-expanded={menuOpen}
+              className="flex items-end gap-1.5 -ml-1"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- a static asset; next/image adds nothing here */}
+              <img src="/persona/p5-menu-icon.webp" alt="" width={764} height={323} className="h-12 sm:h-14 w-auto drop-shadow-[3px_3px_0_#e5001b]" draggable={false} />
+              {profile && (
+                <span className="mb-1 flex flex-col gap-0.5 leading-none bg-black text-white font-display px-2 py-1 -skew-x-12 border-2 border-white">
+                  <span className="text-[11px]">LV {profile.level}</span>
+                  <span className="block h-1 w-10 bg-white/25 overflow-hidden"><span className="tm-xp-fill block h-full" style={{ width: `${progress}%` }} /></span>
+                </span>
+              )}
+            </motion.button>
+          ) : (
           <motion.button
             data-xp-target
             animate={pulseControls}
@@ -67,6 +88,7 @@ export default function PersonaNav({ style }: { style: PersonaStyle }) {
               </span>
             )}
           </motion.button>
+          )}
         </motion.div>
         <div className={cn("pointer-events-auto", hudBacking(style))}>
           <PersonaHud style={style} dark={dark} />
@@ -79,7 +101,6 @@ export default function PersonaNav({ style }: { style: PersonaStyle }) {
 
 function menuTone(style: PersonaStyle) {
   switch (style) {
-    case "p5": return "bg-black text-white font-display text-[16px] px-3 py-2 -skew-x-12 border-[3px] border-white shadow-[5px_5px_0_#e5001b]";
     case "p4": return "bg-[#181512] text-[#ffe100] font-display text-[16px] px-3 py-2 rounded-xl shadow-[4px_4px_0_#ef5f00]";
     default: return "bg-tm-yellow text-[var(--tm-on-accent)] italic font-medium tracking-[0.16em] text-[14px] px-3.5 py-2 -skew-x-[16deg] shadow-[0_4px_18px_-6px_var(--tm-yellow)]";
   }
