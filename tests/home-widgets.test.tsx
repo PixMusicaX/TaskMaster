@@ -47,7 +47,7 @@ describe("SeasonPaceCard", () => {
 
   it("scales the meter to the final rank, marking last month's pace and final", () => {
     render(<SeasonPaceCard profile={profile(3260)} pace={{ ...pace, lastMonthPaceXP: 3275, lastMonthTotalXP: 3725 }} />);
-    expect(screen.getByText("4,400 XP")).toBeTruthy();
+    expect(screen.getByText("4400 XP")).toBeTruthy();
     expect(parseFloat(screen.getByTitle("August on day 28: 3275 XP").style.left)).toBeCloseTo(74.43, 1);
     expect(parseFloat(screen.getByTitle("August final: 3725 XP").style.left)).toBeCloseTo(84.66, 1);
     expect(screen.queryByTestId("meter-overflow")).toBeNull();
@@ -62,15 +62,15 @@ describe("SeasonPaceCard", () => {
   it("keeps 4,400 XP as the end in a normal month", () => {
     render(<SeasonPaceCard profile={profile(3260)} pace={{ ...pace, lastMonthPaceXP: 3275, lastMonthTotalXP: 3725 }} />);
     expect(screen.queryByTestId("meter-overflow-zone")).toBeNull();
-    expect(screen.queryByTitle("4,400 XP · Level 45")).toBeNull();
+    expect(screen.queryByTitle("4400 XP · Level 45")).toBeNull();
   });
 
   it("stretches to fit a last month that went past 4,400", () => {
     render(<SeasonPaceCard profile={profile(3260)} pace={{ ...pace, lastMonthPaceXP: 4500, lastMonthTotalXP: 4900 }} />);
     // Bar now ends at August's final, with a tick where 4,400 falls
-    expect(screen.getByText("4,900 XP")).toBeTruthy();
-    expect(screen.getByText("4,400 XP")).toBeTruthy();
-    expect(parseFloat(screen.getByTitle("4,400 XP · Level 45").style.left)).toBeCloseTo(89.8, 1);
+    expect(screen.getByText("4900 XP")).toBeTruthy();
+    expect(screen.getByText("4400 XP")).toBeTruthy();
+    expect(parseFloat(screen.getByTitle("4400 XP · Level 45").style.left)).toBeCloseTo(89.8, 1);
     expect(parseFloat(screen.getByTitle("August on day 28: 4500 XP").style.left)).toBeCloseTo(91.84, 1);
     expect(parseFloat(screen.getByTitle("August final: 4900 XP").style.left)).toBe(100);
     expect(screen.getByTestId("meter-overflow-zone")).toBeTruthy();
@@ -80,7 +80,7 @@ describe("SeasonPaceCard", () => {
 
   it("still shows the meter when there is no previous month", () => {
     render(<SeasonPaceCard profile={profile(50)} pace={{ ...pace, lastMonthPaceXP: 0, lastMonthTotalXP: 0 }} />);
-    expect(screen.getByText("4,400 XP")).toBeTruthy();
+    expect(screen.getByText("4400 XP")).toBeTruthy();
     expect(screen.queryByTitle(/final/)).toBeNull();
   });
 

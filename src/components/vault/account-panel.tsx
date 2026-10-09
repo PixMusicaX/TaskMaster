@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { format } from "date-fns";
-import { Bot, ExternalLink, KeyRound, LogOut, MonitorSmartphone, UserRound } from "lucide-react";
+import { Bot, ExternalLink, KeyRound, LogOut, MonitorSmartphone, PenLine, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import GlassCard from "@/components/glass-card";
 import VaultSection from "./vault-section";
 import { clearAccountStorage } from "@/components/account-scope";
-import { getAccount, signOutDevice, signOutEverywhereElse, signOutHere, updateAiSettings } from "@/app/actions/account";
+import { getAccount, signOutDevice, signOutEverywhereElse, signOutHere, updateAiSettings, updatePersonalization } from "@/app/actions/account";
+import { PERSONAL_FIELDS, PERSONAL_MAX_LENGTH, type Personalization } from "@/lib/personalization";
 import { AI_PROVIDERS, AI_PROVIDER_INFO, type AiProvider, type AiSettingsView } from "@/lib/ai-providers";
 
 type Account = Awaited<ReturnType<typeof getAccount>>;
@@ -144,6 +145,71 @@ export function AiGuidePanel({ account }: { account: Account | null }) {
     <VaultSection icon={Bot} iconClassName="text-tm-orange-light" title="AI Guide">
       {account && <AiSettingsCard initial={account.ai} />}
     </VaultSection>
+  );
+}
+
+// What the player wants the AI to know about them. Entirely optional: every field can stay empty.
+export function PersonalizePanel({ account }: { account: Account | null }) {
+  return (
+    // The home page's invitation links straight here
+    <div id="personalise" className="scroll-mt-24">
+      <VaultSection icon={PenLine} iconClassName="text-tm-yellow" title="About You">
+        {account && <PersonalizeCard initial={account.personal} />}
+      </VaultSection>
+    </div>
+  );
+}
+
+function PersonalizeCard({ initial }: { initial: Personalization }) {
+  const [values, setValues] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
+
+  async function save() {
+    setSaving(true);
+    setMessage(null);
+    const result = await updatePersonalization(values);
+    if (result.success) {
+      setValues(result.personal);
+      setMessage({ ok: true, text: "Saved. Your next quests, tips and answers will take this into account." });
+    } else {
+      setMessage({ ok: false, text: result.message });
+    }
+    setSaving(false);
+  }
+
+  return (
+    <GlassCard className="p-5 md:p-8 space-y-5">
+      <p className="text-sm text-tm-blue-gray font-medium max-w-2xl">
+        Anything you write here is given to the AI alongside your planner, so the daily quest, the prep tip, the Tavern and the
+        Taskmaster fit you better. All of it is optional: fill in what you like, leave the rest, change it any time.
+      </p>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {PERSONAL_FIELDS.map(field => (
+          <label key={field.key} className="block space-y-2">
+            <span className={cn(LABEL, "text-tm-blue-gray")}>{field.label}</span>
+            <textarea
+              rows={field.rows}
+              maxLength={PERSONAL_MAX_LENGTH}
+              value={values[field.key]}
+              onChange={e => setValues(current => ({ ...current, [field.key]: e.target.value }))}
+              placeholder={field.hint}
+              className={cn(FIELD, "resize-y min-h-[4.5rem] leading-relaxed")}
+            />
+          </label>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button onClick={save} disabled={saving} className={BUTTON_PRIMARY}>
+          {saving ? "Saving…" : "Save"}
+        </button>
+        {message && (
+          <p role="status" className={cn("text-sm font-medium", message.ok ? "text-tm-blue-gray" : "text-tm-orange-dark")}>{message.text}</p>
+        )}
+      </div>
+    </GlassCard>
   );
 }
 

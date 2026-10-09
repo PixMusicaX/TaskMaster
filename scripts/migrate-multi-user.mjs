@@ -7,7 +7,9 @@
 // per user, and sets up the read-only role the Taskmaster's questions run as.
 //
 // Everything happens in one transaction: a failure changes nothing, and --dry-run rolls back on
-// purpose after printing what it would do. Safe to run again; finished steps are skipped.
+// purpose after printing what it would do. Safe to run again; finished steps are skipped. Run it
+// again after an update that adds a table (the latest: "UserPreferences", for the account page's
+// personal details and holiday region).
 import postgres from "postgres";
 import { randomUUID } from "node:crypto";
 
@@ -89,6 +91,16 @@ try {
         "groqKey" text,
         "updatedAt" timestamp(3) DEFAULT now() NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS "UserPreferences" (
+        "userId" text PRIMARY KEY REFERENCES "User"("id") ON DELETE CASCADE,
+        "about" text,
+        "interests" text,
+        "goals" text,
+        "avoid" text,
+        "holidayRegion" text DEFAULT 'IN' NOT NULL,
+        "introSeen" boolean DEFAULT false NOT NULL,
+        "updatedAt" timestamp(3) DEFAULT now() NOT NULL
+      );
       -- These two used to be created on first use, so they may not exist yet
       CREATE TABLE IF NOT EXISTS "SeasonSnapshot" (
         "id" text PRIMARY KEY,
@@ -167,7 +179,7 @@ try {
         const [role] = await sp`SELECT 1 FROM pg_roles WHERE rolname = ${READER_ROLE}`;
         if (!role) await sp.unsafe(`CREATE ROLE ${READER_ROLE} NOLOGIN`);
         await sp.unsafe(`GRANT ${READER_ROLE} TO CURRENT_USER`);
-        for (const table of [...OWNED_TABLES, "User", "Account", "Session", "UserAiSettings", "DailyQuote"]) {
+        for (const table of [...OWNED_TABLES, "User", "Account", "Session", "UserAiSettings", "UserPreferences", "DailyQuote"]) {
           await sp.unsafe(`REVOKE ALL ON "${table}" FROM ${READER_ROLE}`);
         }
       });

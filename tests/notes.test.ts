@@ -17,9 +17,9 @@ describe("saveNote", () => {
     expect((await getNoteByDate("2026-09-01"))?.mood).toBe("good");
   });
 
-  it("defaults the mood to neutral", async () => {
+  it("leaves the mood unset until one is picked", async () => {
     const saved = await saveNote("2026-09-02", noteLines("x"));
-    expect(saved.mood).toBe("neutral");
+    expect(saved.mood).toBe("");
   });
 });
 

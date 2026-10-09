@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
-import { Bell, MapPin, Settings, Sparkles, Volume2 } from "lucide-react";
+import { Bell, CalendarDays, MapPin, PartyPopper, Settings, Sparkles, Volume2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { SPRING } from "@/lib/motion";
@@ -11,6 +11,9 @@ import GlassCard from "@/components/glass-card";
 import VaultSection from "./vault-section";
 import { PERSONA_NAMES, isPersonaOff, nextPersonaDay, setPersonaOff, subscribePersonaSetting } from "@/lib/persona";
 import { usePersona } from "@/components/theme-provider";
+import { HOLIDAY_REGIONS } from "@/lib/personalization";
+import { SPECIAL_DAYS, isSpecialOff, nextSpecialDay, setSpecialOff, subscribeSpecialSetting } from "@/lib/special-days";
+import { useSpecial } from "@/components/theme-provider";
 
 function Switch({ on, disabled, onClick, label }: { on: boolean; disabled?: boolean; onClick: () => void; label: string }) {
   return (
@@ -67,9 +70,14 @@ interface SettingsPanelProps {
   locationPermission: string;
   onEnableNotifications: () => void;
   onEnableLocation: () => void;
+  // Country whose holidays fill the calendar ("" for none); null until the account has loaded
+  holidayRegion: string | null;
+  holidayBusy: boolean;
+  holidayStatus?: string;
+  onHolidayRegionChange: (region: string) => void;
 }
 
-export default function SettingsPanel({ notificationPermission, locationPermission, onEnableNotifications, onEnableLocation }: SettingsPanelProps) {
+export default function SettingsPanel({ notificationPermission, locationPermission, onEnableNotifications, onEnableLocation, holidayRegion, holidayBusy, holidayStatus, onHolidayRegionChange }: SettingsPanelProps) {
   const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
   const personaOff = useSyncExternalStore(subscribePersonaSetting, isPersonaOff, () => true);
   const personaToday = usePersona();
@@ -79,6 +87,15 @@ export default function SettingsPanel({ notificationPermission, locationPermissi
     : personaToday
       ? `Today: ${PERSONA_NAMES[personaToday]} day`
       : next ? `Next: ${PERSONA_NAMES[next.style]} on ${format(next.date, "MMM d")}` : undefined;
+
+  const specialOff = useSyncExternalStore(subscribeSpecialSetting, isSpecialOff, () => false);
+  const specialToday = useSpecial();
+  const nextSpecial = nextSpecialDay();
+  const specialStatus = specialOff
+    ? "Off on this device"
+    : specialToday
+      ? `Today: ${SPECIAL_DAYS[specialToday].name}`
+      : nextSpecial ? `Next: ${SPECIAL_DAYS[nextSpecial.id].name} on ${format(nextSpecial.date, "MMM d")}` : undefined;
 
   return (
     <VaultSection icon={Settings} iconClassName="text-tm-yellow" title="Settings">
@@ -94,6 +111,15 @@ export default function SettingsPanel({ notificationPermission, locationPermissi
           status={personaStatus}
         >
           <Switch on={!personaOff} onClick={() => setPersonaOff(!personaOff)} label="Persona days" />
+        </SettingRow>
+        <div className="h-px bg-tm-blue-gray/10" />
+        <SettingRow
+          icon={PartyPopper}
+          title="Special days"
+          description="One day every month with its own colours, menu, page transitions and backdrop."
+          status={specialStatus}
+        >
+          <Switch on={!specialOff} onClick={() => setSpecialOff(!specialOff)} label="Special days" />
         </SettingRow>
         <div className="h-px bg-tm-blue-gray/10" />
         <SettingRow
@@ -122,6 +148,25 @@ export default function SettingsPanel({ notificationPermission, locationPermissi
             onClick={onEnableLocation}
             label="Location"
           />
+        </SettingRow>
+        <div className="h-px bg-tm-blue-gray/10" />
+        <SettingRow
+          icon={CalendarDays}
+          title="Holiday region"
+          description="Which country's public holidays appear on your calendar as special days."
+          status={holidayBusy ? "Updating your calendar…" : holidayStatus}
+        >
+          <select
+            aria-label="Holiday region"
+            value={holidayRegion ?? ""}
+            disabled={holidayRegion === null || holidayBusy}
+            onChange={e => onHolidayRegionChange(e.target.value)}
+            className="max-w-[46%] sm:max-w-[220px] appearance-none bg-tm-yellow/10 border border-tm-yellow/30 rounded-xl px-3 py-2 text-sm font-semibold outline-none focus:border-tm-yellow transition-all cursor-pointer text-tm-purple-dark dark:text-tm-yellow disabled:opacity-60 disabled:cursor-wait"
+          >
+            {HOLIDAY_REGIONS.map(region => (
+              <option key={region.code} value={region.code} className="bg-tm-purple-dark text-white font-sans">{region.name}</option>
+            ))}
+          </select>
         </SettingRow>
       </GlassCard>
     </VaultSection>

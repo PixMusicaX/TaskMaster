@@ -1183,11 +1183,13 @@ export function WorldMapWidget({ profile, moodData, completionScore = 0, variant
     // 30-day Overall Mood
     const overallJoy = moodData?.filter((m) => m.mood === "good").length || 0;
     const overallSteady = moodData?.filter((m) => m.mood === "neutral").length || 0;
-    const totalOverall = (moodData?.length || 0) || 1;
+    // Days with no mood picked don't count either way
+    const rated = moodData?.filter((m) => m.mood) || [];
+    const totalOverall = rated.length || 1;
     const overallScore = ((overallJoy * 100) + (overallSteady * 50)) / totalOverall;
 
     // 7-day Recent Mood (most recent 7 entries)
-    const recentMoods = moodData?.slice(0, 7) || [];
+    const recentMoods = rated.slice(0, 7);
     const recentJoy = recentMoods.filter((m) => m.mood === "good").length;
     const recentSteady = recentMoods.filter((m) => m.mood === "neutral").length;
     const totalRecent = recentMoods.length || 1;

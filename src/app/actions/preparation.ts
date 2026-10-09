@@ -13,6 +13,7 @@ import { requireUserId } from "@/lib/current-user";
 import { profileFor, invalidateSnapshots } from "@/lib/data/stats";
 import { AiNotConfiguredError } from "@/lib/ai-config";
 import { pickOfflinePrepTip } from "@/lib/offline-missions";
+import { personalizationFor } from "@/lib/data/preferences";
 
 // `persona` is the Persona style the client is showing (null for a normal day; left out, the
 // calendar decides), so the tip is written in that game's voice
@@ -35,7 +36,7 @@ async function tipFor(userId: string, clientDateStr?: string, persona?: string |
       const todayStr = today;
       const horizonStr = format(horizon, "yyyy-MM-dd");
       
-      const [futureTasks, history, profile] = await Promise.all([
+      const [futureTasks, history, profile, personal] = await Promise.all([
         db.select().from(event).where(
           and(
             eq(event.userId, userId),
@@ -44,7 +45,8 @@ async function tipFor(userId: string, clientDateStr?: string, persona?: string |
           )
         ),
         tipHistoryFor(userId, twoWeeksAgo),
-        profileFor(userId, todayStr)
+        profileFor(userId, todayStr),
+        personalizationFor(userId)
       ]);
 
       // Only pending items, soonest first. The player's own plans are listed in full before
@@ -69,6 +71,7 @@ async function tipFor(userId: string, clientDateStr?: string, persona?: string |
           stats: profile.stats
         },
         persona: resolvePersonaStyle(persona, today),
+        personal,
       });
 
       let data: { title: string; description: string } | null = null;

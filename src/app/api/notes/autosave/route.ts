@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { date, content, mood = "neutral" } = body as {
+    const { date, content, mood = "" } = body as {
       date: string;
       content: string;
       mood?: string;

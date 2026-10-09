@@ -52,7 +52,7 @@ export default function ChronicleCard({ days, todayStr }: { days: HistoryDay[]; 
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="text-sm text-foreground/90 leading-snug line-clamp-2">
-                    {note && <span className="mr-1.5" aria-label={`Mood: ${note.mood}`}>{moodEmoji(note.mood)}</span>}
+                    {note?.mood && <span className="mr-1.5" aria-label={`Mood: ${note.mood}`}>{moodEmoji(note.mood)}</span>}
                     {lines.length > 0 ? lines.join(" · ") : <span className="italic text-tm-blue-gray">No note written</span>}
                   </p>
                   {summary && (

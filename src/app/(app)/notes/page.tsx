@@ -45,7 +45,8 @@ export default function NotesPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isNoteLoading, setIsNoteLoading] = useState(false);
-  const [mood, setMood] = useState("neutral");
+  // "" until the day's mood is picked: a new note starts with none selected
+  const [mood, setMood] = useState("");
   const [isTabularOpen, setIsTabularOpen] = useState(false);
   const [allNotesForTable, setAllNotesForTable] = useState<NoteRow[]>([]);
   // Bumped when a note finishes loading, so the entry swaps in as one unit
@@ -78,7 +79,7 @@ export default function NotesPage() {
         getProfile(dateStr)
       ]);
       setProfile(profileData);
-      setMood(data?.mood || "neutral");
+      setMood(data?.mood ?? "");
       if (data?.content) {
         try {
           const parsed = JSON.parse(data.content);
@@ -321,7 +322,7 @@ export default function NotesPage() {
                     ].map(m => (
                       <motion.button
                         key={m.val}
-                        onClick={() => { setMood(m.val); setIsDirty(true); }}
+                        onClick={() => { setMood(mood === m.val ? "" : m.val); setIsDirty(true); }}
                         whileTap={{ scale: 0.8 }}
                         className={cn(
                           "relative p-2 rounded-full transition-colors flex items-center justify-center w-9 h-9",

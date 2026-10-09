@@ -4,7 +4,8 @@ import { db, client } from "@/db";
 import { taskmasterQueryCount } from "@/db/schema";
 import { format } from "date-fns";
 import { and, eq } from "drizzle-orm";
-import { getTaskmasterQueryBuilderPrompt, getTaskmasterAnswerPrompt } from "@/lib/prompts";
+import { getTaskmasterQueryBuilderPrompt, getTaskmasterRepairPrompt, getTaskmasterAnswerPrompt } from "@/lib/prompts";
+import { personalizationFor } from "@/lib/data/preferences";
 import { requireUserId } from "@/lib/current-user";
 import { profileFor } from "@/lib/data/stats";
 import { safeGenerateContent } from "@/lib/ai-utils";
@@ -19,6 +20,16 @@ const SANDBOX_TABLES = ["Habit", "HabitLog", "Note", "Event", "SmartMission", "P
 const SANDBOX_ROLE = "taskmaster_reader";
 
 class SandboxError extends Error {}
+
+// The model's reply as bare SQL: no code fence, no commentary before it, no trailing semicolon
+function cleanSql(reply: string | null | undefined) {
+  const text = (reply ?? "").replace(/```(?:sql)?/gi, "").trim();
+  const start = text.search(/\b(SELECT|WITH)\b/i);
+  return (start > 0 ? text.slice(start) : text).trim().replace(/;+\s*$/, "");
+}
+
+const isReadQuery = (sql: string) => /^(SELECT|WITH)\b/i.test(sql);
+const errorText = (error: unknown) => (error instanceof Error && error.message) || "Unknown SQL error";
 
 async function runInSandbox(userId: string, sql: string) {
   return client.begin(async (tx) => {
@@ -58,29 +69,35 @@ export async function askTaskmaster(question: string, clientDateStr?: string, pe
     }
 
     // Step 1: Query Builder
-    const builderPrompt = getTaskmasterQueryBuilderPrompt(question, today);
-    let generatedSql = await safeGenerateContent(builderPrompt, {
+    const firstSql = cleanSql(await safeGenerateContent(getTaskmasterQueryBuilderPrompt(question, today), {
       userId,
       model: "gemini-flash-latest",
-    });
+    }));
 
-    if (!generatedSql) {
+    if (!firstSql) {
       return { success: false, message: "The Taskmaster's inner mind is silent. (Failed to build query)" };
     }
-
-    // Clean up SQL (remove markdown blocks and trailing semicolons if AI included them)
-    generatedSql = generatedSql.replace(/```sql/gi, "").replace(/```/g, "").trim().replace(/;+\s*$/, "");
-
-    // Security & Reliability Validation
-    if (!/^(SELECT|WITH)\b/i.test(generatedSql)) {
+    if (!isReadQuery(firstSql)) {
       return { success: false, message: "The Taskmaster attempted a forbidden spell. Only SELECT queries are allowed." };
     }
 
-    // Execute the query
-    let queryData = "[]";
+    // Execute the query. If the database rejects it, the model gets one chance to correct its
+    // own SQL from the error; a question that still can't be read is not answered from nothing.
+    let queryData: string;
     try {
-      const result = await runInSandbox(userId, generatedSql);
-      queryData = JSON.stringify(result, null, 2);
+      let rows: unknown;
+      try {
+        rows = await runInSandbox(userId, firstSql);
+      } catch (firstError) {
+        if (firstError instanceof SandboxError) throw firstError;
+        const repaired = cleanSql(await safeGenerateContent(
+          getTaskmasterRepairPrompt(question, today, firstSql, errorText(firstError)),
+          { userId, model: "gemini-flash-latest" },
+        ).catch(() => ""));
+        if (!repaired || !isReadQuery(repaired)) throw firstError;
+        rows = await runInSandbox(userId, repaired);
+      }
+      queryData = JSON.stringify(rows, null, 2);
       // Optional: limit string size to avoid token limit errors
       if (queryData.length > 5000) {
          queryData = queryData.slice(0, 5000) + "\n... [TRUNCATED DUE TO SIZE]";
@@ -92,11 +109,11 @@ export async function askTaskmaster(question: string, clientDateStr?: string, pe
         return { success: false, message: "The Taskmaster's archive is sealed. (Its reading room is not set up on this server.)" };
       }
       console.error("SQL Execution Error:", sqlError);
-      queryData = `[Error executing query: ${(sqlError instanceof Error && sqlError.message) || "Unknown SQL Error"}]`;
+      return { success: false, message: "The Taskmaster searched the archive but could not read it for that question. Try asking it another way; this one did not use up a query." };
     }
 
     // Step 2: Answer Formulator
-    const profile = await profileFor(userId, today);
+    const [profile, personal] = await Promise.all([profileFor(userId, today), personalizationFor(userId)]);
     const answerPrompt = getTaskmasterAnswerPrompt({
       level: profile.level,
       xp: profile.xp,
@@ -104,6 +121,7 @@ export async function askTaskmaster(question: string, clientDateStr?: string, pe
       queryData,
       question,
       persona: resolvePersonaStyle(persona, today),
+      personal,
     });
 
     const content = await safeGenerateContent(answerPrompt, {

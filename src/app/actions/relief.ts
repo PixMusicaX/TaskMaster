@@ -14,6 +14,7 @@ import { reliefsWithCarriedLocation } from "@/lib/data/relief";
 import { safeGenerateContent } from "@/lib/ai-utils";
 import { AiNotConfiguredError } from "@/lib/ai-config";
 import { OFFLINE_TAG, pickOfflineRelief } from "@/lib/offline-missions";
+import { personalizationFor } from "@/lib/data/preferences";
 import { parseNoteLines, type ReliefAlternative } from "@/lib/types";
 import { eq, desc, gte, ne, and } from "drizzle-orm";
 
@@ -122,10 +123,11 @@ async function reliefFor(
           const twoWeeksAgo = subDays(clientNow, 14);
           const twoWeeksAgoStr = format(twoWeeksAgo, "yyyy-MM-dd");
           // Mood comes from the last two weeks; the do-not-repeat list reaches back four months
-          const [taskData, notesData, history] = await Promise.all([
+          const [taskData, notesData, history, personal] = await Promise.all([
             eventsByDateRange(userId, twoWeeksAgo, clientNow),
             db.select().from(note).where(and(eq(note.userId, userId), gte(note.date, twoWeeksAgoStr))),
-            reliefHistoryFor(userId, format(subDays(clientNow, RELIEF_MEMORY_DAYS), "yyyy-MM-dd"))
+            reliefHistoryFor(userId, format(subDays(clientNow, RELIEF_MEMORY_DAYS), "yyyy-MM-dd")),
+            personalizationFor(userId)
           ]);
 
           const past = [
@@ -152,6 +154,7 @@ async function reliefFor(
               brief,
               rejected,
               persona: resolvePersonaStyle(persona, today),
+              personal,
             }), {
               userId,
               model: "gemini-3.1-flash-lite",

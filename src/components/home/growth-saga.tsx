@@ -284,8 +284,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   const meterFill = Math.min(1, xp / meter.max);
   const overflowing = xp >= METER_MAX_XP;
   const ticks = hasRival ? [
-    { label: `${pace.lastMonthName.slice(0, 3)} D${pace.dayOfMonth} · ${pace.lastMonthPaceXP.toLocaleString()}`, at: pace.lastMonthPaceXP / meter.max, className: "text-foreground", dashed: false },
-    { label: `Final · ${pace.lastMonthTotalXP.toLocaleString()}`, at: pace.lastMonthTotalXP / meter.max, className: "text-tm-blue-gray", dashed: true },
+    { label: `${pace.lastMonthName.slice(0, 3)} D${pace.dayOfMonth} · ${pace.lastMonthPaceXP}`, at: pace.lastMonthPaceXP / meter.max, className: "text-foreground", dashed: false },
+    { label: `Final · ${pace.lastMonthTotalXP}`, at: pace.lastMonthTotalXP / meter.max, className: "text-tm-blue-gray", dashed: true },
   ] : [];
   const daysLeft = pace ? pace.daysInMonth - pace.dayOfMonth : 0;
   const goal = pace ? raceGoal(xp, pace, daysLeft) : null;
@@ -318,7 +318,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     const paceXpEl = paceXpRef.current;
     if (!el || !totalEl || !paceXpEl) return;
     totalEl.textContent = totalXP.toLocaleString();
-    paceXpEl.textContent = xp.toLocaleString();
+    // No thousands separator here: the number sits inside the rings and every character counts
+    paceXpEl.textContent = String(xp);
     if (prefersReducedMotion()) return;
 
     const total = { value: 0 };
@@ -386,7 +387,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         .add(season, {
           value: [0, xp],
           duration: 24,
-          onRender: () => { paceXpEl.textContent = Math.round(season.value).toLocaleString(); },
+          onRender: () => { paceXpEl.textContent = String(Math.round(season.value)); },
         }, PACE_AT + 6)
         // The dotted circle sits this scene out
         .add("[data-saga=dial-wrap]", { opacity: [1, 0], duration: 18 }, PACE_AT)
@@ -838,7 +839,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
                       ? `No XP on record for ${pace.lastMonthName}, so this season sets the bar`
                       : delta === 0
                         ? `Level with ${pace.lastMonthName}'s pace`
-                        : `${Math.abs(delta).toLocaleString()} ${delta > 0 ? "ahead of" : "behind"} ${pace.lastMonthName}'s pace`}
+                        : `${Math.abs(delta)} ${delta > 0 ? "ahead of" : "behind"} ${pace.lastMonthName}'s pace`}
                   </p>
                 )}
               </div>
@@ -954,7 +955,11 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
 
             <div data-saga="pace-core" className="absolute inset-0 flex flex-col items-center justify-center motion-reduce:hidden">
               <span className={CAPTION}>Season XP</span>
-              <span ref={paceXpRef} className="text-6xl sm:text-7xl font-display font-bold leading-none tabular-nums text-tm-purple-dark dark:text-tm-yellow" />
+              {/* Sized by how many digits the season has reached, so it stays inside the two rings */}
+              <span ref={paceXpRef} className={cn(
+                "font-display font-bold leading-none tabular-nums text-tm-purple-dark dark:text-tm-yellow",
+                xp >= 10000 ? "text-4xl sm:text-5xl" : xp >= 1000 ? "text-5xl sm:text-6xl" : "text-6xl sm:text-7xl"
+              )} />
             </div>
 
             <TiltRing group="saturn" arc="level" r={166} progress={levelProgress} color={RACE_COLOR} front />
@@ -1019,7 +1024,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
               })}
               <g data-saga="tick" fill="currentColor" textAnchor="middle" fontSize="13" className="font-mono font-semibold uppercase text-tm-blue-gray">
                 <text x={GAUGE_START.x} y={GAUGE_START.y + 28}>0</text>
-                <text x={GAUGE_END.x} y={GAUGE_END.y + 28}>{meter.max.toLocaleString()} XP</text>
+                <text x={GAUGE_END.x} y={GAUGE_END.y + 28}>{meter.max} XP</text>
               </g>
             </svg>
 
@@ -1111,10 +1116,10 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
                     <p className={CAPTION}>
                       {goal.label}
                       <span className="block text-sm font-sans font-semibold normal-case tracking-normal text-foreground">
-                        {!today ? goal.detail ?? goal.value : today.target === 0 ? goal.value : today.left === 0 ? "Today's target met" : `${today.left.toLocaleString()} XP left today`}
+                        {!today ? goal.detail ?? goal.value : today.target === 0 ? goal.value : today.left === 0 ? "Today's target met" : `${today.left} XP left today`}
                       </span>
                       {today && today.target > 0 && (
-                        <span className="block normal-case tracking-normal">{today.earned.toLocaleString()} of {today.target.toLocaleString()} XP today</span>
+                        <span className="block normal-case tracking-normal">{today.earned} of {today.target} XP today</span>
                       )}
                     </p>
                   </div>

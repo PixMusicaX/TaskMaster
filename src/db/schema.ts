@@ -51,6 +51,20 @@ export const userAiSettings = pgTable("UserAiSettings", {
   updatedAt: timestamp("updatedAt", { precision: 3, mode: 'date' }).defaultNow().notNull(),
 });
 
+// What a player chooses to tell the AI about themselves (all optional), and which country's
+// holidays fill their calendar
+export const userPreferences = pgTable("UserPreferences", {
+  userId: text("userId").primaryKey().references(() => user.id, { onDelete: 'cascade' }),
+  about: text("about"),
+  interests: text("interests"),
+  goals: text("goals"),
+  avoid: text("avoid"),
+  holidayRegion: text("holidayRegion").default("IN").notNull(), // ISO country code, "" = no holidays
+  // True once the player has answered (or waved away) the first-visit invitation to personalise
+  introSeen: boolean("introSeen").default(false).notNull(),
+  updatedAt: timestamp("updatedAt", { precision: 3, mode: 'date' }).defaultNow().notNull(),
+});
+
 export const userProfile = pgTable("UserProfile", {
   id: text("id").primaryKey().$defaultFn(() => "me"),
   xp: integer("xp").default(0).notNull(),

@@ -14,7 +14,8 @@ export async function getNoteByDate(date: string) {
   });
 }
 
-export async function saveNote(date: string, content: string, mood: string = "neutral") {
+// `mood` is "good", "neutral", "bad", or "" when none has been picked
+export async function saveNote(date: string, content: string, mood: string = "") {
   const savedNote = await saveNoteFor(await requireUserId(), date, content, mood);
 
   revalidatePath("/notes");

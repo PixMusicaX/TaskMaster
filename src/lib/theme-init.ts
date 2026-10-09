@@ -1,6 +1,7 @@
 import { ERAS } from "./eras";
 import { DEV_TOOLS_ENABLED } from "./dev-xp";
 import { DEV_PERSONA_KEY, PERSONA_ON_KEY, PERSONA_FONTS_URL, PERSONA_FORCED_THEME, pickPersonaDays } from "./persona";
+import { DEV_SPECIAL_KEY, SPECIAL_FONTS_URL, SPECIAL_FORCED_THEME, SPECIAL_IDS, SPECIAL_OFF_KEY, SPECIAL_SWAPS_THEME, pickSpecialDay } from "./special-days";
 
 const ERA_LABELS = Object.fromEntries(ERAS.map(e => [e.id, [e.numeral, e.name]]));
 
@@ -13,18 +14,29 @@ const ERA_LABELS = Object.fromEntries(ERAS.map(e => [e.id, [e.numeral, e.name]])
 // The rank name, era numeral and era name are also published as CSS variables, so their labels
 // (.tm-rank-label / .tm-era-label / .tm-era-name) are right before the app hydrates.
 // On a Persona day (lib/persona.ts), if the player turned them on, it also sets data-persona,
-// pins that style's theme and starts loading its fonts.
+// pins that style's theme and starts loading its fonts. The month's special day
+// (lib/special-days.ts) does the same with data-special, and takes the day from a Persona day.
 export const themeInitScript = `(function(){try{
 var d=document.documentElement,n=new Date(),h=n.getHours();
 var pick=${pickPersonaDays.toString()};
-var ps=localStorage.getItem(${JSON.stringify(PERSONA_ON_KEY)})==='1'?(pick(n.getFullYear(),n.getMonth())[n.getDate()]||null):null;
+var pd=pick(n.getFullYear(),n.getMonth());
+var ps=localStorage.getItem(${JSON.stringify(PERSONA_ON_KEY)})==='1'?(pd[n.getDate()]||null):null;
 var o=${JSON.stringify(DEV_TOOLS_ENABLED)}?localStorage.getItem(${JSON.stringify(DEV_PERSONA_KEY)}):null;
-if(o==='off')ps=null;else if(o==='p3'||o==='p4'||o==='p5')ps=o;
-var pt=ps?${JSON.stringify(PERSONA_FORCED_THEME)}[ps]:null;
+var po=o==='p3'||o==='p4'||o==='p5';
+var spick=${pickSpecialDay.toString()};
+var ids=${JSON.stringify(SPECIAL_IDS)};
+var ss=localStorage.getItem(${JSON.stringify(SPECIAL_OFF_KEY)})==='1'||po?null:(spick(n.getFullYear(),n.getMonth(),pd)===n.getDate()?ids[n.getMonth()]:null);
+var so=${JSON.stringify(DEV_TOOLS_ENABLED)}?localStorage.getItem(${JSON.stringify(DEV_SPECIAL_KEY)}):null;
+if(so==='off')ss=null;else if(ids.indexOf(so)>-1)ss=so;
+if(ids.indexOf(so)>-1)ps=null;else if(o==='off')ps=null;else if(po)ps=o;else if(ss)ps=null;
+var pt=ps?${JSON.stringify(PERSONA_FORCED_THEME)}[ps]:ss?${JSON.stringify(SPECIAL_FORCED_THEME)}[ss]:null;
 var pub=location.pathname==='/'||location.pathname==='/login';
 var sys=pub&&window.matchMedia?matchMedia('(prefers-color-scheme: dark)').matches:null;
-d.classList.toggle('dark',pt?pt==='dark':sys!==null?sys:(h<6||h>=18));
+var dk=sys!==null?sys:(h<6||h>=18);
+if(ss===${JSON.stringify(SPECIAL_SWAPS_THEME)})dk=!dk;
+d.classList.toggle('dark',pt?pt==='dark':dk);
 if(ps){d.setAttribute('data-persona',ps);var f=document.createElement('link');f.rel='stylesheet';f.href=${JSON.stringify(PERSONA_FONTS_URL)};document.head.appendChild(f);}else d.removeAttribute('data-persona');
+if(ss){d.setAttribute('data-special',ss);var sf=document.createElement('link');sf.rel='stylesheet';sf.href=${JSON.stringify(SPECIAL_FONTS_URL)};document.head.appendChild(sf);}else d.removeAttribute('data-special');
 var p=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
 var r=localStorage.getItem('rank');
 var rp=localStorage.getItem('rank_period');

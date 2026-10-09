@@ -10,6 +10,7 @@
 // kept current by the theme provider). P3 follows the clock (blue by day, Dark Hour green by night);
 // P4 is always light and P5 always dark for now.
 import { DEV_TOOLS_ENABLED } from "./dev-xp";
+import { getDevSpecialOverride, specialForToday } from "./special-days";
 
 export type PersonaStyle = "p3" | "p4" | "p5";
 export const PERSONA_STYLES: PersonaStyle[] = ["p3", "p4", "p5"];
@@ -154,11 +155,15 @@ export function subscribePersonaSetting(cb: () => void) {
   return () => window.removeEventListener(PERSONA_SETTING_EVENT, cb);
 }
 
-// Today's style: the dev override wins, then the player's switch, then the calendar
+// Today's style: the dev override wins, then the player's switch, then the calendar. A special
+// day (lib/special-days.ts) has the stage to itself, so a Persona day that lands on one is skipped.
 export function personaForToday(now = new Date()): PersonaStyle | null {
+  const forcedSpecial = getDevSpecialOverride();
+  if (forcedSpecial && forcedSpecial !== "off") return null;
   const forced = getDevPersonaOverride();
   if (forced === "off") return null;
   if (forced) return forced;
+  if (specialForToday(now)) return null;
   return isPersonaOff() ? null : scheduledPersona(now);
 }
 

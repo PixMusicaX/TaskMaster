@@ -2,6 +2,7 @@
 @import "./eras.css";
 @import "./ui.css";
 @import "./persona.css";
+@import "./special.css";
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {

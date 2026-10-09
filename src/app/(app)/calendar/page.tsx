@@ -19,6 +19,8 @@ import type { EventRow, MoodEntry, Profile, ReliefRow } from "@/lib/types";
 import { Search } from "lucide-react";
 import { PERSONA_NAMES, isPersonaOff, scheduledPersona, subscribePersonaSetting } from "@/lib/persona";
 import { PersonaDayBadge } from "@/components/persona/persona-day-badge";
+import { SPECIAL_DAYS, isSpecialOff, scheduledSpecial, subscribeSpecialSetting } from "@/lib/special-days";
+import { SpecialDayBadge } from "@/components/special/special-day-badge";
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -30,7 +32,10 @@ export default function CalendarPage() {
   const [isLoading, setIsLoading] = useState(true);
   // Until Persona days are switched on (Account → Settings) the calendar doesn't mark them either
   const personaOff = useSyncExternalStore(subscribePersonaSetting, isPersonaOff, () => true);
-  const dayPersona = (day: Date) => (personaOff ? null : scheduledPersona(day));
+  // The month's special day gets its sticker too (and has the day to itself: no Persona mark on it)
+  const specialOff = useSyncExternalStore(subscribeSpecialSetting, isSpecialOff, () => false);
+  const daySpecial = (day: Date) => (specialOff ? null : scheduledSpecial(day));
+  const dayPersona = (day: Date) => (personaOff || daySpecial(day) ? null : scheduledPersona(day));
   const [showAdd, setShowAdd] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventRow | null>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -544,6 +549,7 @@ export default function CalendarPage() {
                       });
                     const dayMood = moods.find(m => m.date === format(day, "yyyy-MM-dd"))?.mood;
                     const persona = dayPersona(day);
+                    const special = daySpecial(day);
 
                     return (
                       <button
@@ -553,6 +559,8 @@ export default function CalendarPage() {
                           "relative p-2 border-r border-b border-tm-blue-gray/5 text-left transition-all flex flex-col gap-1 min-h-[100px]",
                           // A Persona day dresses the whole box in that game's look
                           persona && `p-day p-day-${persona}`,
+                          // ...and so does the month's special day, in its theme
+                          special && `s-day s-day-${special}`,
                           !isCurrentMonth ? "text-tm-blue-gray/20 bg-tm-blue-gray/5" : "text-foreground",
                           isSelected ? "bg-tm-yellow/10" : "hover:bg-tm-yellow/5",
                           dayMood === "good" && "bg-tm-yellow/[0.03]",
@@ -568,6 +576,7 @@ export default function CalendarPage() {
                               {format(day, "d")}
                             </span>
                             {persona && <PersonaDayBadge style={persona} size={12} className={cn("relative", !isCurrentMonth && "opacity-40")} />}
+                            {special && <SpecialDayBadge id={special} size={14} className={cn("relative", !isCurrentMonth && "opacity-40")} />}
                           </span>
                           {dayMood && (
                             <span className="text-sm opacity-80 group-hover:opacity-100 transition-all">
@@ -693,6 +702,7 @@ export default function CalendarPage() {
                   const hasSpecialDay = specialDays.length > 0;
                   const sdColor = hasSpecialDay ? getSpecialDayColors() : null;
                   const persona = dayPersona(day);
+                  const special = daySpecial(day);
 
                   return (
                     <button
@@ -713,6 +723,7 @@ export default function CalendarPage() {
                         />
                       )}
                       {persona && <PersonaDayBadge style={persona} size={8} className="absolute -top-0.5 -right-0.5" />}
+                      {special && <SpecialDayBadge id={special} size={9} className="absolute -top-1 -right-1" />}
                       <span className="text-sm font-bold">{format(day, "d")}</span>
                       <div className="flex gap-0.5 mt-0.5 h-1">
                         {hasTask && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-purple-dark" : "bg-tm-yellow")} />}
@@ -731,6 +742,12 @@ export default function CalendarPage() {
                   <h3 className="text-xl font-bold tracking-tight">{format(selectedDate, "MMMM d")}</h3>
                   <p className="text-xs font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] flex items-center gap-2">
                     {format(selectedDate, "EEEE")}
+                    {daySpecial(selectedDate) && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <SpecialDayBadge id={daySpecial(selectedDate)!} size={11} />
+                        {SPECIAL_DAYS[daySpecial(selectedDate)!].name} day
+                      </span>
+                    )}
                     {dayPersona(selectedDate) && (
                       <span className="inline-flex items-center gap-1.5">
                         <PersonaDayBadge style={dayPersona(selectedDate)!} size={10} />

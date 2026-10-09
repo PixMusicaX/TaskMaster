@@ -10,13 +10,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Every special day currently shares one colour set
+// A note's mood as an emoji ("" when no mood was picked)
 export function moodEmoji(mood: string) {
+  if (!mood) return "";
   if (mood === "good") return "😇";
   if (mood === "bad") return "😢";
   return "😐";
 }
 
+// Every special day currently shares one colour set
 export function getSpecialDayColors() {
   return { 
     bg: "bg-tm-orange-dark", 

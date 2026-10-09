@@ -1,0 +1,344 @@
+/* Special days (lib/special-days.ts): one day a month, <html data-special="..."> swaps the
+   palette for the month's theme. Colours only: cards, type and layout stay as they are. Each
+   theme has a light and a dark set (space and halloween are pinned dark). The selectors are
+   written to outrank the rank palettes in globals.css. */
+
+/* January: first snow, ice blue on white */
+html:root[data-special="snow"] {
+  --background: #f4f8fc; --foreground: #14202b;
+  --tm-yellow: #2f7ec2; --tm-orange-light: #5ba8d9; --tm-orange-dark: #1b5e9a;
+  --tm-blue-gray: #5b7186; --tm-purple-dark: #12314d; --tm-red: #7aa7c7;
+}
+html:root.dark[data-special="snow"] {
+  --background: #0a1420; --foreground: #eaf4ff;
+  --tm-yellow: #8ccbff; --tm-orange-light: #5ba8d9; --tm-orange-dark: #3d8fd1;
+  --tm-blue-gray: #8fa6ba; --tm-purple-dark: #0f2a44; --tm-red: #b5d8f2;
+}
+
+/* February: cozy café, rose and espresso */
+html:root[data-special="cafe"] {
+  --background: #fbf4ec; --foreground: #2b1b12;
+  --tm-yellow: #c0504d; --tm-orange-light: #b9824a; --tm-orange-dark: #9c2f3f;
+  --tm-blue-gray: #7a6658; --tm-purple-dark: #3b2418; --tm-red: #d9667b;
+}
+html:root.dark[data-special="cafe"] {
+  --background: #1a110c; --foreground: #f7eadb;
+  --tm-yellow: #f0a08c; --tm-orange-light: #d2a56b; --tm-orange-dark: #e0607a;
+  --tm-blue-gray: #b39c8b; --tm-purple-dark: #2a1a12; --tm-red: #f28aa0;
+}
+
+/* March: spring garden, leaf green and blossom */
+html:root[data-special="garden"] {
+  --background: #f5faef; --foreground: #16240f;
+  --tm-yellow: #4c9a2a; --tm-orange-light: #c77db5; --tm-orange-dark: #2f7d32;
+  --tm-blue-gray: #5f7355; --tm-purple-dark: #1e3a1a; --tm-red: #e26d9a;
+}
+html:root.dark[data-special="garden"] {
+  --background: #0c150a; --foreground: #ecf7e4;
+  --tm-yellow: #8fd46a; --tm-orange-light: #e2a5d2; --tm-orange-dark: #5dbb63;
+  --tm-blue-gray: #9bb08f; --tm-purple-dark: #15301a; --tm-red: #f08db4;
+}
+
+/* April: glitch, cyan and magenta on near-black or near-white */
+html:root[data-special="glitch"] {
+  --background: #f2f2f7; --foreground: #0b0b12;
+  --tm-yellow: #00a3b8; --tm-orange-light: #e0007a; --tm-orange-dark: #7a00e6;
+  --tm-blue-gray: #5a5a72; --tm-purple-dark: #0b0b12; --tm-red: #ff2a6d;
+}
+html:root.dark[data-special="glitch"] {
+  --background: #06060c; --foreground: #f0f0ff;
+  --tm-yellow: #00f0ff; --tm-orange-light: #ff2bd6; --tm-orange-dark: #9d4dff;
+  --tm-blue-gray: #9494b8; --tm-purple-dark: #14142b; --tm-red: #ff3b6b;
+}
+
+/* May: sakura, petal pink */
+html:root[data-special="sakura"] {
+  --background: #fff5f8; --foreground: #2b1620;
+  --tm-yellow: #d6558a; --tm-orange-light: #e891b0; --tm-orange-dark: #b03a6e;
+  --tm-blue-gray: #8a6b78; --tm-purple-dark: #4a1e33; --tm-red: #f2a7c0;
+}
+html:root.dark[data-special="sakura"] {
+  --background: #170b11; --foreground: #ffeaf2;
+  --tm-yellow: #ff9ec4; --tm-orange-light: #f5bcd2; --tm-orange-dark: #e86aa0;
+  --tm-blue-gray: #b998a6; --tm-purple-dark: #2e1320; --tm-red: #ffc2d8;
+}
+
+/* June: beach journal, sea teal, sand and coral */
+html:root[data-special="beach"] {
+  --background: #fff9ec; --foreground: #10303a;
+  --tm-yellow: #0e9aa7; --tm-orange-light: #f0a04b; --tm-orange-dark: #e0623a;
+  --tm-blue-gray: #5f7f87; --tm-purple-dark: #0f3b47; --tm-red: #f27d6a;
+}
+html:root.dark[data-special="beach"] {
+  --background: #071a20; --foreground: #eafbff;
+  --tm-yellow: #4fd6e0; --tm-orange-light: #f6c177; --tm-orange-dark: #ff8a65;
+  --tm-blue-gray: #8fb3bb; --tm-purple-dark: #0c2c36; --tm-red: #ff9c8a;
+}
+
+/* July: space exploration (always dark), violet, cyan and nebula pink */
+html:root[data-special="space"],
+html:root.dark[data-special="space"] {
+  --background: #05061a; --foreground: #eef0ff;
+  --tm-yellow: #9d8cff; --tm-orange-light: #5cc8ff; --tm-orange-dark: #ff6ad5;
+  --tm-blue-gray: #9093c2; --tm-purple-dark: #131540; --tm-red: #ff8fb1;
+}
+
+/* August: adventure maps, parchment and ink */
+html:root[data-special="maps"] {
+  --background: #f6eedc; --foreground: #2e2212;
+  --tm-yellow: #9a6b1f; --tm-orange-light: #b8862f; --tm-orange-dark: #a23b22;
+  --tm-blue-gray: #7a6a4f; --tm-purple-dark: #3a2a14; --tm-red: #c2573a;
+}
+html:root.dark[data-special="maps"] {
+  --background: #17120a; --foreground: #f3e7cc;
+  --tm-yellow: #e0b15a; --tm-orange-light: #c99a4a; --tm-orange-dark: #e0734f;
+  --tm-blue-gray: #b5a383; --tm-purple-dark: #2a2010; --tm-red: #e88a6a;
+}
+
+/* September: the library, banker's-lamp green, brass and oxblood */
+html:root[data-special="library"] {
+  --background: #f7f2ea; --foreground: #231a14;
+  --tm-yellow: #2f6b4f; --tm-orange-light: #b08a3c; --tm-orange-dark: #8c2f2f;
+  --tm-blue-gray: #6e6257; --tm-purple-dark: #2b1d14; --tm-red: #a8463c;
+}
+html:root.dark[data-special="library"] {
+  --background: #120e0b; --foreground: #f2e9dc;
+  --tm-yellow: #6fc49a; --tm-orange-light: #d9b865; --tm-orange-dark: #d46a5f;
+  --tm-blue-gray: #b0a294; --tm-purple-dark: #24180f; --tm-red: #e07f72;
+}
+
+/* October: witch's almanac (always dark), pumpkin, violet and a little slime */
+html:root[data-special="halloween"],
+html:root.dark[data-special="halloween"] {
+  --background: #0d0812; --foreground: #f6ecff;
+  --tm-yellow: #ff8a1f; --tm-orange-light: #b46bff; --tm-orange-dark: #ff5a1f;
+  --tm-blue-gray: #a592b8; --tm-purple-dark: #241333; --tm-red: #9be22d;
+}
+
+/* November: fall leaves, rust, amber and bark */
+html:root[data-special="leaves"] {
+  --background: #fbf3e6; --foreground: #2a1a0e;
+  --tm-yellow: #c7651a; --tm-orange-light: #d9962b; --tm-orange-dark: #a63a1e;
+  --tm-blue-gray: #7c6a58; --tm-purple-dark: #40220f; --tm-red: #b5452c;
+}
+html:root.dark[data-special="leaves"] {
+  --background: #160e08; --foreground: #f8ead8;
+  --tm-yellow: #f0943f; --tm-orange-light: #e8b24f; --tm-orange-dark: #e8603c;
+  --tm-blue-gray: #b8a28c; --tm-purple-dark: #2c180b; --tm-red: #f07a5a;
+}
+
+/* December: winter cabin, cabin red, pine and candle gold */
+html:root[data-special="cabin"] {
+  --background: #f7f1ea; --foreground: #1f1a16;
+  --tm-yellow: #b23a32; --tm-orange-light: #2f6b4a; --tm-orange-dark: #8e2a26;
+  --tm-blue-gray: #6f665e; --tm-purple-dark: #2a1f18; --tm-red: #c9a227;
+}
+html:root.dark[data-special="cabin"] {
+  --background: #100c0a; --foreground: #f5ece2;
+  --tm-yellow: #f0706a; --tm-orange-light: #6dbb8e; --tm-orange-dark: #e0504a;
+  --tm-blue-gray: #b3a79b; --tm-purple-dark: #241a14; --tm-red: #e8c45a;
+}
+
+/* ---------- Calendar: the special day's box ----------
+   Like a Persona day's box (.p-day in persona.css): a tinted panel with the theme's own pattern
+   and edge, in fixed colours so it looks the same whatever palette the app is wearing. */
+.s-day { isolation: isolate; overflow: hidden; }
+.s-day > * { position: relative; z-index: 1; }
+.s-day::before, .s-day::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Snow: ice blue, falling flakes, a frosted edge */
+.s-day-snow {
+  background-image: linear-gradient(165deg, rgb(140 203 255 / 0.4), rgb(47 126 194 / 0.3));
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.8), inset 0 0 0 3px rgb(47 126 194 / 0.6);
+}
+.s-day-snow::before {
+  background:
+    radial-gradient(circle, rgb(255 255 255 / 0.9) 1.4px, transparent 1.9px) 0 0 / 17px 19px,
+    radial-gradient(circle, rgb(255 255 255 / 0.6) 1px, transparent 1.5px) 8px 11px / 23px 17px;
+}
+.s-day-snow::after {
+  inset: auto 0 0 0;
+  height: 22%;
+  background: radial-gradient(60% 100% at 30% 100%, rgb(255 255 255 / 0.7), transparent 70%), radial-gradient(50% 90% at 78% 100%, rgb(255 255 255 / 0.6), transparent 70%);
+}
+
+/* Café: latte and rose gingham, a stitched edge */
+.s-day-cafe {
+  background-image:
+    repeating-linear-gradient(0deg, rgb(192 80 77 / 0.16) 0 9px, transparent 9px 18px),
+    repeating-linear-gradient(90deg, rgb(192 80 77 / 0.16) 0 9px, transparent 9px 18px),
+    linear-gradient(160deg, rgb(246 217 207 / 0.75), rgb(185 130 74 / 0.4));
+  box-shadow: inset 0 0 0 2px rgb(156 47 63 / 0.75);
+}
+.s-day-cafe::before {
+  inset: 4px;
+  border: 1px dashed rgb(255 255 255 / 0.85);
+}
+
+/* Garden: spring green, blossom dots, a strip of grass */
+.s-day-garden {
+  background-image: linear-gradient(175deg, rgb(220 242 207 / 0.7), rgb(76 154 42 / 0.4));
+  box-shadow: inset 0 -5px 0 rgb(47 125 50 / 0.85);
+}
+.s-day-garden::before {
+  background:
+    radial-gradient(circle, rgb(226 109 154 / 0.75) 2px, transparent 2.6px) 3px 5px / 26px 22px,
+    radial-gradient(circle, rgb(255 255 255 / 0.85) 1.5px, transparent 2px) 15px 16px / 26px 22px;
+  -webkit-mask-image: linear-gradient(20deg, #000 10%, transparent 75%);
+  mask-image: linear-gradient(20deg, #000 10%, transparent 75%);
+}
+
+/* Glitch: black, torn into cyan and magenta bands, edges out of register */
+.s-day-glitch {
+  color: #f0f0ff;
+  background-image:
+    linear-gradient(0deg, transparent 0 22%, rgb(0 240 255 / 0.55) 22% 27%, transparent 27% 58%, rgb(255 43 214 / 0.5) 58% 66%, transparent 66% 84%, rgb(0 240 255 / 0.35) 84% 87%, transparent 87%),
+    linear-gradient(rgb(6 6 12 / 0.92), rgb(6 6 12 / 0.92));
+  box-shadow: inset 3px 0 0 #00f0ff, inset -3px 0 0 #ff2bd6;
+}
+.s-day-glitch::before {
+  background: repeating-linear-gradient(0deg, transparent 0 2px, rgb(255 255 255 / 0.06) 2px 3px);
+}
+
+/* Sakura: petal pink, drifting petals, a soft bloom in the corner */
+.s-day-sakura {
+  background-image: linear-gradient(150deg, rgb(255 217 230 / 0.8), rgb(214 85 138 / 0.35));
+  box-shadow: inset 0 0 0 2px rgb(176 58 110 / 0.5);
+}
+.s-day-sakura::before {
+  background:
+    radial-gradient(ellipse 5px 3px, rgb(214 85 138 / 0.7) 60%, transparent 62%) 2px 4px / 24px 20px,
+    radial-gradient(ellipse 3px 5px, rgb(255 255 255 / 0.9) 60%, transparent 62%) 14px 14px / 24px 20px;
+}
+.s-day-sakura::after {
+  inset: auto -20% -35% auto;
+  width: 75%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.55), transparent 65%);
+}
+
+/* Beach: sky over sea over sand, with a line of surf */
+.s-day-beach {
+  background-image: linear-gradient(180deg, rgb(205 241 243 / 0.7) 0 48%, rgb(14 154 167 / 0.55) 48% 76%, rgb(240 160 75 / 0.55) 76%);
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.75);
+}
+.s-day-beach::before {
+  inset: 72% 0 auto 0;
+  height: 9px;
+  background: radial-gradient(circle at 50% 0, transparent 6px, rgb(255 255 255 / 0.9) 6.5px 8px, transparent 8.5px) 0 0 / 16px 9px repeat-x;
+}
+
+/* Space: deep night, stars, and one orbit */
+.s-day-space {
+  color: #eef0ff;
+  background-image: linear-gradient(155deg, rgb(19 21 64 / 0.95), rgb(5 6 26 / 0.95));
+  box-shadow: inset 0 0 0 2px rgb(157 140 255 / 0.7);
+}
+.s-day-space::before {
+  background:
+    radial-gradient(circle, #fff 1px, transparent 1.5px) 3px 5px / 29px 23px,
+    radial-gradient(circle, rgb(92 200 255 / 0.9) 1.2px, transparent 1.7px) 17px 14px / 37px 31px,
+    radial-gradient(circle, rgb(255 106 213 / 0.8) 1px, transparent 1.5px) 9px 21px / 41px 27px;
+}
+.s-day-space::after {
+  inset: auto -25% -40% auto;
+  width: 85%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid rgb(92 200 255 / 0.45);
+}
+
+/* Maps: parchment, a survey grid, a dashed trail and a double ink border */
+.s-day-maps {
+  background-image:
+    linear-gradient(rgb(122 79 18 / 0.14) 1px, transparent 1px) 0 0 / 100% 18px,
+    linear-gradient(90deg, rgb(122 79 18 / 0.14) 1px, transparent 1px) 0 0 / 18px 100%,
+    linear-gradient(165deg, rgb(239 220 176 / 0.9), rgb(184 134 47 / 0.45));
+  box-shadow: inset 0 0 0 2px rgb(122 79 18 / 0.8), inset 0 0 0 4px rgb(239 220 176 / 0.9), inset 0 0 0 5px rgb(122 79 18 / 0.55);
+}
+.s-day-maps::before {
+  background: repeating-linear-gradient(128deg, transparent 0 46%, rgb(162 59 34 / 0.8) 46% 47.5%, transparent 47.5% 100%);
+  -webkit-mask-image: repeating-linear-gradient(38deg, #000 0 7px, transparent 7px 13px);
+  mask-image: repeating-linear-gradient(38deg, #000 0 7px, transparent 7px 13px);
+}
+
+/* Library: a ruled page with a red margin, bound in green */
+.s-day-library {
+  background-image:
+    linear-gradient(90deg, transparent 0 16px, rgb(140 47 47 / 0.6) 16px 17px, transparent 17px),
+    repeating-linear-gradient(0deg, transparent 0 13px, rgb(47 107 79 / 0.28) 13px 14px),
+    linear-gradient(rgb(247 242 234 / 0.85), rgb(220 235 226 / 0.75));
+  box-shadow: inset 5px 0 0 rgb(47 107 79 / 0.9);
+}
+
+/* Halloween: a violet night, a pumpkin slash and embers */
+.s-day-halloween {
+  color: #f6ecff;
+  background-image: linear-gradient(115deg, rgb(36 19 51 / 0.95) 0 60%, rgb(255 138 31 / 0.8) 60%);
+  box-shadow: inset 0 0 0 2px #ff8a1f, inset 0 0 0 4px rgb(13 8 18 / 0.9);
+}
+.s-day-halloween::before {
+  background:
+    radial-gradient(circle, rgb(180 107 255 / 0.55) 1.3px, transparent 1.8px) 0 0 / 9px 9px,
+    linear-gradient(115deg, transparent 0 59.2%, rgb(155 226 45 / 0.9) 59.2% 60.4%, transparent 60.4%);
+}
+
+/* Leaves: amber, raked in rust stripes, a drift in the corner */
+.s-day-leaves {
+  background-image:
+    repeating-linear-gradient(-35deg, transparent 0 11px, rgb(166 58 30 / 0.2) 11px 15px),
+    linear-gradient(160deg, rgb(251 220 182 / 0.85), rgb(199 101 26 / 0.5));
+  box-shadow: inset 0 0 0 2px rgb(166 58 30 / 0.65);
+}
+.s-day-leaves::before {
+  background:
+    radial-gradient(ellipse 6px 3px, rgb(166 58 30 / 0.75) 60%, transparent 62%) 4px 6px / 30px 24px,
+    radial-gradient(ellipse 3px 6px, rgb(217 150 43 / 0.9) 60%, transparent 62%) 19px 17px / 30px 24px;
+  -webkit-mask-image: linear-gradient(200deg, transparent 20%, #000 80%);
+  mask-image: linear-gradient(200deg, transparent 20%, #000 80%);
+}
+
+/* Cabin: a red and green blanket plaid with a candle-gold stitch */
+.s-day-cabin {
+  background-image:
+    repeating-linear-gradient(0deg, rgb(47 107 74 / 0.32) 0 6px, transparent 6px 20px),
+    repeating-linear-gradient(90deg, rgb(47 107 74 / 0.32) 0 6px, transparent 6px 20px),
+    linear-gradient(rgb(178 58 50 / 0.5), rgb(142 42 38 / 0.5));
+  box-shadow: inset 0 0 0 2px rgb(201 162 39 / 0.9);
+}
+.s-day-cabin::before {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 12px, rgb(201 162 39 / 0.55) 12px 13px, transparent 13px 20px),
+    repeating-linear-gradient(90deg, transparent 0 12px, rgb(201 162 39 / 0.55) 12px 13px, transparent 13px 20px);
+}
+
+/* The day brings its own nav, backdrop and menu, so the everyday ones step aside (hidden here
+   before the app hydrates, then unmounted: see components/persona/persona-chrome.tsx) */
+html[data-special] .tm-normal-only { display: none; }
+
+/* The menu's display face per theme (loaded on special days only; each falls back to the app's own) */
+html[data-special] { --special-font: var(--font-space-grotesk); }
+html[data-special="cafe"], html[data-special="garden"], html[data-special="sakura"], html[data-special="beach"], html[data-special="leaves"] { --special-font: "Caveat", var(--font-space-grotesk), cursive; }
+html[data-special="maps"], html[data-special="library"], html[data-special="halloween"], html[data-special="cabin"] { --special-font: "Cinzel", Georgia, serif; }
+html[data-special="space"], html[data-special="glitch"] { --special-font: "Orbitron", var(--font-space-grotesk), sans-serif; }
+html[data-special="snow"] { --special-font: "Fredoka", var(--font-space-grotesk), sans-serif; }
+
+/* Glitch day: the menu's words split into their colour channels now and then */
+@keyframes special-glitch {
+  0%, 92%, 100% { text-shadow: none; transform: none; }
+  93% { text-shadow: -2px 0 var(--tm-orange-light), 2px 0 var(--tm-yellow); transform: translateX(1px); }
+  95% { text-shadow: 2px 0 var(--tm-orange-light), -2px 0 var(--tm-yellow); transform: translateX(-2px) skewX(-6deg); }
+  97% { text-shadow: -1px 0 var(--tm-orange-light), 1px 0 var(--tm-yellow); transform: translateX(1px); }
+}
+html[data-special="glitch"] .special-title { animation: special-glitch 3.2s steps(1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-special="glitch"] .special-title { animation: none; }
+}

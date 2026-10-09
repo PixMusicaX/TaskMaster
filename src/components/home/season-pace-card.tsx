@@ -23,19 +23,21 @@ export const METER_MAX_XP = (FINAL_RANK.minLevel - 1) * LEVEL_UP_XP;
 
 // What it takes to finish above last month's final total, spread over the days left (today included).
 // `detail` is the daily rate, shown after the value on wide screens and under it on phones.
+// Numbers in the Season Pace scene and card are written without thousands separators, to match
+// the big season total, which has no room for one
 export function raceGoal(current: number, pace: SeasonPace, daysLeft: number): { label: string; value: string; detail?: string } {
-  const perDay = (xp: number) => Math.ceil(xp / (daysLeft + 1)).toLocaleString();
+  const perDay = (xp: number) => String(Math.ceil(xp / (daysLeft + 1)));
   if (pace.lastMonthTotalXP <= 0) {
-    return { label: "Daily average", value: `${Math.round(current / pace.dayOfMonth).toLocaleString()} XP a day` };
+    return { label: "Daily average", value: `${Math.round(current / pace.dayOfMonth)} XP a day` };
   }
   const needed = pace.lastMonthTotalXP - current + 1;
   if (needed <= 0) {
-    return { label: `${pace.lastMonthName} beaten`, value: `By ${(1 - needed).toLocaleString()} XP` };
+    return { label: `${pace.lastMonthName} beaten`, value: `By ${(1 - needed)} XP` };
   }
   if (daysLeft === 0) {
-    return { label: `To beat ${pace.lastMonthName}`, value: `${needed.toLocaleString()} XP today` };
+    return { label: `To beat ${pace.lastMonthName}`, value: `${needed} XP today` };
   }
-  return { label: `To beat ${pace.lastMonthName}`, value: `${needed.toLocaleString()} XP`, detail: `${perDay(needed)} XP/day` };
+  return { label: `To beat ${pace.lastMonthName}`, value: `${needed} XP`, detail: `${perDay(needed)} XP/day` };
 }
 
 // Phones: each box is one row, label left and value right. Wider screens: two boxes side by side.
@@ -90,7 +92,7 @@ function PaceBody({ profile, pace }: { profile: Profile; pace: SeasonPace }) {
     <div className="flex-1 flex flex-col gap-5 sm:gap-6 relative z-10">
       <div className="flex items-end justify-between gap-x-4 gap-y-2 flex-wrap">
         <p className="text-4xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow leading-none">
-          {current.toLocaleString()} <span className="text-base text-tm-blue-gray">XP</span>
+          {current} <span className="text-base text-tm-blue-gray">XP</span>
         </p>
         {hasRival && (
           <p className={cn(
@@ -100,7 +102,7 @@ function PaceBody({ profile, pace }: { profile: Profile; pace: SeasonPace }) {
             {delta > 0 ? <TrendingUp size={16} /> : delta < 0 ? <TrendingDown size={16} /> : null}
             {delta === 0
               ? `Level with ${pace.lastMonthName}'s pace`
-              : `${Math.abs(delta).toLocaleString()} ${delta > 0 ? "ahead of" : "behind"} ${pace.lastMonthName}'s pace`}
+              : `${Math.abs(delta)} ${delta > 0 ? "ahead of" : "behind"} ${pace.lastMonthName}'s pace`}
           </p>
         )}
       </div>
@@ -175,7 +177,7 @@ function SeasonMeter({ current, pace, overflow }: { current: number; pace: Seaso
           <div
             className="absolute -top-1.5 -bottom-1.5 w-0.5 bg-tm-orange-dark rounded-full"
             style={{ left: finalRankAt }}
-            title={`${METER_MAX_XP.toLocaleString()} XP · Level 45`}
+            title={`${METER_MAX_XP} XP · Level 45`}
           />
         )}
         {pace && (
@@ -201,27 +203,27 @@ function SeasonMeter({ current, pace, overflow }: { current: number; pace: Seaso
                 <span className="w-0.5 h-3 bg-tm-purple-dark dark:bg-white rounded-full" />
                 <span className="sm:hidden">{pace.lastMonthName.slice(0, 3)} d{pace.dayOfMonth}</span>
                 <span className="hidden sm:inline">{pace.lastMonthName} day {pace.dayOfMonth}:</span>
-                {" "}{pace.lastMonthPaceXP.toLocaleString()}
+                {" "}{pace.lastMonthPaceXP}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-3 border-l-2 border-dashed border-tm-blue-gray/60" />
                 <span className="sm:hidden">Final</span>
                 <span className="hidden sm:inline">Final:</span>
-                {" "}{pace.lastMonthTotalXP.toLocaleString()}
+                {" "}{pace.lastMonthTotalXP}
               </span>
             </>
           )}
           {stretched && (
             <span className="flex items-center gap-1.5">
               <span className="w-0.5 h-3 bg-tm-orange-dark rounded-full" />
-              {METER_MAX_XP.toLocaleString()} XP
+              {METER_MAX_XP} XP
             </span>
           )}
         </span>
         <span className={cn("ml-auto", overflowing && "text-tm-orange-dark")}>
           {overflowing
-            ? `+${overflow.toLocaleString()} XP over`
-            : `${max.toLocaleString()} XP`}
+            ? `+${overflow} XP over`
+            : `${max} XP`}
         </span>
       </div>
     </div>

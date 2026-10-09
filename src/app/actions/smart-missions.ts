@@ -16,6 +16,7 @@ import { AiNotConfiguredError } from "@/lib/ai-config";
 import { rollMissionBrief } from "@/lib/mission-dice";
 import { pickOfflineMission } from "@/lib/offline-missions";
 import { noteTextLines } from "@/lib/types";
+import { personalizationFor } from "@/lib/data/preferences";
 import { and, eq, desc, gte } from "drizzle-orm";
 
 // `persona` is the Persona style the client is showing (null for a normal day; left out, the
@@ -39,12 +40,13 @@ async function missionFor(userId: string, clientDateStr?: string, persona?: stri
           const twoWeeksAgo = subDays(clientNow, 14);
           const twoWeeksAgoStr = format(twoWeeksAgo, "yyyy-MM-dd");
 
-          const [profile, habitData, taskData, notesData, history] = await Promise.all([
+          const [profile, habitData, taskData, notesData, history, personal] = await Promise.all([
             profileFor(userId, today),
             habitsFor(userId, today), // only names are needed, so skip log history
             eventsByDateRange(userId, twoWeeksAgo, clientNow),
             db.select().from(note).where(and(eq(note.userId, userId), gte(note.date, twoWeeksAgoStr))),
-            missionHistoryFor(userId, twoWeeksAgoStr)
+            missionHistoryFor(userId, twoWeeksAgoStr),
+            personalizationFor(userId)
           ]);
 
           const prompt = getSmartMissionPrompt({
@@ -66,11 +68,12 @@ async function missionFor(userId: string, clientDateStr?: string, persona?: stri
               .sort((a, b) => b.date.localeCompare(a.date))
               .map((n) => ({ date: n.date, mood: n.mood, text: noteTextLines(n.content).join("; ") }))
               .filter((n) => n.text)
-              .map((n) => `${n.date} (mood: ${n.mood}): ${n.text}`),
+              .map((n) => `${n.date} (mood: ${n.mood || "not set"}): ${n.text}`),
             missionHistory: history.map((m) => ({ title: m.title, completed: m.completed })),
             brief: rollMissionBrief(history),
             today,
             persona: resolvePersonaStyle(persona, today),
+            personal,
           });
 
           const content = await safeGenerateContent(prompt, {

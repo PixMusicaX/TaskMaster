@@ -13,7 +13,7 @@ import { getOnThisDay, type HistoryDay } from "@/app/actions/history";
 import { getNoteByDate, getRecentNotes } from "@/app/actions/notes";
 import { getSmartMission, toggleSmartMission, regenerateSmartMission } from "@/app/actions/smart-missions";
 import { getDailyQuote } from "@/app/actions/daily-quote";
-import { hasAiKeyConfigured } from "@/app/actions/account";
+import { dismissPersonalizationIntro, getHomeNudges } from "@/app/actions/account";
 import { getReliefRecommendation, toggleReliefRecommendation, regenerateReliefRecommendation } from "@/app/actions/relief";
 import { getPreparationTip, togglePreparationTip, regeneratePreparationTip } from "@/app/actions/preparation";
 import { getSpecialDayColors } from "@/lib/utils";
@@ -107,6 +107,8 @@ export default function Home() {
   const [tasksLoading, setTasksLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(true);
   const [aiKeyMissing, setAiKeyMissing] = useState(false);
+  // The one-time invitation to tell the AI about yourself
+  const [inviteToPersonalize, setInviteToPersonalize] = useState(false);
   const [reliefLoading, setReliefLoading] = useState(false);
   const [prepLoading, setPrepLoading] = useState(false);
 
@@ -197,7 +199,10 @@ export default function Home() {
       getSeasonPace(todayStr).then(setSeasonPace);
       getSeasonXPBeforeToday(todayStr).then(setXpBeforeToday);
       getOnThisDay(todayStr).then(setOnThisDay);
-      hasAiKeyConfigured().then(has => setAiKeyMissing(!has));
+      getHomeNudges().then(nudges => {
+        setAiKeyMissing(nudges.aiKeyMissing);
+        setInviteToPersonalize(nudges.personalize);
+      });
 
       // 4. Calculate 7-day Completion Stats
       Promise.all([
@@ -434,6 +439,8 @@ export default function Home() {
             relief={relief}
             updatingRelief={updatingRelief}
             aiKeyMissing={aiKeyMissing}
+            inviteToPersonalize={inviteToPersonalize}
+            onDismissPersonalize={() => { setInviteToPersonalize(false); dismissPersonalizationIntro(); }}
             onReliefToggle={handleReliefToggle}
           />
         </div>

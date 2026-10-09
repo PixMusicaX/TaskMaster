@@ -7,6 +7,7 @@ import { DEV_ERA_EVENT, DEV_XP_EVENT, getDevEraOverride, getDevXpOffset, setDevE
 import { ERAS } from "@/lib/eras";
 import { DEV_PERSONA_EVENT, getDevPersonaOverride, setDevPersonaOverride, type DevPersonaOverride } from "@/lib/persona";
 import { getDevMapStatus, rerollDevMap, setDevMapStatus, subscribeDevMap, type MapStatus } from "@/lib/dev-map";
+import { DEV_SPECIAL_EVENT, SPECIAL_DAYS, SPECIAL_IDS, getDevSpecialOverride, setDevSpecialOverride, type DevSpecialOverride } from "@/lib/special-days";
 import { cn } from "@/lib/utils";
 import { useProgress } from "./progress-provider";
 
@@ -29,6 +30,11 @@ const subscribePersona = (cb: () => void) => {
   return () => window.removeEventListener(DEV_PERSONA_EVENT, cb);
 };
 
+const subscribeSpecial = (cb: () => void) => {
+  window.addEventListener(DEV_SPECIAL_EVENT, cb);
+  return () => window.removeEventListener(DEV_SPECIAL_EVENT, cb);
+};
+
 const PERSONA_OPTIONS: { value: DevPersonaOverride; label: string; title: string }[] = [
   { value: null, label: "Auto", title: "Follow the calendar" },
   { value: "off", label: "Off", title: "Normal design today" },
@@ -47,6 +53,7 @@ export default function DevTools() {
   const mapStatus = useSyncExternalStore(subscribeDevMap, getDevMapStatus, () => null);
   const eraOverride = useSyncExternalStore(subscribeEra, getDevEraOverride, () => null);
   const personaOverride = useSyncExternalStore(subscribePersona, getDevPersonaOverride, () => null);
+  const specialOverride = useSyncExternalStore(subscribeSpecial, getDevSpecialOverride, () => null);
 
   if (!profile) return null;
 
@@ -143,6 +150,20 @@ export default function DevTools() {
           </div>
 
           <div className="space-y-1.5 pt-2 border-t border-white/10">
+            <p className="font-mono font-semibold uppercase tracking-[0.12em] text-white/60">Special day</p>
+            {/* Twelve themes are too many for buttons: Auto follows the calendar, Off forces a normal day */}
+            <select
+              value={specialOverride ?? ""}
+              onChange={e => setDevSpecialOverride((e.target.value || null) as DevSpecialOverride)}
+              className="w-full px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 outline-none"
+            >
+              <option value="" className="text-black">Auto</option>
+              <option value="off" className="text-black">Off</option>
+              {SPECIAL_IDS.map(id => <option key={id} value={id} className="text-black">{SPECIAL_DAYS[id].name}</option>)}
+            </select>
+          </div>
+
+          <div className="space-y-1.5 pt-2 border-t border-white/10">
             <p className="font-mono font-semibold uppercase tracking-[0.12em] text-white/60">Map status</p>
             <div className="grid grid-cols-4 gap-1">
               {MAP_STATUSES.map(status => (
@@ -170,7 +191,7 @@ export default function DevTools() {
           aria-label="Open dev tools"
           className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-black/80 text-yellow-300 font-mono font-semibold shadow-lg"
         >
-          <Wrench size={14} /> DEV{offset !== 0 && ` ${offset > 0 ? "+" : ""}${offset}`}{eraOverride !== null && ` · era ${ERAS[eraOverride].numeral}`}{mapStatus && ` · map ${mapStatus}`}{personaOverride && ` · ${personaOverride}`}
+          <Wrench size={14} /> DEV{offset !== 0 && ` ${offset > 0 ? "+" : ""}${offset}`}{eraOverride !== null && ` · era ${ERAS[eraOverride].numeral}`}{mapStatus && ` · map ${mapStatus}`}{personaOverride && ` · ${personaOverride}`}{specialOverride && ` · ${specialOverride}`}
         </button>
       )}
     </div>

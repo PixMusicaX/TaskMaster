@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertCircle, Brain, KeyRound, Plus, RotateCw, TrendingUp, Users, Zap } from "lucide-react";
+import { AlertCircle, Brain, KeyRound, PenLine, Plus, RotateCw, TrendingUp, Users, Zap } from "lucide-react";
 import CompletionCheck from "@/components/ui/completion-check";
 import StrikeText from "@/components/ui/strike-text";
 import { SkeletonRows } from "@/components/loader";
@@ -26,10 +26,13 @@ interface AttentionCardProps {
   onReliefToggle: (index: number) => void;
   // True when this account has no AI key, so everything here is the offline version
   aiKeyMissing?: boolean;
+  // First visits: an invitation (never a requirement) to tell the AI about yourself
+  inviteToPersonalize?: boolean;
+  onDismissPersonalize?: () => void;
 }
 
 export default function AttentionCard(props: AttentionCardProps) {
-  const { charisma, aiLoading, missingInfo, prepTip, prepLoading, updatingPrep, onPrepToggle, onRegeneratePrep, smartMission, updatingSmart, onSmartToggle, onRegenerateSmart, relief, updatingRelief, onReliefToggle, aiKeyMissing } = props;
+  const { charisma, aiLoading, missingInfo, prepTip, prepLoading, updatingPrep, onPrepToggle, onRegeneratePrep, smartMission, updatingSmart, onSmartToggle, onRegenerateSmart, relief, updatingRelief, onReliefToggle, aiKeyMissing, inviteToPersonalize, onDismissPersonalize } = props;
 
   return (
     <WidgetCard
@@ -245,6 +248,31 @@ export default function AttentionCard(props: AttentionCardProps) {
                 </p>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shown until answered once, here or on the account page */}
+      {inviteToPersonalize && (
+        <div className="p-5 rounded-[1.25rem] bg-tm-yellow/5 border border-tm-yellow/30 flex flex-col items-center text-center gap-3">
+          <PenLine className="text-tm-yellow" size={24} />
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-foreground">Make It Yours</p>
+            <p className="text-caption text-tm-blue-gray">Tell the Taskmaster a little about you (interests, goals, things to avoid) and your quests and tips will fit you better. Entirely optional.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/account#personalise"
+              className="px-5 py-2 bg-tm-yellow/20 hover:bg-tm-yellow/40 text-tm-yellow text-tiny font-mono font-semibold uppercase rounded-xl transition-all border border-tm-yellow/20 flex items-center gap-2 tracking-[0.12em]"
+            >
+              <PenLine size={12} /> Personalise
+            </Link>
+            <button
+              onClick={onDismissPersonalize}
+              className="px-5 py-2 text-tm-blue-gray hover:text-foreground text-tiny font-mono font-semibold uppercase rounded-xl transition-all border border-tm-blue-gray/20 tracking-[0.12em]"
+            >
+              Not now
+            </button>
           </div>
         </div>
       )}

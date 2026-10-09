@@ -9,7 +9,9 @@ import VaultHero from "@/components/vault/vault-hero";
 import HallOfFame from "@/components/vault/hall-of-fame";
 import Chronicle, { type ChronicleKind } from "@/components/vault/chronicle";
 import SettingsPanel from "@/components/vault/settings-panel";
-import AccountPanel, { AiGuidePanel, useAccount } from "@/components/vault/account-panel";
+import AccountPanel, { AiGuidePanel, PersonalizePanel, useAccount } from "@/components/vault/account-panel";
+import { changeHolidayRegion } from "@/app/actions/events";
+import { HOLIDAY_REGIONS } from "@/lib/personalization";
 import VaultSection from "@/components/vault/vault-section";
 import { getSeasonTimeline } from "@/app/actions/gamification";
 import { seasonEraLabel } from "@/lib/eras";
@@ -52,6 +54,28 @@ export default function AccountPage() {
   const [preparationHistory, setPreparationHistory] = useState<PrepTipRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [account, reloadAccount] = useAccount();
+  const [holidayBusy, setHolidayBusy] = useState(false);
+  const [holidayStatus, setHolidayStatus] = useState<string | undefined>();
+
+  // Swaps the calendar's holidays to another country's (it talks to the holiday service, so it takes a moment)
+  async function handleHolidayRegion(region: string) {
+    setHolidayBusy(true);
+    setHolidayStatus(undefined);
+    try {
+      const result = await changeHolidayRegion(region, format(new Date(), "yyyy-MM-dd"));
+      if (result.success) {
+        const name = HOLIDAY_REGIONS.find(r => r.code === result.region)?.name ?? "";
+        setHolidayStatus(result.region ? `${name}: ${result.added} holidays added` : "Holidays switched off");
+      } else {
+        setHolidayStatus(result.message);
+      }
+      await reloadAccount();
+    } catch (err) {
+      console.error(err);
+      setHolidayStatus("Could not change the region");
+    }
+    setHolidayBusy(false);
+  }
 
   const [openTable, setOpenTable] = useState<"seasons" | ChronicleKind | null>(null);
   const [pruneLoading, setPruneLoading] = useState(false);
@@ -207,9 +231,15 @@ export default function AccountPage() {
         locationPermission={locationPermission}
         onEnableNotifications={handleEnableNotifications}
         onEnableLocation={handleEnableLocation}
+        holidayRegion={account ? account.holidayRegion : null}
+        holidayBusy={holidayBusy}
+        holidayStatus={holidayStatus}
+        onHolidayRegionChange={handleHolidayRegion}
       />
 
       <AiGuidePanel account={account} />
+
+      <PersonalizePanel account={account} />
 
       <VaultSection icon={Database} iconClassName="text-tm-blue-gray" title="Cloud Storage">
         <GlassCard className="p-5 md:p-8 relative overflow-hidden">

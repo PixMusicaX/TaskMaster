@@ -131,9 +131,16 @@ describe("one account never sees another's planner", () => {
 });
 
 describe("the Taskmaster's queries are fenced in", () => {
+  // Everything the AI was ever shown during the question
+  const everythingSeen = () => ai.mock.calls.map(call => String(call[0])).join("\n");
   const dataSeen = () => String(ai.mock.calls[1]?.[0] ?? "");
   const ask = async (sql: string) => {
     ai.mockResolvedValueOnce(sql).mockResolvedValueOnce("Answer.");
+    return askTaskmaster("Q", "2026-09-28");
+  };
+  // A query the database refuses is retried once; here the retry tries the same thing
+  const askTwice = async (sql: string) => {
+    ai.mockResolvedValueOnce(sql).mockResolvedValueOnce(sql);
     return askTaskmaster("Q", "2026-09-28");
   };
 
@@ -158,14 +165,13 @@ describe("the Taskmaster's queries are fenced in", () => {
     ['SELECT * FROM "UserAiSettings"'],
     [`SELECT query_to_xml('select content from public."Note"', true, false, '')`],
   ])("cannot reach the real tables with %s", async (sql) => {
-    await ask(sql);
-    expect(dataSeen()).toContain("Error executing query");
-    expect(dataSeen()).not.toContain("secret");
+    expect((await askTwice(sql)).success).toBe(false);
+    expect(everythingSeen()).not.toContain("secret");
+    expect(everythingSeen()).not.toContain("second user's note");
   });
 
   it("cannot change its copies, or anything else", async () => {
-    await ask('WITH d AS (DELETE FROM "Note" RETURNING *) SELECT count(*)::int FROM d');
-    expect(dataSeen()).toContain("Error executing query");
+    expect((await askTwice('WITH d AS (DELETE FROM "Note" RETURNING *) SELECT count(*)::int FROM d')).success).toBe(false);
     expect(await db.select().from(note)).toHaveLength(2);
   });
 

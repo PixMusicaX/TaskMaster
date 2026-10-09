@@ -8,6 +8,8 @@ import { signOut } from "@/auth";
 import { requireUserId } from "@/lib/current-user";
 import { getAiSettingsView, hasAiKey, saveAiSettings } from "@/lib/ai-config";
 import { isAiProvider, type AiProvider } from "@/lib/ai-providers";
+import { dismissIntro, preferencesFor, savePersonalization } from "@/lib/data/preferences";
+import type { Personalization } from "@/lib/personalization";
 
 // Auth.js names its cookie differently over HTTPS
 async function currentSessionToken() {
@@ -18,7 +20,7 @@ async function currentSessionToken() {
 // Everything the account page shows: who is signed in, on which devices, and their AI setup
 export async function getAccount() {
   const userId = await requireUserId();
-  const [[me], sessions, ai, token] = await Promise.all([
+  const [[me], sessions, ai, token, preferences] = await Promise.all([
     db.select({ name: user.name, email: user.email, image: user.image, createdAt: user.createdAt })
       .from(user).where(eq(user.id, userId)),
     db.select().from(session)
@@ -26,6 +28,7 @@ export async function getAccount() {
       .orderBy(desc(session.createdAt)),
     getAiSettingsView(userId),
     currentSessionToken(),
+    preferencesFor(userId),
   ]);
 
   return {
@@ -38,7 +41,40 @@ export async function getAccount() {
       current: s.sessionToken === token,
     })),
     ai,
+    // What they've told the AI about themselves, and their holiday region
+    personal: preferences.personal,
+    holidayRegion: preferences.holidayRegion,
   };
+}
+
+// What the home page should gently point out: no AI key yet, and the one-time invitation to
+// tell the AI about yourself
+export async function getHomeNudges() {
+  const userId = await requireUserId();
+  const [hasKey, preferences] = await Promise.all([hasAiKey(userId), preferencesFor(userId)]);
+  return { aiKeyMissing: !hasKey, personalize: preferences.invite };
+}
+
+// Optional details the AI is given so its quests, tips and answers fit the player
+export async function updatePersonalization(input: Partial<Personalization>) {
+  const userId = await requireUserId();
+  try {
+    await savePersonalization(userId, input);
+    return { success: true as const, personal: (await preferencesFor(userId)).personal };
+  } catch (e) {
+    console.error("Error saving personalization:", e);
+    return { success: false as const, message: "Could not save. If this keeps happening, the database needs its latest update." };
+  }
+}
+
+// "Not now" on the home page's invitation: don't ask again
+export async function dismissPersonalizationIntro() {
+  const userId = await requireUserId();
+  try {
+    await dismissIntro(userId);
+  } catch (e) {
+    console.error("Error dismissing the personalization invitation:", e);
+  }
 }
 
 // Whether this account has a usable key for the AI service it picked
