@@ -466,6 +466,7 @@ export default function Home() {
         tavern={tavern}
         completionScore={completionScore}
         onAsk={() => setShowTaskmaster(true)}
+        holdArrival={aiLoading || prepLoading || reliefLoading}
         fallback={<>
           <CharacterStatsCard profile={profile} />
           <SeasonPaceCard profile={profile} pace={seasonPace} />

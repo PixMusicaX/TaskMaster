@@ -225,11 +225,13 @@ interface GrowthSagaProps {
   completionScore: number;
   // Opens the Taskmaster's dialog
   onAsk: () => void;
+  // While true (the day's AI guidance is still loading), the page isn't scrolled down to the saga
+  holdArrival: boolean;
   // The analytics as plain cards, shown instead of the drawn scenes when motion is reduced
   fallback: React.ReactNode;
 }
 
-export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onThisDay, futureEvents, todayStr, tavern, completionScore, onAsk, fallback }: GrowthSagaProps) {
+export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onThisDay, futureEvents, todayStr, tavern, completionScore, onAsk, holdArrival, fallback }: GrowthSagaProps) {
   const reduced = useSyncExternalStore(subscribeReducedMotion, prefersReducedMotion, () => false);
   const [mapInfo, setMapInfo] = useState<MapInfo | null>(null);
   const root = useRef<HTMLElement>(null);
@@ -660,6 +662,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   // How long the scene on stage may sit idle before autoplay moves on
   const idleFor = useRef(IDLE_BEFORE_AUTO);
   const lastInput = useRef(0);
+  const holdingArrival = useRef(holdArrival);
+  useEffect(() => { holdingArrival.current = holdArrival; }, [holdArrival]);
   const onFuture = scenes[scene]?.id === "future";
   const eventCount = marks.length;
   useEffect(() => {
@@ -687,6 +691,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       // Higher up the home page: after a longer wait, come down to the Standing, and autoplay
       // carries on from there (not while a dialog is open, which sits outside <main>)
       if (timeNow < stops[0] - 1) {
+        // The wait only starts once the guidance above has finished loading
+        if (holdingArrival.current) return touch();
         if (idle < IDLE_BEFORE_ARRIVING || !under?.closest("main")) return;
         scrollToY(yOf(stops[0]), true);
         return touch();
