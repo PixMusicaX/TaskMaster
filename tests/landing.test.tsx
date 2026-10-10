@@ -15,6 +15,11 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
 
+// The Demo button's server action reaches the database; the button itself is all these tests need
+const startDemo = vi.fn<(today: string, tzOffsetMinutes: number) => Promise<{ success: false; message: string }>>(
+  async () => ({ success: false, message: "The demo is busy right now." }));
+vi.mock("@/app/actions/demo", () => ({ startDemo: (today: string, tzOffsetMinutes: number) => startDemo(today, tzOffsetMinutes) }));
+
 const SCENES = ["top", "calendar", "notes", "habits", "seasons", "guide", "privacy", "special", "themes", "version"];
 
 function motionPreference(reduce: boolean) {
@@ -85,6 +90,20 @@ describe("the landing page", () => {
     const { container } = render(<ThemeProvider><Landing /></ThemeProvider>);
     const demo = Array.from(container.querySelectorAll('[data-scene="top"] button')).find(b => b.textContent?.includes("Demo"));
     expect(demo).toBeDefined();
+  });
+
+  it("starts a demo with the visitor's own date and clock, and says so when it can't", async () => {
+    motionPreference(false);
+    startDemo.mockClear();
+    const { container } = render(<ThemeProvider><Landing /></ThemeProvider>);
+    const demo = Array.from(container.querySelectorAll<HTMLButtonElement>('[data-scene="top"] button')).find(b => b.textContent?.includes("Demo"))!;
+
+    await act(async () => { fireEvent.click(demo); });
+    expect(startDemo).toHaveBeenCalledTimes(1);
+    expect(startDemo.mock.calls[0][0]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(typeof startDemo.mock.calls[0][1]).toBe("number");
+    expect(demo.textContent).toContain("Try again");
+    expect(demo.title).toContain("busy");
   });
 
   it("opens on the forge's backdrop", () => {

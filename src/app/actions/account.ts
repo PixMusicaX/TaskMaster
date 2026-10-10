@@ -10,6 +10,8 @@ import { getAiSettingsView, hasAiKey, saveAiSettings } from "@/lib/ai-config";
 import { isAiProvider, type AiProvider } from "@/lib/ai-providers";
 import { dismissIntro, preferencesFor, savePersonalization } from "@/lib/data/preferences";
 import type { Personalization } from "@/lib/personalization";
+import { deleteDemoUser } from "@/lib/data/demo";
+import { isDemoEmail } from "@/lib/demo";
 
 // Auth.js names its cookie differently over HTTPS
 async function currentSessionToken() {
@@ -32,6 +34,8 @@ export async function getAccount() {
   ]);
 
   return {
+    // A demo planner: its account and everything in it go when the visitor leaves
+    demo: isDemoEmail(me?.email),
     user: me,
     // Tokens stay on the server; the page only gets each session's public id
     sessions: sessions.map(s => ({
@@ -95,6 +99,9 @@ export async function signOutDevice(sessionId: string) {
 }
 
 export async function signOutHere() {
+  // Signing out of a demo is leaving it: the temporary account is deleted, not just the session
+  const userId = await requireUserId();
+  await deleteDemoUser(userId);
   await signOut({ redirectTo: "/" });
 }
 

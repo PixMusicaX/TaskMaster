@@ -94,12 +94,12 @@ export default function AccountPanel({ account, onReload }: { account: Account |
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-xl font-bold text-foreground leading-tight truncate">{user?.name?.trim().split(/\s+/)[0] || (account ? "Player" : "Loading…")}</h3>
-              <p className="text-sm text-tm-blue-gray font-medium truncate">{user?.email ?? " "}</p>
-              <p className={cn(LABEL, "text-tm-blue-gray/70 mt-1")}>Signed in with Google</p>
+              <p className="text-sm text-tm-blue-gray font-medium truncate">{account?.demo ? "A made-up planner for trying things out" : user?.email ?? " "}</p>
+              <p className={cn(LABEL, "text-tm-blue-gray/70 mt-1")}>{account?.demo ? "Demo session · nothing here is saved" : "Signed in with Google"}</p>
             </div>
             <button onClick={handleSignOut} disabled={busy !== null} className={BUTTON_PRIMARY}>
               <LogOut size={14} />
-              {busy === "signout" ? "Signing out…" : "Sign out"}
+              {busy === "signout" ? "Leaving…" : account?.demo ? "Exit demo" : "Sign out"}
             </button>
           </div>
 

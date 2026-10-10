@@ -68,7 +68,7 @@ export function TavernEmblem({ relief, loading, onRegenerate, active }: Pick<Tav
 
   return (
     <div data-saga="tavern" className="absolute inset-0 motion-reduce:hidden">
-      <svg aria-hidden viewBox="0 0 400 400" className={cn("absolute inset-0 w-full h-full overflow-visible", waiting && "animate-pulse")}>
+      <svg data-saga="tavern-seats" aria-hidden viewBox="0 0 400 400" className={cn("absolute inset-0 w-full h-full overflow-visible", waiting && "animate-pulse")}>
         {SEAT_PATHS.map((d, i) => (
           <g key={i}>
             <path className="text-tm-blue-gray/25" d={d} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
@@ -83,7 +83,7 @@ export function TavernEmblem({ relief, loading, onRegenerate, active }: Pick<Tav
         )}
       </svg>
 
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-10">
+      <div data-saga="tavern-core" className="absolute inset-0 flex flex-col items-center justify-center text-center px-10">
         {waiting ? (
           <>
             <span className={CAPTION}>{loading ? "Finding new" : "Scanning for"}</span>

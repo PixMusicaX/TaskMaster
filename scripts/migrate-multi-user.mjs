@@ -125,6 +125,9 @@ try {
         "count" integer DEFAULT 0 NOT NULL
       );
     `);
+    // Databases that began under the app's first ORM have no default on this column, though the
+    // schema says there is one; without it, an insert that leaves the column out is rejected
+    await tx.unsafe(`ALTER TABLE "Note" ALTER COLUMN "updatedAt" SET DEFAULT now()`);
     console.log("Sign-in tables ready.");
 
     // ---- The owner of everything that already exists ----

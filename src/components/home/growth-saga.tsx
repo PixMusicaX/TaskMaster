@@ -75,6 +75,10 @@ const TIME_COLOR = "color-mix(in srgb, var(--tm-orange-dark) 55%, var(--tm-yello
 
 const even = (r: number) => STATS.map(() => r);
 const STAT_GRID = LEVELS.map(l => polygon(STAT_ANGLES, even(RADAR * l)));
+// The mood triangle grown out to the Tavern's ring: turned a sixth of the way round, its corners
+// are the middles of the three seats (see the hand-over in the script)
+const SEAT_SHAPE = polygon(MOOD_ANGLES, even(166));
+const SEAT_TURN = 60;
 const MOOD_GRID = LEVELS.map(l => polygon(MOOD_ANGLES, even(RADAR * l)));
 
 // The scroll script, in svh of scrolling. The orbit assembles during the approach (the half screen
@@ -133,6 +137,8 @@ const SETTLE_AFTER = 160;
 // Left alone on a stop for this long, the saga moves on to the next one by itself (and from the
 // last one, rolls back to the first)
 const IDLE_BEFORE_AUTO = 8000;
+// The Chronicle's years go by this much faster than the scenes, both the ride between them and the wait
+const CHRONICLE_PACE = 1.5;
 // Left idle anywhere above the saga for this long, the home page scrolls down to it
 const IDLE_BEFORE_ARRIVING = 20000;
 // Future Sight waits longer, so its scrolling list can be read through: a base, plus the time the
@@ -311,6 +317,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   const onAskScene = scenes[scene]?.id === "ask";
   // A string, so the navigation below only resets when the stops really change
   const stopsKey = times.stops.join();
+  const chronFrom = times.chronAt;
+  const chronUntil = times.mapAt;
 
   useEffect(() => {
     const el = root.current;
@@ -375,12 +383,16 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         .add("[data-saga=saturn-tilt]", { rotate: [0, -16], duration: 30, ease: "inOut(2)" }, ERA_AT - 6)
         .add("[data-saga=era-text]", { opacity: [0, 1], translateY: [20, 0], duration: 16, delay: stagger(4) }, ERA_AT + 8)
         // The rank ring dims and the season's XP gauge turns in inside it
-        .add("[data-saga=era-core]", { opacity: 0, scale: 0.55, duration: 14, ease: "in(2)" }, PACE_AT - 6)
+        // The era drops through the centre; the tipped level ring snaps flat and the gauge unrolls
+        // from where it lay
+        .add("[data-saga=era-core]", { opacity: 0, scale: 0.3, translateY: "45%", duration: 14, ease: "in(3)" }, PACE_AT - 6)
         .add("[data-saga=era]", { opacity: 0, translateY: -20, duration: 14, ease: "in(2)" }, PACE_AT - 6)
-        .add("[data-saga=saturn-tilt]", { opacity: 0, scale: 1.2, duration: 18, ease: "in(2)" }, PACE_AT - 6)
+        .add("[data-saga=saturn]", { rotateX: [74, 0], duration: 12, ease: "inOut(3)" }, PACE_AT - 10)
+        .add("[data-saga=saturn-tilt]", { rotate: [-16, 0], duration: 12, ease: "inOut(3)" }, PACE_AT - 10)
+        .add("[data-saga=saturn-tilt]", { opacity: 0, scale: 1.18, duration: 8, ease: "in(2)" }, PACE_AT + 1)
         .add("[data-saga=rings]", { opacity: 0.3, duration: 18 }, PACE_AT - 4)
         .add("[data-saga=dial-inner], [data-saga=next]", { opacity: 0, duration: 14 }, PACE_AT - 4)
-        .add("[data-saga=gauge]", { opacity: [0, 1], rotate: [-120, 0], scale: [0.9, 1], duration: 26 }, PACE_AT + 4)
+        .add("[data-saga=gauge]", { opacity: [0, 1], rotate: [-300, 0], scale: [1.1, 1], duration: 28, ease: "out(4)" }, PACE_AT + 1)
         .add("[data-saga=gauge-fill]", { strokeDashoffset: [1, 1 - meterFill], duration: 22, ease: "inOut(2)" }, PACE_AT + 10)
         .add("[data-saga=tick]", { opacity: [0, 1], duration: 10, delay: stagger(3) }, PACE_AT + 22)
         .add("[data-saga=pace-core]", { opacity: [0, 1], scale: [0.5, 1], duration: 18 }, PACE_AT + 4)
@@ -401,7 +413,12 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         .add("[data-saga=pace-text]", { opacity: [0, 1], translateY: [20, 0], duration: 14, delay: stagger(4) }, PACE_AT + 26)
         // The dotted circle returns, and the radar draws inside it with the stats springing from its centre
         .add("[data-saga=dial-wrap]", { opacity: [0, 1], duration: 20 }, STATS_AT - 12)
-        .add("[data-saga=gauge], [data-saga=pace-tilt], [data-saga=pace-core], [data-saga=pace-title]", { opacity: 0, duration: 12, ease: "in(2)" }, STATS_AT - 14)
+        // The pace rings and the gauge fall in to a point, and the radar bursts out of it
+        .add("[data-saga=pace-title]", { opacity: 0, duration: 12, ease: "in(2)" }, STATS_AT - 16)
+        .add("[data-saga=pace-tilt]", { scale: 0, opacity: [1, 0], duration: 14, ease: "in(3)" }, STATS_AT - 16)
+        .add("[data-saga=pace-core]", { scale: 0.2, opacity: 0, duration: 12, ease: "in(3)" }, STATS_AT - 16)
+        .add("[data-saga=gauge]", { rotate: 140, scale: 0.3, opacity: 0, duration: 14, ease: "in(3)" }, STATS_AT - 16)
+        .add("[data-saga=radar]", { scale: [0, 1], rotate: [-70, 0], duration: 24, ease: "outBack(1.3)" }, STATS_AT - 2)
         .add("[data-saga=grid]", { strokeDashoffset: [1, 0], duration: 20, delay: stagger(3, { reversed: true }), ease: "inOut(2)" }, STATS_AT + 2)
         .add("[data-saga=axis]", { strokeDashoffset: [1, 0], duration: 16, delay: stagger(2) }, STATS_AT + 6)
         .add("[data-saga=shape]", { opacity: [0, 1], scale: [0, 1], rotate: [-50, 0], duration: 26, ease: "outBack(1.4)" }, STATS_AT + 14)
@@ -413,19 +430,30 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
           onRender: () => { totalEl.textContent = Math.round(total.value).toLocaleString(); },
         }, STATS_AT + 14)
         // The pentagon folds into the mood triangle
-        .add("[data-saga=stat], [data-saga=stats-title]", { opacity: 0, duration: 12, ease: "in(2)" }, MOOD_AT - 8)
+        .add("[data-saga=stats-title]", { opacity: 0, translateY: -30, duration: 12, ease: "in(2)" }, MOOD_AT - 8)
         .add("[data-saga=polygon]", { points: [statShape, moodShape], duration: 30, ease: "inOut(3)" }, MOOD_AT)
         .add("[data-saga=shape]", { rotate: [0, 360], duration: 30, ease: "inOut(3)" }, MOOD_AT)
         .add("[data-saga=mood]", { opacity: [0, 1], duration: 12, delay: stagger(5) }, MOOD_AT + 20)
         .add("[data-saga=mood-title]", { opacity: [0, 1], translateY: [24, 0], duration: 18 }, MOOD_AT + 14)
-        .add("[data-saga=radar], [data-saga=mood-title]", { opacity: 0, duration: 12, ease: "in(2)" }, TAVERN_AT - 14)
+        // The triangle lets go of its fill and grows out to the ring, turning until its corners
+        // sit where the Tavern's three seats are; the seats take over from it
+        .add("[data-saga=mood-title]", { opacity: 0, translateY: -30, duration: 12, ease: "in(2)" }, TAVERN_AT - 18)
+        .add("[data-saga=grid], [data-saga=axis]", { opacity: 0, duration: 8, ease: "in(2)" }, TAVERN_AT - 18)
+        .add("[data-saga=polygon]", { points: [moodShape, SEAT_SHAPE], fillOpacity: [1, 0], duration: 16, ease: "inOut(3)" }, TAVERN_AT - 16)
+        .add("[data-saga=shape]", { rotate: [360, 360 + SEAT_TURN], duration: 16, ease: "inOut(3)" }, TAVERN_AT - 16)
+        .add("[data-saga=radar]", { opacity: 0, duration: 8, ease: "in(2)" }, TAVERN_AT - 4)
         // The Tavern: its three-seat ring turns in and the suggestions line up beneath it
-        .add("[data-saga=tavern]", { opacity: [0, 1], scale: [0.85, 1], rotate: [-60, 0], duration: 20 }, TAVERN_AT - 2)
+        .add("[data-saga=tavern]", { opacity: [0, 1], scale: [1.12, 1], rotate: [-24, 0], duration: 16 }, TAVERN_AT - 6)
         .add("[data-saga=tavern-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, TAVERN_AT + 2)
         .add("[data-saga=tavern-row]", { opacity: [0, 1], translateY: [16, 0], duration: 12, delay: stagger(4) }, TAVERN_AT + 8)
-        .add("[data-saga=tavern], [data-saga=tavern-title], [data-saga=tavern-details]", { opacity: 0, duration: 12, ease: "in(2)" }, futureAt - 14)
+        // The seats spin up into a blur, and the two-week dial spins down out of it
+        .add("[data-saga=tavern-title]", { opacity: 0, translateY: -30, duration: 12, ease: "in(2)" }, futureAt - 16)
+        .add("[data-saga=tavern-details]", { opacity: 0, translateY: 24, duration: 12, ease: "in(2)" }, futureAt - 16)
+        .add("[data-saga=tavern-core]", { opacity: 0, scale: 0.4, duration: 10, ease: "in(2)" }, futureAt - 16)
+        .add("[data-saga=tavern-seats]", { rotate: [0, 420], duration: 16, ease: "in(2)" }, futureAt - 16)
+        .add("[data-saga=tavern]", { opacity: 0, duration: 6, ease: "linear" }, futureAt - 6)
         // Future Sight: a hand sweeps the two-week dial once and what lies ahead appears as it passes
-        .add("[data-saga=future]", { opacity: [0, 1], scale: [0.9, 1], duration: 16 }, futureAt - 2)
+        .add("[data-saga=future]", { opacity: [0, 1], scale: [1.2, 1], rotate: [-160, 0], duration: 20, ease: "out(4)" }, futureAt - 6)
         .add("[data-saga=future-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, futureAt + 2)
         .add("[data-saga=future-hand]", { rotate: [0, 360], duration: FUTURE_SWEEP, ease: "linear" }, futureAt + 6)
         .add("[data-saga=future-hand]", { opacity: 0, duration: 8 }, futureAt + 6 + FUTURE_SWEEP)
@@ -434,8 +462,9 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         // going backwards the block is gone even if the list is mid-scroll
         .add("[data-saga=future-details]", { opacity: [0, 1], duration: 10 }, futureAt + 20)
         .add("[data-saga=future-row]", { opacity: [0, 1], translateY: [16, 0], duration: 10, delay: stagger(1.2) }, futureAt + 22)
-        // (the Chronicle, when there is one, plays between these two; see below)
-        .add("[data-saga=future], [data-saga=future-title], [data-saga=future-details]", { opacity: 0, duration: 12, ease: "in(2)" }, chronAt - 14)
+        // (Future Sight leaves, and the Chronicle, when there is one, plays between these two; see below)
+        .add("[data-saga=future-title]", { opacity: 0, translateY: -30, duration: 12, ease: "in(2)" }, chronAt - 16)
+        .add("[data-saga=future-details]", { opacity: 0, translateY: 24, duration: 12, ease: "in(2)" }, chronAt - 16)
         // The Map: a compass turns in, its needle swings and settles, then rings rush outward and
         // the map warps in where the needle was
         .add("[data-saga=dial-wrap]", { opacity: 0, duration: 14 }, mapAt - 10)
@@ -459,6 +488,29 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         // Nothing moves in the tail; this only makes the script as long as the scroll
         .add(pad, { value: 1, duration: 1 }, length - 1);
 
+      // The rank's letters scatter along the ring as the centre turns over to the era
+      const letters = all("letter");
+      letters.forEach((letter, i) => {
+        timeline.add(letter, { translateX: (i - (letters.length - 1) / 2) * 16, translateY: -26, rotate: (i % 2 ? 1 : -1) * 24, opacity: 0, duration: 10, ease: "in(2)" }, ERA_AT - 8 + i * 0.4);
+      });
+      // Stat and mood labels leave along their own axes
+      const flyOut = (label: Element, angle: number, at: number) => {
+        const turn = (angle * Math.PI) / 180;
+        timeline.add(label, { translateX: Math.sin(turn) * 44, translateY: -Math.cos(turn) * 44, opacity: 0, duration: 10, ease: "in(2)" }, at);
+      };
+      all("stat").forEach((label, i) => flyOut(label, STAT_ANGLES[i], MOOD_AT - 10 + i));
+      all("mood").forEach((label, i) => flyOut(label, i * 120, TAVERN_AT - 20 + i));
+      // Future Sight leaves: with a Chronicle to come, its hand comes back and winds the dial
+      // backwards into the past; with none, the dial just spins away
+      if (yearCount > 0) {
+        timeline
+          .add("[data-saga=future-hand]", { opacity: [0, 1], duration: 3, ease: "linear" }, chronAt - 19)
+          .add("[data-saga=future-hand]", { rotate: [360, -360], duration: 17, ease: "in(2)" }, chronAt - 19)
+          .add("[data-saga=future]", { rotate: [0, -200], scale: [1, 0.85], opacity: [1, 0], duration: 13, ease: "in(3)" }, chronAt - 15);
+      } else {
+        timeline.add("[data-saga=future]", { rotate: [0, 90], scale: [1, 0.8], opacity: [1, 0], duration: 12, ease: "in(2)" }, chronAt - 14);
+      }
+
       // Persona 3 days: the music player's own moves, on the same script
       if (p3) addP3Script(timeline, froms);
       // Persona 4 days: the TV's channel changes
@@ -474,19 +526,22 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         const to = polar(MOOD_ANGLES[i], RADAR);
         timeline.add(axis, { x2: [from.x, to.x], y2: [from.y, to.y], duration: 30, ease: "inOut(3)" }, MOOD_AT);
       });
+      const seatPoints = SEAT_SHAPE.split(" ").map(p => p.split(","));
       all("point").forEach((point, i) => {
-        timeline.add(point, { cx: [statPoints[i][0], moodPoints[i][0]], cy: [statPoints[i][1], moodPoints[i][1]], duration: 30, ease: "inOut(3)" }, MOOD_AT);
+        timeline
+          .add(point, { cx: [statPoints[i][0], moodPoints[i][0]], cy: [statPoints[i][1], moodPoints[i][1]], duration: 30, ease: "inOut(3)" }, MOOD_AT)
+          .add(point, { cx: [moodPoints[i][0], seatPoints[i][0]], cy: [moodPoints[i][1], seatPoints[i][1]], duration: 16, ease: "inOut(3)" }, TAVERN_AT - 16);
       });
       all("future-node").forEach(node => {
         const angle = Number((node as HTMLElement).dataset.angle);
-        timeline.add(node, { opacity: [0, 1], duration: 6 }, futureAt + 6 + (angle / 360) * FUTURE_SWEEP);
+        timeline.add(node, { opacity: [0, 1], scale: [2.6, 1], duration: 7 }, futureAt + 6 + (angle / 360) * FUTURE_SWEEP);
       });
 
       // The Chronicle: the ring's sweep reaches back one year at a time, and the centre and the
       // entry below change with it
       if (yearCount > 0) {
         timeline
-          .add("[data-saga=chron]", { opacity: [0, 1], scale: [0.9, 1], duration: 16 }, chronAt - 2)
+          .add("[data-saga=chron]", { opacity: [0, 1], scale: [0.85, 1], rotate: [140, 0], duration: 20, ease: "out(4)" }, chronAt - 4)
           .add("[data-saga=chron-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, chronAt + 2)
           .add("[data-saga=chron-node]", { opacity: [0, 1], duration: 8, delay: stagger(2) }, chronAt + 4)
           .add("[data-saga=chron], [data-saga=chron-title], [data-saga=chron-details]", { opacity: 0, duration: 12, ease: "in(2)" }, mapAt - 14);
@@ -592,11 +647,11 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
 
   // A step between neighbouring stops is slow enough to watch; a longer ride (a jump, the way
   // back to the start or the top) moves along
-  const scrollToY = useCallback((y: number, ride = false) => {
+  const scrollToY = useCallback((y: number, ride = false, pace = 1) => {
     cancelAnimationFrame(scrollAnim.current);
     const from = window.scrollY;
     const far = Math.abs(y - from);
-    const duration = ride ? Math.min(2400, Math.max(900, far * 0.4)) : Math.min(3400, Math.max(1900, far * 3.4));
+    const duration = (ride ? Math.min(2400, Math.max(900, far * 0.4)) : Math.min(3400, Math.max(1900, far * 3.4))) / pace;
     const began = performance.now();
     const frame = (now: number) => {
       const t = Math.min(1, (now - began) / duration);
@@ -613,9 +668,11 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     const { timeNow, yOf } = measure();
     const target = direction > 0 ? stops.find(s => s > timeNow + 1) : [...stops].reverse().find(s => s < timeNow - 1);
     if (target === undefined) return false;
-    scrollToY(yOf(target));
+    // From one year of the Chronicle to the next is a quicker ride
+    const inChronicle = (t: number) => chronFrom < chronUntil && t >= chronFrom && t < chronUntil;
+    scrollToY(yOf(target), false, inChronicle(timeNow) && inChronicle(target) ? CHRONICLE_PACE : 1);
     return true;
-  }, [stopsKey, measure, scrollToY]);
+  }, [stopsKey, measure, scrollToY, chronFrom, chronUntil]);
 
   // Scroll to a scene's first stop
   function jumpTo(target: number) {
@@ -666,12 +723,13 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   const holdingArrival = useRef(holdArrival);
   useEffect(() => { holdingArrival.current = holdArrival; }, [holdArrival]);
   const onFuture = scenes[scene]?.id === "future";
+  const onChronicle = scenes[scene]?.id === "chronicle";
   const eventCount = marks.length;
   useEffect(() => {
     idleFor.current = onFuture
       ? Math.min(FUTURE_IDLE.max, Math.max(FUTURE_IDLE.min, FUTURE_IDLE.base + eventCount * FUTURE_IDLE.perEvent))
-      : IDLE_BEFORE_AUTO;
-  }, [onFuture, eventCount]);
+      : onChronicle ? IDLE_BEFORE_AUTO / CHRONICLE_PACE : IDLE_BEFORE_AUTO;
+  }, [onFuture, onChronicle, eventCount]);
 
   // Left idle on a stop, move on to the next one; any input starts the wait again
   useEffect(() => {

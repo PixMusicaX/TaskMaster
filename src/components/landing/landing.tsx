@@ -26,6 +26,7 @@ import { useBrowserTheme, useTheme } from "@/components/theme-provider";
 import HabitIconRender from "@/components/HabitIconRender";
 import { P3Menu, P4Menu, P5Menu } from "@/components/persona/persona-pause-menu";
 import { GOOGLE_WIPE_MS, GoogleSpiral, markGoogleWipe } from "./google-reveal";
+import { startDemo } from "@/app/actions/demo";
 import SpecialStage, { type SpecialShow } from "./special-stage";
 import "./landing.css";
 
@@ -134,15 +135,37 @@ const LABEL = "text-caption font-mono font-semibold uppercase tracking-[0.12em]"
 const CTA = cn(LABEL, "inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-tm-yellow text-tm-purple-dark text-sm transition-transform hover:scale-[1.03] active:scale-95");
 const BOARD = "tm-card tm-board relative border border-tm-blue-gray/10 dark:border-white/10";
 
-// A look around without an account. Not built yet: the button is here so the layout has its place.
+// A look around without an account: starts a throwaway planner filled with made-up data
+// (app/actions/demo.ts). Nothing done in it is kept.
 function DemoButton({ className }: { className?: string }) {
+  const [starting, setStarting] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  async function start() {
+    setStarting(true);
+    setProblem(null);
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    try {
+      // On success the server sends the browser on to the planner, so this only returns on failure
+      const result = await startDemo(today, now.getTimezoneOffset());
+      if (result && !result.success) setProblem(result.message);
+    } catch (error) {
+      // A redirect surfaces here in some setups; anything else is a real failure
+      if (!(error instanceof Error && error.message === "NEXT_REDIRECT")) setProblem("Could not start the demo.");
+    }
+    setStarting(false);
+  }
+
   return (
     <button
       type="button"
-      title="Demo coming soon"
-      className={cn(LABEL, "inline-flex items-center gap-2 border border-tm-blue-gray/30 text-tm-purple-dark dark:text-tm-yellow hover:border-tm-yellow/60 hover:bg-tm-yellow/10 transition-colors active:scale-95", className)}
+      onClick={start}
+      disabled={starting}
+      title={problem ?? "Try TaskMaster with a made-up planner. Nothing is saved."}
+      className={cn(LABEL, "inline-flex items-center gap-2 border border-tm-blue-gray/30 text-tm-purple-dark dark:text-tm-yellow hover:border-tm-yellow/60 hover:bg-tm-yellow/10 transition-colors active:scale-95 disabled:opacity-70 disabled:cursor-wait", className)}
     >
-      <Play size={14} /> Demo
+      <Play size={14} /> {starting ? "Setting up…" : problem ? "Try again" : "Demo"}
     </button>
   );
 }

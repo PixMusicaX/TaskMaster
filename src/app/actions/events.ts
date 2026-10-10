@@ -10,6 +10,7 @@ import { invalidateSnapshots } from "@/lib/data/stats";
 import { eventsByDateRange, syncRecurringEventsFor } from "@/lib/data/events";
 import { preferencesFor, saveHolidayRegion } from "@/lib/data/preferences";
 import { isHolidayRegion } from "@/lib/personalization";
+import { isDemoUser } from "@/lib/data/demo";
 
 // What a client may set on an event; ownership and system fields are never taken from it
 type EventInput = {
@@ -168,6 +169,8 @@ async function fetchHolidays(apiKey: string, country: string, year: number): Pro
 // account page, so this runs once a month per account
 export async function syncMonthlyHolidays(testDateStr?: string) {
   const userId = await requireUserId();
+  // Demo planners come with their own made-up special days and never call the holiday service
+  if (await isDemoUser(userId)) return { success: true, message: "Demo: no holiday sync" };
   const apiKey = process.env.calendarific_key;
   if (!apiKey) {
     console.error("No Calendarific API key found in .env");
@@ -274,6 +277,7 @@ async function removeHolidays(userId: string, apiKey: string, country: string, f
 // country's holidays from this year on are swapped for the new one's.
 export async function changeHolidayRegion(region: string, clientDateStr?: string) {
   const userId = await requireUserId();
+  if (await isDemoUser(userId)) return { success: false as const, message: "Holiday regions are switched off in the demo." };
   if (!isHolidayRegion(region)) return { success: false as const, message: "Unknown region." };
   const apiKey = process.env.calendarific_key;
   if (!apiKey) return { success: false as const, message: "Holidays aren't set up on this server." };
