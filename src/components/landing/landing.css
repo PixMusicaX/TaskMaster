@@ -24,6 +24,10 @@
   --font-p5-menu: "P5 Menu", "Anton", Impact, sans-serif;
   animation: tm-persona-in 0.45s ease-out;
 }
+/* The special day's preview fades up the same way, under its wipe */
+.tm-special-frame {
+  animation: tm-persona-in 0.45s ease-out;
+}
 /* The era backdrops behind the scenes: the same strength whatever era the visitor's browser
    remembers, and visible even where a Persona day would switch the app's ambience off */
 .tm-landing-ambient {

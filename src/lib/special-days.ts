@@ -85,6 +85,15 @@ export function scheduledSpecial(date: Date): SpecialId | null {
   return day === date.getDate() ? SPECIAL_IDS[month] : null;
 }
 
+// When a theme's day next comes round (today counts)
+export function nextDateOf(id: SpecialId, now = new Date()): Date {
+  const { month } = SPECIAL_DAYS[id];
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const inYear = (year: number) => new Date(year, month, pickSpecialDay(year, month, pickPersonaDays(year, month)));
+  const date = inYear(today.getFullYear());
+  return date >= today ? date : inYear(today.getFullYear() + 1);
+}
+
 // ---- Dev override: force a theme (or force it off) on any day ----
 
 export const DEV_SPECIAL_EVENT = "dev-special-changed";

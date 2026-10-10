@@ -172,7 +172,9 @@ function drawExtra(extra: BackdropExtra, ctx: CanvasRenderingContext2D, w: numbe
   // "hearth" needs no stroke: the fire is the warm glow in the day's wash
 }
 
-export default function SpecialBackdrop({ id }: { id: SpecialId }) {
+// `contained` is for the landing page's preview: the canvas fills its parent instead of the
+// screen, and the wash is left to the caller
+export default function SpecialBackdrop({ id, contained }: { id: SpecialId; contained?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const look = SPECIAL_LOOKS[id];
 
@@ -189,7 +191,8 @@ export default function SpecialBackdrop({ id }: { id: SpecialId }) {
 
     let colors: string[] = [];
     const readColors = () => {
-      const styles = getComputedStyle(root);
+      // Read off the canvas, not the root: a preview wears the palette on an element of its own
+      const styles = getComputedStyle(canvas);
       colors = PALETTE_VARS.map(v => styles.getPropertyValue(v).trim() || "#888");
     };
     readColors();
@@ -271,9 +274,9 @@ export default function SpecialBackdrop({ id }: { id: SpecialId }) {
   }, [id]);
 
   return (
-    <div className="tm-ambient" aria-hidden>
+    <div className={contained ? "absolute inset-0 overflow-hidden pointer-events-none" : "tm-ambient"} aria-hidden>
       <div className="tm-grain" />
-      <div className="absolute inset-0" style={{ background: look.wash }} />
+      {!contained && <div className="absolute inset-0" style={{ background: look.wash }} />}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
     </div>
   );

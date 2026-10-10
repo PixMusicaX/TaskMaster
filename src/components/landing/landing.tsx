@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { animate, createScope, createTimeline, onScroll, stagger, utils, type AnimationParams } from "animejs";
 import {
   ArrowDown, ArrowRight, Bot, Calendar, Check, CheckCircle2, CheckSquare, ChevronLeft, ChevronRight, Database, FileText, Flame,
-  Github, KeyRound, Lock, Moon, Play, Shield, Sparkles, Sun, TrendingUp, UserRound, WifiOff, Zap, type LucideIcon,
+  Github, KeyRound, Lock, Moon, Palette, Play, Shield, Sparkles, Sun, TrendingUp, UserRound, WifiOff, Zap, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { prefersReducedMotion } from "@/lib/scroll-fx";
@@ -17,6 +17,7 @@ import { RankCrest } from "@/lib/rank-icons";
 import { APP_VERSION, CREATOR_URL, REPO_URL } from "@/lib/version";
 import { AnimatePresence, motion } from "framer-motion";
 import { PERSONA_FONTS_URL, PERSONA_NAMES, PERSONA_STYLES, type PersonaStyle } from "@/lib/persona";
+import { SPECIAL_FORCED_THEME, SPECIAL_IDS, type SpecialId } from "@/lib/special-days";
 import type { AmbientLayer } from "@/lib/eras";
 import { Layer } from "@/components/era-ambient";
 import LandingBackdrop, { type BackdropMode } from "./landing-backdrop";
@@ -25,6 +26,7 @@ import { useBrowserTheme, useTheme } from "@/components/theme-provider";
 import HabitIconRender from "@/components/HabitIconRender";
 import { P3Menu, P4Menu, P5Menu } from "@/components/persona/persona-pause-menu";
 import { GOOGLE_WIPE_MS, GoogleSpiral, markGoogleWipe } from "./google-reveal";
+import SpecialStage, { type SpecialShow } from "./special-stage";
 import "./landing.css";
 
 // The front door, as one pinned scroll sequence (the same idea as the home page's Growth Orbit).
@@ -33,14 +35,15 @@ import "./landing.css";
 // plays it, and flies it out again: a calendar lying in space with its busy days lifting off,
 // a stack of note sheets, habit tokens that flip, ranks on a turning carousel, a quest card that
 // turns over, two doors. The calendar, notes and habits props are the app's own screens, copied
-// class for class with sample data; the Themes scene shows one of the real Persona menus; and
-// each scene sits on the ambience of one of the app's five eras.
+// class for class with sample data; the Special days scene wears one of the twelve monthly themes
+// and the Persona days scene shows one of the real Persona menus; and each of the other scenes
+// sits on the ambience of one of the app's five eras.
 // Scrolling back rewinds all of it.
 //
 // One prop is on stage at a time and the others are hidden outright, which keeps the number of
 // live 3D layers small on phones. With reduced motion there is no stage: the sections are a list.
 
-type SceneId = "top" | "calendar" | "notes" | "habits" | "seasons" | "guide" | "privacy" | "themes" | "version";
+type SceneId = "top" | "calendar" | "notes" | "habits" | "seasons" | "guide" | "privacy" | "special" | "themes" | "version";
 
 const FEATURES: { id: Exclude<SceneId, "top" | "version">; label: string; icon: LucideIcon; number: string; eyebrow: string; title: string; body: string; points: string[]; side: "left" | "right" }[] = [
   {
@@ -74,11 +77,19 @@ const FEATURES: { id: Exclude<SceneId, "top" | "version">; label: string; icon: 
     points: ["No password to remember, none stored", "See and sign out every device", "Open source, top to bottom"],
   },
   {
-    id: "themes", label: "Themes", icon: Sparkles, number: "07", eyebrow: "Themes", title: "Some days it dresses up", side: "right",
-    body: "Six days a month, if you switch them on, the app turns into Persona 3, 4 or 5: fonts, menus, ceremonies, even the AI's voice. Light by day and dark by night the rest of the time.",
-    points: ["Persona days: a full takeover, never the same dates twice", "Ranks and eras restyle everything as you level", "Go to accounts and turn it on!"],
+    id: "special", label: "Special days", icon: Palette, number: "07", eyebrow: "Special days", title: "Once a month it dresses up", side: "right",
+    body: "One day every month the app takes on that month's theme: its own colours, a menu with every page renamed, page wipes and a backdrop. Your cards stay exactly where they are.",
+    points: ["Twelve themes, from First Snow to Winter Cabin", "Four fall on fixed dates; the rest are a surprise", "On by default, with a switch in Account"],
+  },
+  {
+    id: "themes", label: "Persona days", icon: Sparkles, number: "08", eyebrow: "Persona days", title: "Other days it goes further", side: "right",
+    body: "Six days a month, if you switch them on, the app turns into Persona 3, 4 or 5: fonts, menus, ceremonies, even the AI's voice. A full takeover, where a special day only changes the colours.",
+    points: ["A full takeover, never the same dates twice", "Two days each for Persona 3, 4 and 5", "Go to accounts and turn it on!"],
   },
 ];
+
+const SPECIAL_FEATURE = FEATURES[6];
+const PERSONA_FEATURE = FEATURES[7];
 
 const SCENES: { id: SceneId; label: string }[] = [
   { id: "top", label: "Start" },
@@ -88,7 +99,7 @@ const SCENES: { id: SceneId; label: string }[] = [
 
 // The script's clock: how long each scene holds the stage. A scene plays a little past its span,
 // overlapping the next one's arrival.
-const SPANS: Record<SceneId, number> = { top: 60, calendar: 90, notes: 90, habits: 90, seasons: 90, guide: 90, privacy: 90, themes: 112, version: 60 };
+const SPANS: Record<SceneId, number> = { top: 60, calendar: 90, notes: 90, habits: 90, seasons: 90, guide: 90, privacy: 90, special: 112, themes: 112, version: 60 };
 const STARTS = SCENES.reduce<number[]>((starts, scene, i) => [...starts, i === 0 ? 0 : starts[i - 1] + SPANS[SCENES[i - 1].id]], []);
 const sceneStart = (index: number) => STARTS[index];
 const sceneSpan = (index: number) => SPANS[SCENES[index].id];
@@ -99,21 +110,25 @@ const sceneRest = (index: number) => (index === 0 ? 0 : sceneStart(index) + 52);
 const SCROLL_SMOOTHING = 0.3;
 const SCROLL_PER_UNIT = 1.6; // vh of scrolling per unit of script
 
-// Inside the Themes scene, a Persona menu is up whose options spell the scene's heading, lit one
-// after another as the scroll moves through it
+// The Special days and Persona days scenes each put a full menu on the stage, and light its
+// options one after another as the scroll moves through the scene
+const SPECIAL_INDEX = SCENES.findIndex(scene => scene.id === "special");
 const THEMES_INDEX = SCENES.findIndex(scene => scene.id === "themes");
 const SEASONS_INDEX = SCENES.findIndex(scene => scene.id === "seasons");
-const THEME_WORDS = ["Some", "Days", "It", "Dresses", "Up"];
+// Which of a scene's `count` options is lit at this point of the script (null while its menu is down)
+function optionAt(time: number, index: number, count: number): number | null {
+  const local = time - sceneStart(index);
+  const from = 8;
+  const until = sceneSpan(index) - 6;
+  if (local < from || local > until) return null;
+  return Math.min(count - 1, Math.floor(((local - from) / (until - from)) * count));
+}
+// The special day's menu keeps its own six page names
+const SPECIAL_PAGES = 6;
+// The Persona menu's options spell the scene's heading
+const THEME_WORDS = ["Other", "Days", "It", "Goes", "Further"];
 const THEME_NOTES = ["Six days a month", "Never the same dates twice", "Fonts, menus, ceremonies", "Even the AI changes its voice", "Only if you switch it on"];
 type PersonaShow = { style: PersonaStyle; selected: number } | null;
-function personaAt(time: number, style: PersonaStyle): PersonaShow {
-  const local = time - sceneStart(THEMES_INDEX);
-  const from = 8;
-  const until = SPANS.themes - 6;
-  if (local < from || local > until) return null;
-  const word = Math.floor(((local - from) / (until - from)) * THEME_WORDS.length);
-  return { style, selected: Math.min(THEME_WORDS.length - 1, word) };
-}
 
 const LABEL = "text-caption font-mono font-semibold uppercase tracking-[0.12em]";
 const CTA = cn(LABEL, "inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-tm-yellow text-tm-purple-dark text-sm transition-transform hover:scale-[1.03] active:scale-95");
@@ -168,8 +183,17 @@ export default function Landing() {
   const bar = useRef<HTMLDivElement>(null);
   const total = useRef(1);
   const [active, setActive] = useState(0);
-  // What the Themes scene should be showing, and the setter <PersonaStage> hands us
-  // One game per visit, picked when the page loads
+  // What the Special days scene should be showing, and the setter <SpecialStage> hands us.
+  // One day per visit, picked when the page loads
+  const specialId = useRef<SpecialId>("halloween");
+  const specialKey = useRef("");
+  const specialShow = useRef<SpecialShow>(null);
+  const setSpecial = useRef<((show: SpecialShow) => void) | null>(null);
+  const registerSpecial = useCallback((set: (show: SpecialShow) => void) => {
+    setSpecial.current = set;
+    set(specialShow.current);
+  }, []);
+  // The same for the Persona days scene and <PersonaStage>: one game per visit
   const personaStyle = useRef<PersonaStyle>("p5");
   const personaKey = useRef("");
   const personaShow = useRef<PersonaShow>(null);
@@ -183,6 +207,12 @@ export default function Landing() {
     const el = root.current;
     const trackEl = track.current;
     if (!el || !trackEl || reduced) return;
+    // The Special days scene wears the day's palette (see data-special-scope in app/special.css),
+    // dark where the day is always dark
+    specialId.current = SPECIAL_IDS[Math.floor(Math.random() * SPECIAL_IDS.length)];
+    const specialLayer = el.querySelector<HTMLElement>('[data-scene="special"]');
+    specialLayer?.setAttribute("data-special-scope", specialId.current);
+    specialLayer?.classList.toggle("dark", SPECIAL_FORCED_THEME[specialId.current] === "dark");
     personaStyle.current = PERSONA_STYLES[Math.floor(Math.random() * PERSONA_STYLES.length)];
     // The caption card is placed per game (see the Themes scene's markup)
     el.querySelector<HTMLElement>('[data-scene="themes"]')?.setAttribute("data-game", personaStyle.current);
@@ -207,7 +237,6 @@ export default function Landing() {
         if (time >= from + 1) current = i;
       });
       if (current !== shown) { shown = current; setActive(current); }
-      // The Persona menus are mounted only while they are up (they play video)
       // The rank ring shows only the ranks on its near side (again, not left to the browser)
       if (ring && layers[SEASONS_INDEX]?.style.visibility === "visible") {
         const turned = parseFloat(String(utils.get(ring, "rotateY"))) || 0;
@@ -216,7 +245,17 @@ export default function Landing() {
           (card as HTMLElement).style.visibility = facing < 100 || facing > 260 ? "" : "hidden";
         });
       }
-      const persona = personaAt(time, personaStyle.current);
+      // The two menus are mounted only while they are up (one runs a canvas, the other plays video)
+      const page = optionAt(time, SPECIAL_INDEX, SPECIAL_PAGES);
+      const special: SpecialShow = page === null ? null : { id: specialId.current, selected: page };
+      const pageKey = special ? `${special.id}${special.selected}` : "";
+      if (pageKey !== specialKey.current) {
+        specialKey.current = pageKey;
+        specialShow.current = special;
+        setSpecial.current?.(special);
+      }
+      const word = optionAt(time, THEMES_INDEX, THEME_WORDS.length);
+      const persona: PersonaShow = word === null ? null : { style: personaStyle.current, selected: word };
       const key = persona ? `${persona.style}${persona.selected}` : "";
       if (key !== personaKey.current) {
         personaKey.current = key;
@@ -358,8 +397,16 @@ export default function Landing() {
         add(q("[data-door]"), { translateZ: [0, -700], translateY: ["0%", "40%"], duration: 24, delay: stagger(3), ease: "in(2)" }, at + 76);
       }
 
-      // ── Themes: a real Persona menu takes over the whole stage (mounted by <PersonaStage>,
-      // driven from stage() above). Only the caption card is scripted.
+      // ── Special days: one of the twelve days takes over the whole stage (mounted by
+      // <SpecialStage>, driven from stage() above). Only the caption card is scripted.
+      {
+        const at = sceneStart(SPECIAL_INDEX);
+        const q = within("special");
+        add(q("[data-obj]"), { translateY: [60, 0], duration: 20, ease: "out(4)" }, at);
+        add(q("[data-obj]"), { translateY: [0, 60], duration: 12, ease: "in(2)" }, at + SPANS.special - 10);
+      }
+
+      // ── Persona days: a real Persona menu does the same (mounted by <PersonaStage>)
       {
         const at = sceneStart(THEMES_INDEX);
         const q = within("themes");
@@ -369,7 +416,7 @@ export default function Landing() {
 
       // ── Version: the number arrives from far away and stays
       {
-        const at = sceneStart(8);
+        const at = sceneStart(SCENES.length - 1);
         const q = within("version");
         add(q("[data-obj]"), { scale: [0.15, 1], translateZ: [-900, 0], duration: 34, ease: "out(4)" }, at);
         add(q("[data-x]"), { opacity: [0, 1], translateY: [20, 0], duration: 12, delay: stagger(4) }, at + 30);
@@ -538,7 +585,25 @@ export default function Landing() {
             </div>
           </FeatureScene>
 
-          {/* Themes: a game's menu fills the stage; the words ride on a card over it */}
+          {/* Special days: a day's menu and backdrop fill the stage, in the day's own colours; the
+              words ride on a card over it, clear of the menu (under it on a phone) */}
+          <div data-scene="special" className="invisible absolute inset-0">
+            <SpecialStage register={registerSpecial} />
+            <div className="absolute bottom-4 inset-x-4 md:inset-x-auto md:right-[4vw] md:bottom-[7vh] md:w-[28vw] md:max-w-sm">
+              <div data-obj className={cn(BOARD, "p-4 md:p-6 space-y-2 md:space-y-3 bg-background/90 [perspective:900px]")}>
+                <CardFx />
+                <p data-line className={cn(LABEL, "flex items-center gap-3 text-tm-blue-gray")}>
+                  <span className="text-tm-yellow">{SPECIAL_FEATURE.number}</span>
+                  <span className="h-px w-8 bg-tm-blue-gray/30" />
+                  <Palette size={14} /> {SPECIAL_FEATURE.eyebrow}
+                </p>
+                <h2 data-title className="origin-bottom text-lg md:text-3xl font-display font-bold tracking-tight uppercase leading-[1.05] text-tm-purple-dark dark:text-tm-yellow">{SPECIAL_FEATURE.title}</h2>
+                <p data-line className="text-xs md:text-sm font-medium text-tm-blue-gray max-md:line-clamp-3">{SPECIAL_FEATURE.body}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Persona days: a game's menu fills the stage; the words ride on a card over it */}
           <div data-scene="themes" className="group invisible absolute inset-0">
             <PersonaStage register={registerPersona} />
             {/* Bottom left on wide screens, except on a Persona 3 day: that is where Makoto's face is,
@@ -553,12 +618,11 @@ export default function Landing() {
                 <CardFx />
                 {/* No heading here: the menu behind spells it out */}
                 <p data-line className={cn(LABEL, "flex items-center gap-3 text-tm-blue-gray")}>
-                  <span className="text-tm-yellow">{FEATURES[6].number}</span>
+                  <span className="text-tm-yellow">{PERSONA_FEATURE.number}</span>
                   <span className="h-px w-8 bg-tm-blue-gray/30" />
-                  <Sparkles size={14} /> {FEATURES[6].eyebrow}
+                  <Sparkles size={14} /> {PERSONA_FEATURE.eyebrow}
                 </p>
-                <p data-line className="text-xs md:text-sm font-medium text-tm-blue-gray">{FEATURES[6].body}</p>
-                <p data-line className={cn(LABEL, "hidden md:inline-block px-3 py-1.5 rounded-full border border-dashed border-tm-blue-gray/30 text-tm-blue-gray")}>Special days · soon</p>
+                <p data-line className="text-xs md:text-sm font-medium text-tm-blue-gray">{PERSONA_FEATURE.body}</p>
               </div>
             </div>
           </div>
@@ -972,9 +1036,9 @@ function PrivacyProp({ onSignIn }: { onSignIn: (event: React.MouseEvent) => void
 
 const noop = () => {};
 
-// The Themes scene's backdrop: one of the app's real Persona pause menus, full size, with the
+// The Persona days scene's backdrop: one of the app's real Persona pause menus, full size, with the
 // scene's heading as its options. The landing script decides when it is up and which word is lit
-// (see personaAt); this mounts it. It arrives and leaves behind that game's own page wipe, the
+// (see optionAt); this mounts it. It arrives and leaves behind that game's own page wipe, the
 // one the app plays between pages on a Persona day. The menu is for looking at: inert and silent.
 function PersonaStage({ register }: { register: (set: (show: PersonaShow) => void) => void }) {
   const [show, setShow] = useState<PersonaShow>(null);
@@ -1048,8 +1112,8 @@ function PersonaStage({ register }: { register: (set: (show: PersonaShow) => voi
 // ─── Backdrops ────────────────────────────────────────────────────────────────
 // Two layers behind every scene. A wash of colour borrowed from the app's eras (the layers from
 // components/era-ambient, styled in app/eras.css), and over it a quiet canvas show of its own
-// where one suits (see landing-backdrop.tsx); the calendar and the AI guide keep only the wash. The Themes scene has neither; the game's
-// menu is its backdrop.
+// where one suits (see landing-backdrop.tsx); the calendar and the AI guide keep only the wash. The Special days and Persona days scenes have
+// neither; the day's or the game's menu is the backdrop.
 const AMBIENT: Partial<Record<SceneId, { wash: AmbientLayer[]; show: BackdropMode | null }>> = {
   top: { wash: ["hearth"], show: "embers" },
   calendar: { wash: ["mesh"], show: null },

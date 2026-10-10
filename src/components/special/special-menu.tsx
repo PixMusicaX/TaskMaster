@@ -28,8 +28,6 @@ export default function SpecialMenu({ id, open, onClose }: { id: SpecialId; open
   const { theme, toggleTheme } = useTheme();
   const { profile } = useProgress();
   const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
-  const day = SPECIAL_DAYS[id];
-  const look = SPECIAL_LOOKS[id];
   const current = Math.max(0, ROUTES.indexOf(pathname));
   const [selected, setSelected] = useState(current);
 
@@ -65,9 +63,6 @@ export default function SpecialMenu({ id, open, onClose }: { id: SpecialId; open
     return () => window.removeEventListener("keydown", onKey, true);
   }, [open, onClose, select, router]);
 
-  const Icon = look.icon;
-  const items = ROUTES.map((href, i) => ({ href, label: day.labels[i], icon: PERSONA_MENU_ITEMS[i].icon }));
-
   return (
     <AnimatePresence>
       {open && (
@@ -81,42 +76,16 @@ export default function SpecialMenu({ id, open, onClose }: { id: SpecialId; open
           aria-modal="true"
           aria-label="Menu"
         >
-          {/* The day's wash, and its emblem, huge and faint, in the corner */}
-          <div className="absolute inset-0" style={{ background: look.wash }} aria-hidden />
-          <motion.div
-            className="absolute -right-[12vmin] -bottom-[14vmin] text-tm-yellow opacity-[0.09] pointer-events-none"
-            initial={{ scale: 0.7, rotate: -30 }}
-            animate={{ scale: 1, rotate: -12 }}
-            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-            aria-hidden
-          >
-            <Icon style={{ width: "70vmin", height: "70vmin" }} strokeWidth={1} />
-          </motion.div>
-
-          <div className="relative h-full flex flex-col px-6 pt-[max(4.5rem,env(safe-area-inset-top))] pb-8 md:px-16 md:pt-20 overflow-y-auto">
-            <motion.header
-              className="shrink-0 mb-6 md:mb-10"
-              initial={{ opacity: 0, y: -16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...SPRING, delay: 0.05 }}
-            >
-              <p className={cn(LABEL, "flex items-center gap-2 text-tm-blue-gray")}>
-                <Icon size={14} className="text-tm-yellow" />
-                {format(new Date(), "EEEE, MMMM d")}
-                {profile && <span className="text-tm-yellow">· LV {profile.level}</span>}
-              </p>
-              <h2 className="special-title mt-2 text-5xl md:text-7xl font-bold leading-none text-tm-purple-dark dark:text-tm-yellow" style={{ fontFamily: "var(--special-font)" }}>
-                {day.name}
-              </h2>
-              <p className="mt-2 text-sm md:text-base font-medium italic text-tm-blue-gray">{day.tagline}</p>
-            </motion.header>
-
-            <nav aria-label="Menu" className="flex-1 min-h-0">
-              <MenuItems layout={look.menu} items={items} selected={selected} current={current} select={select} onClose={onClose} />
-            </nav>
-
-            <p className={cn(LABEL, "shrink-0 mt-6 hidden md:block text-tm-blue-gray/70")}>↵ Open · Esc Close · M Menu</p>
-          </div>
+          <SpecialMenuBody
+            id={id}
+            selected={selected}
+            current={current}
+            select={select}
+            onClose={onClose}
+            date={new Date()}
+            level={profile?.level}
+            footer={<p className={cn(LABEL, "shrink-0 mt-6 hidden md:block text-tm-blue-gray/70")}>↵ Open · Esc Close · M Menu</p>}
+          />
 
           {/* Sound, light or dark (unless the day pins one), and close */}
           <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 [&>button]:p-2.5 [&>button]:rounded-full [&>button]:bg-tm-purple-dark [&>button]:text-tm-yellow [&>button]:active:scale-90 [&>button]:transition-transform">
@@ -135,6 +104,72 @@ export default function SpecialMenu({ id, open, onClose }: { id: SpecialId; open
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+interface BodyProps {
+  id: SpecialId;
+  selected: number;
+  // The page you are on (-1 for none)
+  current: number;
+  select: (index: number) => void;
+  onClose: () => void;
+  date: Date;
+  level?: number;
+  // Drawn over the wash and under the words
+  backdrop?: React.ReactNode;
+  footer?: React.ReactNode;
+  className?: string;
+}
+
+// The menu's screen itself, without the dialog around it: the day's wash and emblem, its name,
+// and the six pages. The landing page shows this as a preview of the day (inert, with a backdrop).
+export function SpecialMenuBody({ id, selected, current, select, onClose, date, level, backdrop, footer, className }: BodyProps) {
+  const day = SPECIAL_DAYS[id];
+  const look = SPECIAL_LOOKS[id];
+  const Icon = look.icon;
+  const items = ROUTES.map((href, i) => ({ href, label: day.labels[i], icon: PERSONA_MENU_ITEMS[i].icon }));
+
+  return (
+    <>
+      {/* The day's wash, and its emblem, huge and faint, in the corner */}
+      <div className="absolute inset-0" style={{ background: look.wash }} aria-hidden />
+      {backdrop}
+      <motion.div
+        className="absolute -right-[12vmin] -bottom-[14vmin] text-tm-yellow opacity-[0.09] pointer-events-none"
+        initial={{ scale: 0.7, rotate: -30 }}
+        animate={{ scale: 1, rotate: -12 }}
+        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        aria-hidden
+      >
+        <Icon style={{ width: "70vmin", height: "70vmin" }} strokeWidth={1} />
+      </motion.div>
+
+      <div className={cn("relative h-full flex flex-col px-6 pt-[max(4.5rem,env(safe-area-inset-top))] pb-8 md:px-16 md:pt-20 overflow-y-auto", className)}>
+        <motion.header
+          className="shrink-0 mb-6 md:mb-10"
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...SPRING, delay: 0.05 }}
+        >
+          <p className={cn(LABEL, "flex items-center gap-2 text-tm-blue-gray")}>
+            <Icon size={14} className="text-tm-yellow" />
+            {format(date, "EEEE, MMMM d")}
+            {level !== undefined && <span className="text-tm-yellow">· LV {level}</span>}
+          </p>
+          <h2 className="special-title mt-2 text-5xl md:text-7xl font-bold leading-none text-tm-purple-dark dark:text-tm-yellow" style={{ fontFamily: "var(--special-font)" }}>
+            {day.name}
+          </h2>
+          <p className="mt-2 text-sm md:text-base font-medium italic text-tm-blue-gray">{day.tagline}</p>
+        </motion.header>
+
+        <nav aria-label="Menu" className="flex-1 min-h-0">
+          <MenuItems layout={look.menu} items={items} selected={selected} current={current} select={select} onClose={onClose} />
+        </nav>
+
+        {footer}
+      </div>
+    </>
   );
 }
 

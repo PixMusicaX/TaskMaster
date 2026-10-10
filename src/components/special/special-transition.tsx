@@ -25,7 +25,7 @@ export default function SpecialTransition({ id }: { id: SpecialId }) {
   useEffect(() => {
     if (run === null) return;
     sfx.swoosh();
-    const t = setTimeout(() => setRun(null), 720);
+    const t = setTimeout(() => setRun(null), SPECIAL_WIPE_MS);
     return () => clearTimeout(t);
   }, [run]);
 
@@ -34,7 +34,7 @@ export default function SpecialTransition({ id }: { id: SpecialId }) {
       <AnimatePresence>
         {run !== null && (
           <motion.div key={run} className="absolute inset-0" exit={{ opacity: 0, transition: { duration: 0.15 } }}>
-            <Wipe kind={SPECIAL_LOOKS[id].wipe} />
+            <SpecialWipe kind={SPECIAL_LOOKS[id].wipe} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -42,7 +42,10 @@ export default function SpecialTransition({ id }: { id: SpecialId }) {
   );
 }
 
-function Wipe({ kind }: { kind: WipeKind }) {
+// How long a wipe is given before it is cleared away
+export const SPECIAL_WIPE_MS = 720;
+
+export function SpecialWipe({ kind }: { kind: WipeKind }) {
   switch (kind) {
     // A tilted sheet of the accent colour crosses the screen (snow drift, page turn, map unrolling)
     case "sweep":

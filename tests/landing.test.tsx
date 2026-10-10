@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import Landing from "@/components/landing/landing";
 import { ThemeProvider } from "@/components/theme-provider";
 import { P5Menu } from "@/components/persona/persona-pause-menu";
 import { SHOWS } from "@/components/landing/landing-backdrop";
+import SpecialStage, { type SpecialShow } from "@/components/landing/special-stage";
+import { SPECIAL_DAYS, SPECIAL_IDS, nextDateOf } from "@/lib/special-days";
 
 // The landing page sends visitors to /login through the app router, which tests don't mount
 const push = vi.fn();
@@ -13,7 +15,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
 
-const SCENES = ["top", "calendar", "notes", "habits", "seasons", "guide", "privacy", "themes", "version"];
+const SCENES = ["top", "calendar", "notes", "habits", "seasons", "guide", "privacy", "special", "themes", "version"];
 
 function motionPreference(reduce: boolean) {
   // jsdom has no ResizeObserver; anime.js's scroll observer needs one
@@ -55,8 +57,11 @@ describe("the landing page", () => {
     expect(container.querySelector('[data-scene="notes"]')!.textContent).toContain("October 9 Entry");
     expect(container.querySelector('[data-scene="habits"]')!.textContent).toContain("Read 10 pages");
     expect(container.querySelectorAll('[data-scene="habits"] [data-flip]').length).toBeGreaterThan(10);
-    // The Persona menus are not mounted until their scene comes up
+    // The special day and the Persona menus are not mounted until their scenes come up
+    expect(container.querySelector(".tm-special-frame")).toBeNull();
     expect(container.querySelector(".tm-persona-frame")).toBeNull();
+    // The Special days scene wears one of the twelve palettes
+    expect(SPECIAL_IDS).toContain(container.querySelector(`[data-scene="special"]`)!.getAttribute("data-special-scope"));
   });
 
   it("closes a spiral in Google's colours over the page before going to the login page", () => {
@@ -113,12 +118,40 @@ describe("the landing page", () => {
 
   it("can dress a Persona menu in the scene's own words", () => {
     motionPreference(false);
-    const words = ["Some", "Days", "It", "Dresses", "Up"];
+    const words = ["Other", "Days", "It", "Goes", "Further"];
     const { container } = render(<P5Menu selected={3} select={() => {}} onClose={() => {}} labels={words} descriptions={words.map(w => `about ${w}`)} />);
     const options = Array.from(container.querySelectorAll("nav a")).map(a => a.getAttribute("aria-label"));
     expect(options).toEqual(words);
-    expect(container.textContent).toContain("about Dresses");
+    expect(container.textContent).toContain("about Goes");
     expect(container.textContent).not.toContain("hideout");
+  });
+
+  it("previews a special day: its menu under its own page names, with the date it next falls on", () => {
+    motionPreference(false);
+    vi.useFakeTimers();
+    let set: (show: SpecialShow) => void = () => {};
+    const { container } = render(<SpecialStage register={s => { set = s; }} />);
+    expect(container.querySelector(".tm-special-frame")).toBeNull();
+
+    act(() => set({ id: "halloween", selected: 2 }));
+    act(() => { vi.advanceTimersByTime(300); });
+    const frame = container.querySelector(".tm-special-frame")!;
+    expect(frame.textContent).toContain(SPECIAL_DAYS.halloween.name);
+    for (const label of SPECIAL_DAYS.halloween.labels) expect(frame.textContent).toContain(label);
+    expect(frame.textContent).toContain("October 31");
+    expect(frame.hasAttribute("inert")).toBe(true);
+
+    // Scrolled past: it comes down again
+    act(() => set(null));
+    act(() => { vi.advanceTimersByTime(800); });
+    expect(container.querySelector(".tm-special-frame")).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it("knows when a theme's day next comes round", () => {
+    expect(nextDateOf("halloween", new Date(2026, 9, 10))).toEqual(new Date(2026, 9, 31));
+    expect(nextDateOf("halloween", new Date(2026, 9, 31, 18))).toEqual(new Date(2026, 9, 31));
+    expect(nextDateOf("snow", new Date(2026, 9, 10))).toEqual(new Date(2027, 0, 1));
   });
 
   it("is a plain page of sections when motion is reduced", () => {
@@ -132,6 +165,7 @@ describe("the landing page", () => {
     });
     expect(container.querySelector("[data-obj]")).toBeNull();
     expect(container.textContent).toContain("Every day accounted for");
-    expect(container.textContent).toContain("Some days it dresses up");
+    expect(container.textContent).toContain("Once a month it dresses up");
+    expect(container.textContent).toContain("Other days it goes further");
   });
 });

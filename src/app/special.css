@@ -1,75 +1,97 @@
 /* Special days (lib/special-days.ts): one day a month, <html data-special="..."> swaps the
    palette for the month's theme. Colours only: cards, type and layout stay as they are. Each
    theme has a light and a dark set (space and halloween are pinned dark). The selectors are
-   written to outrank the rank palettes in globals.css. */
+   written to outrank the rank palettes in globals.css.
+
+   The landing page previews a day inside one scene: [data-special-scope="..."] puts the same
+   palette on that element alone. Tailwind's colour tokens are worked out on :root, so the scope
+   points them at its own palette again. */
+[data-special-scope] {
+  --color-background: var(--background); --color-foreground: var(--foreground);
+  --color-tm-yellow: var(--tm-yellow); --color-tm-orange-light: var(--tm-orange-light); --color-tm-orange-dark: var(--tm-orange-dark);
+  --color-tm-blue-gray: var(--tm-blue-gray); --color-tm-purple-dark: var(--tm-purple-dark); --color-tm-red: var(--tm-red);
+  --tm-on-accent: var(--tm-purple-dark);
+}
 
 /* January: first snow, ice blue on white */
-html:root[data-special="snow"] {
+html:root[data-special="snow"],
+[data-special-scope="snow"] {
   --background: #f4f8fc; --foreground: #14202b;
   --tm-yellow: #2f7ec2; --tm-orange-light: #5ba8d9; --tm-orange-dark: #1b5e9a;
   --tm-blue-gray: #5b7186; --tm-purple-dark: #12314d; --tm-red: #7aa7c7;
 }
-html:root.dark[data-special="snow"] {
+html:root.dark[data-special="snow"],
+.dark [data-special-scope="snow"] {
   --background: #0a1420; --foreground: #eaf4ff;
   --tm-yellow: #8ccbff; --tm-orange-light: #5ba8d9; --tm-orange-dark: #3d8fd1;
   --tm-blue-gray: #8fa6ba; --tm-purple-dark: #0f2a44; --tm-red: #b5d8f2;
 }
 
 /* February: cozy café, rose and espresso */
-html:root[data-special="cafe"] {
+html:root[data-special="cafe"],
+[data-special-scope="cafe"] {
   --background: #fbf4ec; --foreground: #2b1b12;
   --tm-yellow: #c0504d; --tm-orange-light: #b9824a; --tm-orange-dark: #9c2f3f;
   --tm-blue-gray: #7a6658; --tm-purple-dark: #3b2418; --tm-red: #d9667b;
 }
-html:root.dark[data-special="cafe"] {
+html:root.dark[data-special="cafe"],
+.dark [data-special-scope="cafe"] {
   --background: #1a110c; --foreground: #f7eadb;
   --tm-yellow: #f0a08c; --tm-orange-light: #d2a56b; --tm-orange-dark: #e0607a;
   --tm-blue-gray: #b39c8b; --tm-purple-dark: #2a1a12; --tm-red: #f28aa0;
 }
 
 /* March: spring garden, leaf green and blossom */
-html:root[data-special="garden"] {
+html:root[data-special="garden"],
+[data-special-scope="garden"] {
   --background: #f5faef; --foreground: #16240f;
   --tm-yellow: #4c9a2a; --tm-orange-light: #c77db5; --tm-orange-dark: #2f7d32;
   --tm-blue-gray: #5f7355; --tm-purple-dark: #1e3a1a; --tm-red: #e26d9a;
 }
-html:root.dark[data-special="garden"] {
+html:root.dark[data-special="garden"],
+.dark [data-special-scope="garden"] {
   --background: #0c150a; --foreground: #ecf7e4;
   --tm-yellow: #8fd46a; --tm-orange-light: #e2a5d2; --tm-orange-dark: #5dbb63;
   --tm-blue-gray: #9bb08f; --tm-purple-dark: #15301a; --tm-red: #f08db4;
 }
 
 /* April: glitch, cyan and magenta on near-black or near-white */
-html:root[data-special="glitch"] {
+html:root[data-special="glitch"],
+[data-special-scope="glitch"] {
   --background: #f2f2f7; --foreground: #0b0b12;
   --tm-yellow: #00a3b8; --tm-orange-light: #e0007a; --tm-orange-dark: #7a00e6;
   --tm-blue-gray: #5a5a72; --tm-purple-dark: #0b0b12; --tm-red: #ff2a6d;
 }
-html:root.dark[data-special="glitch"] {
+html:root.dark[data-special="glitch"],
+.dark [data-special-scope="glitch"] {
   --background: #06060c; --foreground: #f0f0ff;
   --tm-yellow: #00f0ff; --tm-orange-light: #ff2bd6; --tm-orange-dark: #9d4dff;
   --tm-blue-gray: #9494b8; --tm-purple-dark: #14142b; --tm-red: #ff3b6b;
 }
 
 /* May: sakura, petal pink */
-html:root[data-special="sakura"] {
+html:root[data-special="sakura"],
+[data-special-scope="sakura"] {
   --background: #fff5f8; --foreground: #2b1620;
   --tm-yellow: #d6558a; --tm-orange-light: #e891b0; --tm-orange-dark: #b03a6e;
   --tm-blue-gray: #8a6b78; --tm-purple-dark: #4a1e33; --tm-red: #f2a7c0;
 }
-html:root.dark[data-special="sakura"] {
+html:root.dark[data-special="sakura"],
+.dark [data-special-scope="sakura"] {
   --background: #170b11; --foreground: #ffeaf2;
   --tm-yellow: #ff9ec4; --tm-orange-light: #f5bcd2; --tm-orange-dark: #e86aa0;
   --tm-blue-gray: #b998a6; --tm-purple-dark: #2e1320; --tm-red: #ffc2d8;
 }
 
 /* June: beach journal, sea teal, sand and coral */
-html:root[data-special="beach"] {
+html:root[data-special="beach"],
+[data-special-scope="beach"] {
   --background: #fff9ec; --foreground: #10303a;
   --tm-yellow: #0e9aa7; --tm-orange-light: #f0a04b; --tm-orange-dark: #e0623a;
   --tm-blue-gray: #5f7f87; --tm-purple-dark: #0f3b47; --tm-red: #f27d6a;
 }
-html:root.dark[data-special="beach"] {
+html:root.dark[data-special="beach"],
+.dark [data-special-scope="beach"] {
   --background: #071a20; --foreground: #eafbff;
   --tm-yellow: #4fd6e0; --tm-orange-light: #f6c177; --tm-orange-dark: #ff8a65;
   --tm-blue-gray: #8fb3bb; --tm-purple-dark: #0c2c36; --tm-red: #ff9c8a;
@@ -77,31 +99,37 @@ html:root.dark[data-special="beach"] {
 
 /* July: space exploration (always dark), violet, cyan and nebula pink */
 html:root[data-special="space"],
-html:root.dark[data-special="space"] {
+[data-special-scope="space"],
+html:root.dark[data-special="space"],
+.dark [data-special-scope="space"] {
   --background: #05061a; --foreground: #eef0ff;
   --tm-yellow: #9d8cff; --tm-orange-light: #5cc8ff; --tm-orange-dark: #ff6ad5;
   --tm-blue-gray: #9093c2; --tm-purple-dark: #131540; --tm-red: #ff8fb1;
 }
 
 /* August: adventure maps, parchment and ink */
-html:root[data-special="maps"] {
+html:root[data-special="maps"],
+[data-special-scope="maps"] {
   --background: #f6eedc; --foreground: #2e2212;
   --tm-yellow: #9a6b1f; --tm-orange-light: #b8862f; --tm-orange-dark: #a23b22;
   --tm-blue-gray: #7a6a4f; --tm-purple-dark: #3a2a14; --tm-red: #c2573a;
 }
-html:root.dark[data-special="maps"] {
+html:root.dark[data-special="maps"],
+.dark [data-special-scope="maps"] {
   --background: #17120a; --foreground: #f3e7cc;
   --tm-yellow: #e0b15a; --tm-orange-light: #c99a4a; --tm-orange-dark: #e0734f;
   --tm-blue-gray: #b5a383; --tm-purple-dark: #2a2010; --tm-red: #e88a6a;
 }
 
 /* September: the library, banker's-lamp green, brass and oxblood */
-html:root[data-special="library"] {
+html:root[data-special="library"],
+[data-special-scope="library"] {
   --background: #f7f2ea; --foreground: #231a14;
   --tm-yellow: #2f6b4f; --tm-orange-light: #b08a3c; --tm-orange-dark: #8c2f2f;
   --tm-blue-gray: #6e6257; --tm-purple-dark: #2b1d14; --tm-red: #a8463c;
 }
-html:root.dark[data-special="library"] {
+html:root.dark[data-special="library"],
+.dark [data-special-scope="library"] {
   --background: #120e0b; --foreground: #f2e9dc;
   --tm-yellow: #6fc49a; --tm-orange-light: #d9b865; --tm-orange-dark: #d46a5f;
   --tm-blue-gray: #b0a294; --tm-purple-dark: #24180f; --tm-red: #e07f72;
@@ -109,31 +137,37 @@ html:root.dark[data-special="library"] {
 
 /* October: witch's almanac (always dark), pumpkin, violet and a little slime */
 html:root[data-special="halloween"],
-html:root.dark[data-special="halloween"] {
+[data-special-scope="halloween"],
+html:root.dark[data-special="halloween"],
+.dark [data-special-scope="halloween"] {
   --background: #0d0812; --foreground: #f6ecff;
   --tm-yellow: #ff8a1f; --tm-orange-light: #b46bff; --tm-orange-dark: #ff5a1f;
   --tm-blue-gray: #a592b8; --tm-purple-dark: #241333; --tm-red: #9be22d;
 }
 
 /* November: fall leaves, rust, amber and bark */
-html:root[data-special="leaves"] {
+html:root[data-special="leaves"],
+[data-special-scope="leaves"] {
   --background: #fbf3e6; --foreground: #2a1a0e;
   --tm-yellow: #c7651a; --tm-orange-light: #d9962b; --tm-orange-dark: #a63a1e;
   --tm-blue-gray: #7c6a58; --tm-purple-dark: #40220f; --tm-red: #b5452c;
 }
-html:root.dark[data-special="leaves"] {
+html:root.dark[data-special="leaves"],
+.dark [data-special-scope="leaves"] {
   --background: #160e08; --foreground: #f8ead8;
   --tm-yellow: #f0943f; --tm-orange-light: #e8b24f; --tm-orange-dark: #e8603c;
   --tm-blue-gray: #b8a28c; --tm-purple-dark: #2c180b; --tm-red: #f07a5a;
 }
 
 /* December: winter cabin, cabin red, pine and candle gold */
-html:root[data-special="cabin"] {
+html:root[data-special="cabin"],
+[data-special-scope="cabin"] {
   --background: #f7f1ea; --foreground: #1f1a16;
   --tm-yellow: #b23a32; --tm-orange-light: #2f6b4a; --tm-orange-dark: #8e2a26;
   --tm-blue-gray: #6f665e; --tm-purple-dark: #2a1f18; --tm-red: #c9a227;
 }
-html:root.dark[data-special="cabin"] {
+html:root.dark[data-special="cabin"],
+.dark [data-special-scope="cabin"] {
   --background: #100c0a; --foreground: #f5ece2;
   --tm-yellow: #f0706a; --tm-orange-light: #6dbb8e; --tm-orange-dark: #e0504a;
   --tm-blue-gray: #b3a79b; --tm-purple-dark: #241a14; --tm-red: #e8c45a;
@@ -324,11 +358,11 @@ html:root.dark[data-special="cabin"] {
 html[data-special] .tm-normal-only { display: none; }
 
 /* The menu's display face per theme (loaded on special days only; each falls back to the app's own) */
-html[data-special] { --special-font: var(--font-space-grotesk); }
-html[data-special="cafe"], html[data-special="garden"], html[data-special="sakura"], html[data-special="beach"], html[data-special="leaves"] { --special-font: "Caveat", var(--font-space-grotesk), cursive; }
-html[data-special="maps"], html[data-special="library"], html[data-special="halloween"], html[data-special="cabin"] { --special-font: "Cinzel", Georgia, serif; }
-html[data-special="space"], html[data-special="glitch"] { --special-font: "Orbitron", var(--font-space-grotesk), sans-serif; }
-html[data-special="snow"] { --special-font: "Fredoka", var(--font-space-grotesk), sans-serif; }
+html[data-special], [data-special-scope] { --special-font: var(--font-space-grotesk); }
+html[data-special="cafe"], [data-special-scope="cafe"], html[data-special="garden"], [data-special-scope="garden"], html[data-special="sakura"], [data-special-scope="sakura"], html[data-special="beach"], [data-special-scope="beach"], html[data-special="leaves"], [data-special-scope="leaves"] { --special-font: "Caveat", var(--font-space-grotesk), cursive; }
+html[data-special="maps"], [data-special-scope="maps"], html[data-special="library"], [data-special-scope="library"], html[data-special="halloween"], [data-special-scope="halloween"], html[data-special="cabin"], [data-special-scope="cabin"] { --special-font: "Cinzel", Georgia, serif; }
+html[data-special="space"], [data-special-scope="space"], html[data-special="glitch"], [data-special-scope="glitch"] { --special-font: "Orbitron", var(--font-space-grotesk), sans-serif; }
+html[data-special="snow"], [data-special-scope="snow"] { --special-font: "Fredoka", var(--font-space-grotesk), sans-serif; }
 
 /* Glitch day: the menu's words split into their colour channels now and then */
 @keyframes special-glitch {
@@ -337,7 +371,7 @@ html[data-special="snow"] { --special-font: "Fredoka", var(--font-space-grotesk)
   95% { text-shadow: 2px 0 var(--tm-orange-light), -2px 0 var(--tm-yellow); transform: translateX(-2px) skewX(-6deg); }
   97% { text-shadow: -1px 0 var(--tm-orange-light), 1px 0 var(--tm-yellow); transform: translateX(1px); }
 }
-html[data-special="glitch"] .special-title { animation: special-glitch 3.2s steps(1) infinite; }
+html[data-special="glitch"] .special-title, [data-special-scope="glitch"] .special-title { animation: special-glitch 3.2s steps(1) infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   html[data-special="glitch"] .special-title { animation: none; }
