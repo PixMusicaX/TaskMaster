@@ -314,7 +314,7 @@ export default function AccountPage() {
       {/* Footer */}
       <div className="pt-12 text-center border-t border-tm-blue-gray/10">
         <p className="text-xs font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">
-          Version {APP_VERSION} • TaskMaster • By Pinaki AKA PiX
+          Version {APP_VERSION} • TaskMaster • By kk36 and PiX
         </p>
       </div>
 
