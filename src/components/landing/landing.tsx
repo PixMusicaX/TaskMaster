@@ -14,7 +14,7 @@ import { prefersReducedMotion } from "@/lib/scroll-fx";
 import { useMounted } from "@/lib/use-mounted";
 import { RPG_TITLES } from "@/lib/constants";
 import { RankCrest } from "@/lib/rank-icons";
-import { APP_VERSION, CREATOR_URL, REPO_URL } from "@/lib/version";
+import { APP_VERSION, REPO_URL } from "@/lib/version";
 import { AnimatePresence, motion } from "framer-motion";
 import { PERSONA_FONTS_URL, PERSONA_NAMES, PERSONA_STYLES, type PersonaStyle } from "@/lib/persona";
 import { SPECIAL_FORCED_THEME, SPECIAL_IDS, type SpecialId } from "@/lib/special-days";
@@ -655,7 +655,7 @@ export default function Landing() {
             <div className="space-y-7 max-w-2xl [perspective:1200px]">
               <p data-line className={cn(LABEL, "text-tm-blue-gray")}>Version</p>
               <p data-obj className="text-7xl md:text-9xl font-display font-bold tracking-tight text-tm-purple-dark dark:text-tm-yellow">{APP_VERSION}</p>
-              <p data-x className="text-base md:text-lg font-medium text-tm-blue-gray">Accounts, your own AI key and this front door are new in this one. Made by Pinaki, also known as PiX.</p>
+              <p data-x className="text-base md:text-lg font-medium text-tm-blue-gray">Accounts, your own AI key and this front door are new in this one. Made by kk36 and PiX.</p>
               <div data-x><Link href="/login" onClick={signIn} className={CTA}>Start your season <ArrowRight size={18} /></Link></div>
               <VersionLinks />
             </div>
@@ -723,7 +723,6 @@ function VersionLinks() {
   return (
     <div data-x className={cn(LABEL, "flex flex-wrap items-center justify-center gap-6 text-tm-blue-gray")}>
       <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 hover:text-foreground transition-colors"><Github size={14} /> Source</a>
-      <a href={CREATOR_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 hover:text-foreground transition-colors"><UserRound size={14} /> Creator</a>
     </div>
   );
 }

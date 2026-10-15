@@ -26,8 +26,8 @@ import type { PrepTipRow, ReliefRow, SmartMissionRow, TimelineSeason } from "@/l
 const flip = <T extends { id: string; completed: boolean }>(list: T[], id: string) =>
   list.map(item => item.id === id ? { ...item, completed: !item.completed } : item);
 
-const CREDITS = [
-  { href: "https://pinakipsingha.vercel.app", icon: UserRound, title: "Creator", description: "Made by Pinaki AKA PiX." },
+const CREDITS: { href?: string; icon: typeof UserRound; title: string; description: string }[] = [
+  { icon: UserRound, title: "Creator", description: "Made by kk36 and PiX." },
   { href: "https://github.com/PixMusicaX/TaskMaster", icon: Github, title: "GitHub", description: "Browse the TaskMaster source code." },
 ];
 
@@ -289,22 +289,25 @@ export default function AccountPage() {
 
       <VaultSection icon={Heart} iconClassName="text-tm-red" title="Credits">
         <div className="space-y-4">
-          {CREDITS.map(({ href, icon: Icon, title, description }) => (
-            <a key={href} href={href} target="_blank" rel="noopener noreferrer" className="block group">
-              <GlassCard className="p-5 md:p-6 hover:border-tm-orange-light/40 transition-colors">
+          {CREDITS.map(({ href, icon: Icon, title, description }) => {
+            const card = (
+              <GlassCard className={cn("p-5 md:p-6", href && "hover:border-tm-orange-light/40 transition-colors")}>
                 <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 rounded-2xl bg-tm-orange-light/20 text-tm-orange-light flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <div className={cn("w-12 h-12 rounded-2xl bg-tm-orange-light/20 text-tm-orange-light flex items-center justify-center shrink-0", href && "group-hover:scale-110 transition-transform")}>
                     <Icon size={24} />
                   </div>
                   <div className="flex-1">
                     <h4 className="text-lg font-bold text-foreground leading-tight">{title}</h4>
                     <p className="text-sm text-tm-blue-gray font-medium mt-1">{description}</p>
                   </div>
-                  <ExternalLink size={20} className="text-tm-blue-gray group-hover:text-tm-orange-light group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                  {href && <ExternalLink size={20} className="text-tm-blue-gray group-hover:text-tm-orange-light group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />}
                 </div>
               </GlassCard>
-            </a>
-          ))}
+            );
+            return href
+              ? <a key={title} href={href} target="_blank" rel="noopener noreferrer" className="block group">{card}</a>
+              : <div key={title}>{card}</div>;
+          })}
         </div>
       </VaultSection>
 
