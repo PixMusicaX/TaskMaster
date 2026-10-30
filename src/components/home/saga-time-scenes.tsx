@@ -263,6 +263,20 @@ export function futureNodes(marks: FutureMark[]) {
   return Array.from(days.values()).map(n => ({ ...n, angle: dayAngle(n.day) }));
 }
 
+// The stretches of ring that multi-day events cover. Each lists the colours of every event on it,
+// so where two overlap the line cycles between them instead of one painting over the other.
+export function futureSegments(marks: FutureMark[]) {
+  const segments: { from: number; to: number; colors: string[] }[] = [];
+  for (let day = 1; day < FUTURE_DAYS; day++) {
+    const colors = Array.from(new Set(marks.filter(m => m.day <= day && m.lastDay > day).flatMap(m => m.colors)));
+    if (colors.length === 0) continue;
+    const previous = segments[segments.length - 1];
+    if (previous?.to === day && previous.colors.join() === colors.join()) previous.to = day + 1;
+    else segments.push({ from: day, to: day + 1, colors });
+  }
+  return segments;
+}
+
 // Several colours cycle through .tm-node-shimmer, which reads them from these variables
 function shimmerProps(colors: string[]) {
   return {
@@ -277,14 +291,14 @@ function shimmerProps(colors: string[]) {
 
 // The line joining a multi-day event's days round the ring: a soft glow with a highlight running
 // along it (see .tm-gauge-shimmer). No blur: anything filtered would be repainted on every frame.
-function FutureArc({ mark }: { mark: FutureMark }) {
-  const fromAngle = dayAngle(mark.day);
-  const toAngle = dayAngle(mark.lastDay);
+function FutureArc({ from: fromDay, to: toDay, colors }: { from: number; to: number; colors: string[] }) {
+  const fromAngle = dayAngle(fromDay);
+  const toAngle = dayAngle(toDay);
   const from = polar(fromAngle, RING);
   const to = polar(toAngle, RING);
   const d = `M ${from.x} ${from.y} A ${RING} ${RING} 0 ${toAngle - fromAngle > 180 ? 1 : 0} 1 ${to.x} ${to.y}`;
   return (
-    <g data-saga="future-arc" data-angle={fromAngle} data-sweep={toAngle - fromAngle} {...shimmerProps(mark.colors)}>
+    <g data-saga="future-arc" data-angle={fromAngle} data-sweep={toAngle - fromAngle} {...shimmerProps(colors)}>
       <path d={d} fill="none" stroke="currentColor" strokeWidth="12" strokeLinecap="round" opacity="0.2" />
       <path d={d} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
       <path className="tm-gauge-shimmer" d={d} pathLength={1} fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeDasharray="0.12 1" style={{ "--fill": 1 } as React.CSSProperties} />
@@ -343,7 +357,7 @@ export function FutureEmblem({ marks, active }: { marks: FutureMark[]; active: b
           const to = polar((i / FUTURE_DAYS) * 360, RING + 7);
           return <line key={i} className="text-tm-blue-gray/50" x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="currentColor" strokeWidth="2" strokeLinecap="round" />;
         })}
-        {marks.filter(m => m.lastDay > m.day).map(mark => <FutureArc key={mark.id} mark={mark} />)}
+        {futureSegments(marks).map(segment => <FutureArc key={segment.from} {...segment} />)}
         {futureNodes(marks).map(node => {
           const at = polar(node.angle, RING);
           const size = Math.min(12, 7 + node.count);

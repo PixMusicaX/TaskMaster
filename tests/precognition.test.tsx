@@ -2,8 +2,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import FutureSightCard from "@/components/home/future-sight-card";
-import { FutureEmblem, futureMarks, futureNodes } from "@/components/home/saga-time-scenes";
-import { GOOGLE } from "@/components/google-mark";
+import { FutureEmblem, futureMarks, futureNodes, futureSegments } from "@/components/home/saga-time-scenes";
+import { GOOGLE, GoogleSyncMark } from "@/components/google-mark";
 import type { EventRow } from "@/lib/types";
 
 const TODAY = "2026-10-31";
@@ -78,12 +78,51 @@ describe("the dial", () => {
     expect(container.querySelectorAll("[data-saga=future-node]")).toHaveLength(4);
   });
 
+  it("breaks overlapping events into stretches, with both colours on the shared one", () => {
+    const main = trip("2026-11-01", "2026-11-06");
+    const epic = trip("2026-11-03", "2026-11-09", { id: "epic", tier: "epic" });
+    const marks = futureMarks([main, epic], TODAY);
+    const [one, both, two] = marks.map(m => m.color);
+    expect(one).not.toBe(both);
+    expect(two).toBeUndefined();
+    expect(futureSegments(marks)).toEqual([
+      { from: 1, to: 3, colors: [one] },
+      { from: 3, to: 5, colors: [one, both] },
+      { from: 5, to: 8, colors: [both] },
+    ]);
+  });
+
+  it("makes the shared stretch shimmer, and leaves the rest steady", () => {
+    const marks = futureMarks([trip("2026-11-01", "2026-11-06"), trip("2026-11-03", "2026-11-09", { id: "epic", tier: "epic" })], TODAY);
+    const { container } = render(<FutureEmblem marks={marks} active />);
+    const arcs = Array.from(container.querySelectorAll("[data-saga=future-arc]"));
+    expect(arcs.map(a => a.getAttribute("data-colors"))).toEqual(["1", "2", "1"]);
+    expect(arcs[1].getAttribute("class")).toContain("tm-node-shimmer");
+    expect(arcs[0].getAttribute("class")).toBeNull();
+  });
+
+  it("doesn't merge a gap between two events into one line", () => {
+    const marks = futureMarks([trip("2026-11-01", "2026-11-03"), trip("2026-11-05", "2026-11-07", { id: "later" })], TODAY);
+    expect(futureSegments(marks).map(s => [s.from, s.to])).toEqual([[1, 2], [5, 6]]);
+  });
+
   it("shimmers an import's line through Google's colours", () => {
     const marks = futureMarks([trip("2026-11-01", "2026-11-04", { gcalImported: true })], TODAY);
     const { container } = render(<FutureEmblem marks={marks} active />);
     const arc = container.querySelector("[data-saga=future-arc]");
     expect(arc?.getAttribute("class")).toContain("tm-node-shimmer");
     expect(arc?.getAttribute("data-colors")).toBe("4");
+  });
+});
+
+describe("GoogleSyncMark", () => {
+  it("points up for an item made here and down for one that came from Google", () => {
+    const { rerender, container } = render(<GoogleSyncMark fromGoogle={false} />);
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("Created here");
+    expect(container.querySelector(".lucide-arrow-up")).not.toBeNull();
+    rerender(<GoogleSyncMark fromGoogle />);
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("Came from Google");
+    expect(container.querySelector(".lucide-arrow-down")).not.toBeNull();
   });
 });
 

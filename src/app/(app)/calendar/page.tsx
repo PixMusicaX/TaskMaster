@@ -9,7 +9,7 @@ import { getCalendarEvents, addEvent, addToTaskmaster, toggleEventCompletion, de
 import { getGoogleCalendarStatus, syncGoogleCalendar } from "@/app/actions/google-calendar";
 import SyncLogic from "@/components/sync-logic";
 import GoogleEventCard from "@/components/google-event-card";
-import { GoogleChip, GoogleDot, GoogleMark } from "@/components/google-mark";
+import { GoogleChip, GoogleDot, GoogleSyncMark } from "@/components/google-mark";
 import { isSyncable } from "@/lib/gcal/map";
 import { GCAL_SYNCED_EVENT } from "@/lib/gcal/events";
 import { dayTitle, multiDayLength, occursOn } from "@/lib/multi-day";
@@ -961,7 +961,7 @@ export default function CalendarPage() {
                             </div>
                             <div className="flex items-center shrink-0">
                               {event.gcalSync && isSyncable(event) && (
-                                <span title="Synced with Google Calendar" className="p-1 ml-2"><GoogleMark size={14} /></span>
+                                <GoogleSyncMark fromGoogle={event.gcalOrigin} className="p-1 ml-2" />
                               )}
                               {/* Folded away on desktop so the G sits at the edge, and slides left as these open */}
                               <div className="flex gap-2 items-center overflow-hidden transition-[max-width] duration-300 lg:max-w-0 lg:group-hover:max-w-16 lg:group-focus-within:max-w-16">
