@@ -1,6 +1,6 @@
 // Events that run across several days are one row, shown on each day as "Title (Day 1/3)"
 // (safe to import from the client)
-import { addDays, differenceInCalendarDays, format, isSameDay, parseISO, startOfDay } from "date-fns";
+import { addDays, differenceInCalendarDays, format, isSameDay, parseISO, setHours, setMinutes, startOfDay } from "date-fns";
 import type { EventRow } from "@/lib/types";
 
 type Span = Pick<EventRow, "type" | "date" | "startTime" | "endTime">;
@@ -55,6 +55,18 @@ export function multiDayLabel(event: Span, day: Date) {
   const part = multiDayPart(event, day);
   if (!found || !part) return null;
   return part.day > 1 ? `Day ${part.day}/${part.total}` : `${format(found.first, "MMM dd")} – ${format(found.last, "MMM dd")}`;
+}
+
+// The end an event form describes, given its start. An end date with no time runs to the end of
+// that day. An end time with no later date is on the start day, or the next if it's earlier.
+export function formEnd(start: Date | null, startDate: string, endDate: string, endTime: string) {
+  const later = endDate > startDate;
+  // All-day ends are stored the way Google does: the day after the last one
+  if (!start) return later ? new Date(new Date(`${endDate}T00:00:00.000Z`).getTime() + DAY_MS) : null;
+  if (!later && !endTime) return null;
+  const [hours, minutes] = (endTime || "23:59").split(":").map(Number);
+  const end = setMinutes(setHours(later ? parseISO(endDate) : start, hours), minutes);
+  return end > start ? end : addDays(end, 1);
 }
 
 // The last day of a multi-day event, for anything that has to know every month it touches

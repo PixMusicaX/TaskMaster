@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import GlassCard from "@/components/glass-card";
 import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Coins, RotateCw, RefreshCw, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
-import { addDays, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { getCalendarEvents, addEvent, addToTaskmaster, toggleEventCompletion, deleteEvent, updateEvent, getAllEvents } from "@/app/actions/events";
 import { getGoogleCalendarStatus, syncGoogleCalendar } from "@/app/actions/google-calendar";
@@ -12,7 +12,7 @@ import GoogleEventCard from "@/components/google-event-card";
 import { GoogleChip, GoogleDot, GoogleSyncMark } from "@/components/google-mark";
 import { isSyncable } from "@/lib/gcal/map";
 import { GCAL_SYNCED_EVENT } from "@/lib/gcal/events";
-import { dayTitle, multiDayLength, occursOn } from "@/lib/multi-day";
+import { dayTitle, formEnd, multiDayLastDate, multiDayLength, occursOn } from "@/lib/multi-day";
 import { getProfile } from "@/app/actions/gamification";
 import { getMoodsByDateRange } from "@/app/actions/notes";
 import { getReliefHistory } from "@/app/actions/relief";
@@ -62,6 +62,7 @@ export default function CalendarPage() {
   const [newNotification, setNewNotification] = useState(true);
   const [newRepeatsYearly, setNewRepeatsYearly] = useState(false);
   const [newDateStr, setNewDateStr] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [newEndDate, setNewEndDate] = useState("");
   const [newEndTime, setNewEndTime] = useState("");
   const [newGoogleSync, setNewGoogleSync] = useState(true);
   const [googleConnected, setGoogleConnected] = useState(false);
@@ -164,6 +165,7 @@ export default function CalendarPage() {
     setNewDateStr(format(dateObj, "yyyy-MM-dd"));
     setNewNotification(event.notification ?? true);
     setNewRepeatsYearly(event.repeatsYearly ?? false);
+    setNewEndDate(multiDayLastDate(event) ?? "");
     setNewEndTime(event.endTime && event.startTime ? format(new Date(event.endTime), "HH:mm") : "");
     setNewGoogleSync(event.gcalSync);
     setSelectedDate(dateObj);
@@ -177,18 +179,11 @@ export default function CalendarPage() {
     const baseDate = new Date(newDateStr);
     const eventTime = newType === "special_day" || keepsAllDay ? null : setMinutes(setHours(baseDate, hours), minutes);
 
-    // Only a changed end is sent, so editing a multi-day event's title doesn't shorten it
-    const originalEnd = editingEvent?.endTime && editingEvent.startTime ? format(new Date(editingEvent.endTime), "HH:mm") : "";
-    let endTime: Date | null | undefined;
-    if (newType === "event" && eventTime && newEndTime !== originalEnd) {
-      if (newEndTime) {
-        const [endHours, endMinutes] = newEndTime.split(":").map(Number);
-        const end = setMinutes(setHours(eventTime, endHours), endMinutes);
-        endTime = end > eventTime ? end : addDays(end, 1); // Ends after midnight
-      } else {
-        endTime = null;
-      }
-    }
+    // Only a changed end is sent: left alone, an end moves with its start
+    const originalEndDate = editingEvent ? multiDayLastDate(editingEvent) ?? "" : "";
+    const originalEndTime = editingEvent?.endTime && editingEvent.startTime ? format(new Date(editingEvent.endTime), "HH:mm") : "";
+    const endChanged = newEndDate !== originalEndDate || newEndTime !== originalEndTime;
+    const endTime = newType === "event" && endChanged ? formEnd(eventTime, newDateStr, newEndDate, newEndTime) : undefined;
 
     const eventData = {
       title: newTitle,
@@ -221,6 +216,7 @@ export default function CalendarPage() {
     setNewDateStr(format(selectedDate, "yyyy-MM-dd"));
     setNewNotification(true);
     setNewRepeatsYearly(false);
+    setNewEndDate("");
     setNewEndTime("");
     setNewGoogleSync(true);
     setEditingEvent(null);
@@ -305,8 +301,6 @@ export default function CalendarPage() {
 
   // A Google all-day event stays all-day when edited, and an import can't change what it is
   const keepsAllDay = !!editingEvent?.gcalEventId && !editingEvent.startTime;
-  // The End time field only holds a time, so it can't describe an event ending days later
-  const keepsEnd = !!editingEvent && multiDayLength(editingEvent) > 1;
   const showGoogleToggle = googleConnected && newType !== "special_day" && !newRepeatsYearly;
 
   const selectedLocation = reliefs.find(r => r.date === format(selectedDate, "yyyy-MM-dd"))?.location;
@@ -460,16 +454,31 @@ export default function CalendarPage() {
                       )}
                     </div>
                     
-                    {newType === "event" && !keepsAllDay && !keepsEnd && (
-                      <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
-                        <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray mb-1 tracking-[0.12em]">End time (optional)</p>
-                        <input
-                          type="time"
-                          aria-label="End time"
-                          value={newEndTime}
-                          onChange={(e) => setNewEndTime(e.target.value)}
-                          className="bg-transparent font-bold text-lg outline-none w-full [color-scheme:light] dark:[color-scheme:dark]"
-                        />
+                    {newType === "event" && (
+                      <div className={cn("grid gap-4", keepsAllDay ? "grid-cols-1" : "grid-cols-2")}>
+                        <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
+                          <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray mb-1 tracking-[0.12em]">End date (optional)</p>
+                          <input
+                            type="date"
+                            aria-label="End date"
+                            min={newDateStr}
+                            value={newEndDate}
+                            onChange={(e) => setNewEndDate(e.target.value)}
+                            className="bg-transparent font-bold text-lg outline-none w-full [color-scheme:light] dark:[color-scheme:dark]"
+                          />
+                        </div>
+                        {!keepsAllDay && (
+                          <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
+                            <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray mb-1 tracking-[0.12em]">End time (optional)</p>
+                            <input
+                              type="time"
+                              aria-label="End time"
+                              value={newEndTime}
+                              onChange={(e) => setNewEndTime(e.target.value)}
+                              className="bg-transparent font-bold text-lg outline-none w-full [color-scheme:light] dark:[color-scheme:dark]"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
 

@@ -256,6 +256,14 @@ describe("sending changes to Google", () => {
     expect(await db.select().from(gcalOutbox)).toEqual([]);
   });
 
+  it("sends a multi-day event's real end", async () => {
+    await synced();
+    const google = fakeGoogle();
+    await addEvent({ ...newTask, type: "event", endTime: new Date("2026-10-13T17:00:00Z") });
+    await flush();
+    expect((google.writes()[0].body!.end as { dateTime: string }).dateTime).toBe("2026-10-13T17:00:00.000Z");
+  });
+
   it("leaves it out when the toggle is off, or there's no connection", async () => {
     const google = fakeGoogle();
     expect(await addEvent(newTask)).toMatchObject({ gcalSync: false });

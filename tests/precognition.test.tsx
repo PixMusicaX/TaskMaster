@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import FutureSightCard from "@/components/home/future-sight-card";
 import { FutureEmblem, futureMarks, futureNodes, futureSegments } from "@/components/home/saga-time-scenes";
 import { GOOGLE, GoogleSyncMark } from "@/components/google-mark";
+import { formEnd, multiDayLength } from "@/lib/multi-day";
 import type { EventRow } from "@/lib/types";
 
 const TODAY = "2026-10-31";
@@ -112,6 +113,44 @@ describe("the dial", () => {
     const arc = container.querySelector("[data-saga=future-arc]");
     expect(arc?.getAttribute("class")).toContain("tm-node-shimmer");
     expect(arc?.getAttribute("data-colors")).toBe("4");
+  });
+});
+
+describe("formEnd", () => {
+  const start = new Date("2026-11-01T14:00:00");
+  const local = (value: string) => new Date(value);
+
+  it("leaves an event with no end alone", () => {
+    expect(formEnd(start, "2026-11-01", "", "")).toBeNull();
+  });
+
+  it("runs to the end of a later end date when no time is given", () => {
+    expect(formEnd(start, "2026-11-01", "2026-11-03", "")).toEqual(local("2026-11-03T23:59:00"));
+  });
+
+  it("uses both when both are given", () => {
+    expect(formEnd(start, "2026-11-01", "2026-11-03", "09:30")).toEqual(local("2026-11-03T09:30:00"));
+  });
+
+  it("keeps a same-day end time, and rolls an earlier one past midnight", () => {
+    expect(formEnd(start, "2026-11-01", "", "15:30")).toEqual(local("2026-11-01T15:30:00"));
+    expect(formEnd(start, "2026-11-01", "", "01:00")).toEqual(local("2026-11-02T01:00:00"));
+  });
+
+  it("ignores an end date that isn't after the start", () => {
+    expect(formEnd(start, "2026-11-01", "2026-10-30", "")).toBeNull();
+  });
+
+  it("stores an all-day end the way Google does, so its days count right", () => {
+    const endTime = formEnd(null, "2026-11-01", "2026-11-03", "");
+    expect(endTime).toEqual(new Date("2026-11-04T00:00:00.000Z"));
+    expect(multiDayLength({ type: "event", date: "2026-11-01", startTime: null, endTime })).toBe(3);
+    expect(formEnd(null, "2026-11-01", "2026-11-01", "")).toBeNull();
+  });
+
+  it("makes a real multi-day event from a form with just an end date", () => {
+    const endTime = formEnd(start, "2026-11-01", "2026-11-03", "");
+    expect(multiDayLength({ type: "event", date: "2026-11-01", startTime: start, endTime })).toBe(3);
   });
 });
 
