@@ -138,14 +138,15 @@ export async function updateEvent(id: string, data: EventInput & SyncChoice) {
   return updatedEvent;
 }
 
-// An imported Google event becomes a real task or quest, and from here on earns XP like one
+// An imported Google event becomes a real task or quest, and from here on earns XP like one. It
+// joins the planner now rather than when it was imported, which is when its daily XP can start.
 export async function addToTaskmaster(id: string, type: "task" | "event", tier: string = "side") {
   const userId = await requireUserId();
   if (type !== "task" && type !== "event") return null;
   if (!["side", "main", "epic"].includes(tier)) return null;
   const mine = and(eq(event.id, id), eq(event.userId, userId), eq(event.gcalImported, true));
   const [updatedEvent] = await db.update(event)
-    .set({ type, tier: type === "task" ? "side" : tier, gcalImported: false })
+    .set({ type, tier: type === "task" ? "side" : tier, gcalImported: false, createdAt: new Date() })
     .where(mine)
     .returning();
   if (!updatedEvent) return null;

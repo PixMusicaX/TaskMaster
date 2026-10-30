@@ -1,5 +1,5 @@
 // Shown on the landing page and in the account page's footer
-export const APP_VERSION = "7.3.2";
+export const APP_VERSION = "7.3.6";
 export const REPO_URL = "https://github.com/PixMusicaX/TaskMaster";
 // Where privacy questions and data requests go
 export const PRIVACY_CONTACT_URL = `${REPO_URL}/issues`;

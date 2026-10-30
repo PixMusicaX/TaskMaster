@@ -7,17 +7,15 @@ type Span = Pick<EventRow, "type" | "date" | "startTime" | "endTime">;
 
 const DAY_MS = 86_400_000;
 
-// First day, last day and number of days. Null for anything on one day: a timed event under 24 hours stays
-// on its start day even if it runs past midnight. Tasks stay single too, having one tick.
+// First day, last day and number of days. Null for anything on one day, so an event running past
+// midnight counts as two. Tasks stay single, having one tick.
 function span(event: Span) {
   if (event.type !== "event" || !event.endTime) return null;
   const end = new Date(event.endTime);
   let first: Date;
   let last: Date;
   if (event.startTime) {
-    const start = new Date(event.startTime);
-    if (end.getTime() - start.getTime() < DAY_MS) return null;
-    first = startOfDay(start);
+    first = startOfDay(new Date(event.startTime));
     last = new Date(end.getTime() - 1); // Ending exactly at midnight doesn't touch the next day
   } else {
     // All-day ends come from Google, which stores the day after the last one
@@ -76,18 +74,22 @@ export function multiDayLastDate(event: Span) {
 }
 
 // How many times an event pays out in the period from `from` to `to`, as of `now`: once if it's
-// on one day, or once for each day of a longer one. Each day counts once it has begun, and a
-// season only gets the days inside it, so an event across two months pays into both.
-export function earnedDays(event: Span, from: Date, to: Date, now: Date) {
+// on one day, or once for each day of a longer one. Those payments land a day apart, starting on
+// its first day or the day it joined the planner, whichever is later, so backdating a long event
+// can't pay it all at once. A season only gets the payments inside it.
+export function earnedDays(event: Span & Pick<EventRow, "createdAt">, from: Date, to: Date, now: Date) {
   const found = span(event);
   if (!found) {
     const begins = event.startTime ? new Date(event.startTime) : parseISO(event.date);
     return begins >= from && begins < now ? 1 : 0;
   }
+  const added = startOfDay(new Date(event.createdAt));
+  const onSchedule = found.first >= added;
+  const firstPayment = onSchedule ? found.first : added;
   let earned = 0;
   for (let i = 0; i < found.days; i++) {
-    const day = addDays(found.first, i);
-    const begins = i === 0 && event.startTime ? new Date(event.startTime) : day;
+    const day = addDays(firstPayment, i);
+    const begins = i === 0 && onSchedule && event.startTime ? new Date(event.startTime) : day;
     if (day >= startOfDay(from) && day <= to && begins < now) earned++;
   }
   return earned;

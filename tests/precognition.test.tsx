@@ -178,8 +178,8 @@ describe("FutureSightCard", () => {
     expect(screen.getByText("· Nov 03 – Nov 05")).toBeTruthy();
   });
 
-  it("leaves out an overnight event that started today", () => {
+  it("shows the second day of an overnight event that started today", () => {
     render(<FutureSightCard events={[event({ startTime: new Date(`${TODAY}T23:00:00`), endTime: new Date("2026-11-01T01:00:00") })]} />);
-    expect(screen.queryByText("Trip")).toBeNull();
+    expect(screen.getByText("· Day 2/2")).toBeTruthy();
   });
 });

@@ -11,7 +11,7 @@ import { event, gcalConnection, gcalOutbox } from "@/db/schema";
 import { encryptSecret } from "@/lib/ai-config";
 import { safeGenerateContent } from "@/lib/ai-utils";
 import { plannerEventsByDateRange } from "@/lib/data/events";
-import { dayTitle, multiDayLength, multiDayPart, occursOn } from "@/lib/multi-day";
+import { dayTitle, earnedDays, multiDayLength, multiDayPart, occursOn } from "@/lib/multi-day";
 import { fromGoogle, googleIdFor, isSyncable, shiftedEnd, toGoogle, type GoogleEvent } from "@/lib/gcal/map";
 import { syncUser } from "@/lib/gcal/sync";
 import type { EventRow } from "@/lib/types";
@@ -167,8 +167,10 @@ describe("XP", () => {
 });
 
 describe("XP for events over several days", () => {
-  const trip = (date: string, endExclusive: string, tier = "main") =>
-    insertEvent({ title: "Trip", type: "event", tier, date, endTime: new Date(`${endExclusive}T00:00:00Z`) });
+  // In the planner well before it began, so its days pay out on schedule
+  const LONG_AGO = new Date("2026-01-01T00:00:00");
+  const trip = (date: string, endExclusive: string, tier = "main", createdAt = LONG_AGO) =>
+    insertEvent({ title: "Trip", type: "event", tier, date, endTime: new Date(`${endExclusive}T00:00:00Z`), createdAt });
 
   it("pays for each day that has begun", async () => {
     await trip("2026-10-05", "2026-10-08");
@@ -189,18 +191,65 @@ describe("XP for events over several days", () => {
   it("pays a timed event for each day too", async () => {
     await insertEvent({
       title: "Conference", type: "event", tier: "side", date: "2026-10-05",
-      startTime: new Date("2026-10-05T09:00:00"), endTime: new Date("2026-10-07T17:00:00"),
+      startTime: new Date("2026-10-05T09:00:00"), endTime: new Date("2026-10-07T17:00:00"), createdAt: LONG_AGO,
     });
     expect((await getProfile(TODAY)).xp).toBe(120);
   });
 
-  it("pays a one-day all-day event once, and an overnight one once in the month it began", async () => {
-    await insertEvent({ title: "All day", type: "event", tier: "side", date: "2026-10-05" });
-    await insertEvent({
-      title: "Gig", type: "event", tier: "side", date: "2026-09-30",
+  it("pays a one-day all-day event once", async () => {
+    await insertEvent({ title: "All day", type: "event", tier: "side", date: "2026-10-05", createdAt: LONG_AGO });
+    expect((await getProfile(TODAY)).xp).toBe(40);
+  });
+
+  it("pays an overnight event for both days, across a month end too", async () => {
+    const gig = await insertEvent({
+      title: "Gig", type: "event", tier: "side", date: "2026-09-30", createdAt: LONG_AGO,
       startTime: new Date("2026-09-30T23:00:00"), endTime: new Date("2026-10-01T01:00:00"),
     });
+    const now = new Date(`${TODAY}T10:00:00`);
+    expect(earnedDays(gig, new Date("2026-09-01T00:00:00"), new Date("2026-09-30T23:59:59"), now)).toBe(1);
+    expect(earnedDays(gig, new Date("2026-10-01T00:00:00"), new Date("2026-10-31T23:59:59"), now)).toBe(1);
     expect((await getProfile(TODAY)).xp).toBe(40);
+  });
+
+  describe("when it's added after it began", () => {
+    const addedToday = new Date(`${TODAY}T09:00:00`);
+
+    it("pays a day at a time from the day it's added, not all at once", async () => {
+      await trip("2026-06-01", "2026-09-01", "epic", addedToday);
+      expect((await getProfile(TODAY)).xp).toBe(80);
+      setToday("2026-10-13");
+      expect((await getProfile("2026-10-13")).xp).toBe(320);
+    });
+
+    it("still pays every day in the end, even after the event is over", async () => {
+      await trip("2026-10-01", "2026-10-04", "main", addedToday);
+      expect((await getProfile(TODAY)).xp).toBe(60);
+      setToday("2026-10-30");
+      expect((await getProfile("2026-10-30")).xp).toBe(180);
+    });
+
+    it("carries on into the next season", async () => {
+      await trip("2026-06-01", "2026-09-01", "side", new Date("2026-10-30T09:00:00"));
+      setToday("2026-11-02");
+      expect((await getProfile("2026-11-02")).xp).toBe(80);
+    });
+
+    it("isn't held back for an event that hasn't started", async () => {
+      await trip("2026-10-12", "2026-10-15", "main", addedToday);
+      expect((await getProfile(TODAY)).xp).toBe(0);
+      setToday("2026-10-14");
+      expect((await getProfile("2026-10-14")).xp).toBe(180);
+    });
+
+    it("counts from the day an import is added to TaskMaster", async () => {
+      await insertEvent({
+        title: "Old import", type: "event", tier: "main", date: "2026-10-01", gcalImported: true,
+        endTime: new Date("2026-10-05T00:00:00Z"), createdAt: LONG_AGO,
+      });
+      await addToTaskmaster((await rows())[0].id, "event", "main");
+      expect((await getProfile(TODAY)).xp).toBe(60);
+    });
   });
 
   it("pays nothing while it's still imported, and every day once it's added", async () => {
@@ -560,16 +609,16 @@ describe("multi-day events", () => {
     expect(occursOn(allDay, local("2026-10-09"))).toBe(false);
   });
 
-  it("spans timed events of 24 hours or more, ending at midnight on the last full day", () => {
+  it("counts a timed event on every day it touches, but not a midnight finish", () => {
     const conference = { title: "Conf", type: "event", date: "2026-10-10", startTime: new Date("2026-10-10T09:00:00"), endTime: new Date("2026-10-12T00:00:00") };
     expect(multiDayLength(conference)).toBe(2);
     expect(multiDayPart(conference, local("2026-10-12"))).toBeNull();
   });
 
-  it("leaves an overnight event, a one-day event and a task on their own day", () => {
+  it("treats an overnight event as two days, and leaves a one-day event and a task alone", () => {
     const overnight = { title: "Gig", type: "event", date: "2026-10-10", startTime: new Date("2026-10-10T23:00:00"), endTime: new Date("2026-10-11T01:00:00") };
-    expect(dayTitle(overnight, local("2026-10-10"))).toBe("Gig");
-    expect(occursOn(overnight, local("2026-10-11"))).toBe(false);
+    expect(dayTitle(overnight, local("2026-10-10"))).toBe("Gig (Day 1/2)");
+    expect(dayTitle(overnight, local("2026-10-11"))).toBe("Gig (Day 2/2)");
     expect(multiDayLength({ ...allDay, endTime: new Date("2026-10-11T00:00:00Z") })).toBe(1);
     expect(multiDayLength({ ...allDay, type: "task" })).toBe(1);
   });
