@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Google's own look. Imported events wear it until they're added to TaskMaster, so these colours
 // are fixed values: era, Persona and special-day themes never reach them.
@@ -33,9 +34,18 @@ export function GoogleSyncMark({ fromGoogle, className }: { fromGoogle: boolean;
   const label = fromGoogle ? "Came from Google Calendar" : "Created here, synced to Google Calendar";
   return (
     <span role="img" aria-label={label} title={label} className={className}>
-      <span className="flex items-center gap-0.5">
-        <GoogleMark size={14} />
-        <Arrow size={10} strokeWidth={3} className="text-tm-blue-gray" />
+      <span className="relative block">
+        <GoogleMark size={16} className="block" />
+        {/* A badge on the G's corner, nudging the way it points when the card is hovered */}
+        <span
+          className={cn(
+            "absolute -right-1 -bottom-1 w-2.5 h-2.5 rounded-full flex items-center justify-center transition-transform duration-300",
+            fromGoogle ? "group-hover:translate-y-0.5" : "group-hover:-translate-y-0.5"
+          )}
+          style={{ background: GOOGLE.text, boxShadow: `0 0 0 1px ${GOOGLE.surface}` }}
+        >
+          <Arrow size={8} strokeWidth={3.5} color={GOOGLE.surface} />
+        </span>
       </span>
     </span>
   );

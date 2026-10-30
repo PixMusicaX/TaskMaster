@@ -57,6 +57,30 @@ export function multiDayLabel(event: Span, day: Date) {
   return part.day > 1 ? `Day ${part.day}/${part.total}` : `${format(found.first, "MMM dd")} – ${format(found.last, "MMM dd")}`;
 }
 
+// The last day of a multi-day event, for anything that has to know every month it touches
+export function multiDayLastDate(event: Span) {
+  const found = span(event);
+  return found ? format(found.last, "yyyy-MM-dd") : null;
+}
+
+// How many times an event pays out in the period from `from` to `to`, as of `now`: once if it's
+// on one day, or once for each day of a longer one. Each day counts once it has begun, and a
+// season only gets the days inside it, so an event across two months pays into both.
+export function earnedDays(event: Span, from: Date, to: Date, now: Date) {
+  const found = span(event);
+  if (!found) {
+    const begins = event.startTime ? new Date(event.startTime) : parseISO(event.date);
+    return begins >= from && begins < now ? 1 : 0;
+  }
+  let earned = 0;
+  for (let i = 0; i < found.days; i++) {
+    const day = addDays(found.first, i);
+    const begins = i === 0 && event.startTime ? new Date(event.startTime) : day;
+    if (day >= startOfDay(from) && day <= to && begins < now) earned++;
+  }
+  return earned;
+}
+
 export function dayTitle(event: Span & Pick<EventRow, "title">, day: Date) {
   const part = multiDayPart(event, day);
   return part ? `${event.title} (Day ${part.day}/${part.total})` : event.title;

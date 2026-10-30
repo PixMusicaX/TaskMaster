@@ -166,6 +166,58 @@ describe("XP", () => {
   });
 });
 
+describe("XP for events over several days", () => {
+  const trip = (date: string, endExclusive: string, tier = "main") =>
+    insertEvent({ title: "Trip", type: "event", tier, date, endTime: new Date(`${endExclusive}T00:00:00Z`) });
+
+  it("pays for each day that has begun", async () => {
+    await trip("2026-10-05", "2026-10-08");
+    expect((await getProfile(TODAY)).xp).toBe(180);
+  });
+
+  it("only pays for days reached so far", async () => {
+    await trip("2026-10-09", "2026-10-15");
+    expect((await getProfile(TODAY)).xp).toBe(120);
+  });
+
+  it("pays each season for its own days", async () => {
+    await trip("2026-09-29", "2026-10-03");
+    expect((await getProfile("2026-09-30")).xp).toBe(120);
+    expect((await getProfile(TODAY)).xp).toBe(120);
+  });
+
+  it("pays a timed event for each day too", async () => {
+    await insertEvent({
+      title: "Conference", type: "event", tier: "side", date: "2026-10-05",
+      startTime: new Date("2026-10-05T09:00:00"), endTime: new Date("2026-10-07T17:00:00"),
+    });
+    expect((await getProfile(TODAY)).xp).toBe(120);
+  });
+
+  it("pays a one-day all-day event once, and an overnight one once in the month it began", async () => {
+    await insertEvent({ title: "All day", type: "event", tier: "side", date: "2026-10-05" });
+    await insertEvent({
+      title: "Gig", type: "event", tier: "side", date: "2026-09-30",
+      startTime: new Date("2026-09-30T23:00:00"), endTime: new Date("2026-10-01T01:00:00"),
+    });
+    expect((await getProfile(TODAY)).xp).toBe(40);
+  });
+
+  it("pays nothing while it's still imported, and every day once it's added", async () => {
+    await connect();
+    fakeGoogle([page([googleEvent("trip", TODAY, { start: { date: "2026-10-10" }, end: { date: "2026-10-12" } })])]);
+    await syncUser(TEST_USER_ID);
+    expect((await getProfile("2026-10-11")).xp).toBe(0);
+    await addToTaskmaster((await rowFor("trip"))!.id, "event", "main");
+    expect((await getProfile("2026-10-11")).xp).toBe(120);
+  });
+
+  it("pays a task once however long it ran", async () => {
+    await insertEvent({ title: "Task", type: "task", date: "2026-10-05", completed: true, endTime: new Date("2026-10-09T00:00:00Z") });
+    expect((await getProfile(TODAY)).xp).toBe(30);
+  });
+});
+
 describe("the AI", () => {
   beforeEach(async () => {
     await connect();
