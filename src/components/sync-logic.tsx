@@ -17,7 +17,7 @@ const RULES = [
   ["Ticking off a task", "This doesn't change anything in Google."],
   ["Not synced", "Holidays, special days and yearly repeats."],
   ["Invites you don't own", "These can't be edited here, and declined ones aren't imported."],
-  ["Multi-day events", "These show on every day as Day 1/3 and so on. They're still one event, so editing or deleting any day changes the whole event."],
+  ["Multi-day events", "These show on every day as Day 1/3 and so on. They're still one event, so editing or deleting any day changes the whole event. Added to TaskMaster as an event, one earns XP for each day it runs, paid a day at a time from the day you add it. Added as a task, it earns XP once, when ticked off."],
   ["Timing", "Google changes arrive within about a minute while TaskMaster is open, or straight away when you press Sync."],
 ];
 

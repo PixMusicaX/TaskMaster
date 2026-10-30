@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { event, gcalConnection, gcalIgnored, gcalOutbox } from "@/db/schema";
 import { decryptSecret } from "@/lib/ai-config";
 import { invalidateSnapshots } from "@/lib/data/stats";
+import { multiDayLastDate } from "@/lib/multi-day";
 import type { EventRow } from "@/lib/types";
 import { accessTokenFor, deleteEvent, GoogleApiError, GoogleAuthError, insertEvent, listEvents, patchEvent, type EventPage } from "./api";
 import { fromGoogle, googleIdFor, isSyncable, isUnwanted, localDay, toGoogle, type GoogleEvent } from "./map";
@@ -184,7 +185,7 @@ async function applyChanges(userId: string, items: GoogleEvent[], timeZone: stri
       // A finished task keeps its XP; its Google copy is simply gone
       if (row.type === "task" && row.completed) await unlink(row.id);
       else await db.delete(event).where(eq(event.id, row.id));
-      touched.add(row.date);
+      touched.add(row.date).add(multiDayLastDate(row) ?? row.date);
       changed++;
       continue;
     }
@@ -203,8 +204,8 @@ async function applyChanges(userId: string, items: GoogleEvent[], timeZone: stri
       await db.update(event).set({ gcalEtag: fields.gcalEtag }).where(eq(event.id, row.id));
     } else {
       await db.update(event).set(fields).where(eq(event.id, row.id));
-      touched.add(row.date);
-      touched.add(fields.date);
+      touched.add(row.date).add(multiDayLastDate(row) ?? row.date);
+      touched.add(fields.date).add(multiDayLastDate({ type: row.type, ...fields }) ?? fields.date);
       changed++;
     }
   }

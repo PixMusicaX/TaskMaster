@@ -10,7 +10,8 @@ import { getAiSettingsView, hasAiKey, saveAiSettings } from "@/lib/ai-config";
 import { isAiProvider, type AiProvider } from "@/lib/ai-providers";
 import { dismissIntro, preferencesFor, savePersonalization } from "@/lib/data/preferences";
 import type { Personalization } from "@/lib/personalization";
-import { deleteDemoUser } from "@/lib/data/demo";
+import { deleteDemoUser, isDemoUser } from "@/lib/data/demo";
+import { disconnectGoogleCalendar } from "@/app/actions/google-calendar";
 import { isDemoEmail } from "@/lib/demo";
 
 // Auth.js names its cookie differently over HTTPS
@@ -102,6 +103,24 @@ export async function signOutHere() {
   // Signing out of a demo is leaving it: the temporary account is deleted, not just the session
   const userId = await requireUserId();
   await deleteDemoUser(userId);
+  await signOut({ redirectTo: "/" });
+}
+
+// Permanently removes this account: every planner table goes with it through its foreign key.
+// Google access is revoked first, and events already in Google stay there. The confirmation is
+// checked here too, so nothing but the account page's typed answer can reach the delete.
+export async function deleteAccount(confirmation: string) {
+  const userId = await requireUserId();
+  if (confirmation !== "DELETE") return { success: false as const, message: "Your account wasn't deleted." };
+  if (await isDemoUser(userId)) return { success: false as const, message: "Exit the demo instead: it deletes itself." };
+  try {
+    await disconnectGoogleCalendar();
+    await db.delete(user).where(eq(user.id, userId));
+  } catch (e) {
+    console.error("Could not delete the account:", e);
+    return { success: false as const, message: "Could not delete your account. Nothing was removed." };
+  }
+  // Outside the try: this ends in a redirect, which Next signals by throwing
   await signOut({ redirectTo: "/" });
 }
 

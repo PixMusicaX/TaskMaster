@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { format, subDays, addDays } from "date-fns";
 import Clock from "@/components/clock";
 import { getHabits, toggleHabitLog } from "@/app/actions/habits";
-import { getEventsByDateRange, toggleEventCompletion, getDashboardTasks, syncMonthlyHolidays } from "@/app/actions/events";
+import { getCalendarEvents, getEventsByDateRange, toggleEventCompletion, getDashboardTasks, syncMonthlyHolidays } from "@/app/actions/events";
 import { GCAL_SYNCED_EVENT } from "@/lib/gcal/events";
 import { getProfile, getSeasonPace, getSeasonXPBeforeToday } from "@/app/actions/gamification";
 import { DEV_XP_EVENT, withDevXp } from "@/lib/dev-xp";
@@ -146,7 +146,7 @@ export default function Home() {
   useEffect(() => {
     const onSynced = () => {
       getDashboardTasks(todayStr).then(setTasks);
-      getEventsByDateRange(addDays(today, 1), addDays(today, 14)).then(data => setFutureEvents(data.filter(e => e.type !== "task")));
+      getCalendarEvents(addDays(today, 1), addDays(today, 14)).then(data => setFutureEvents(data.filter(e => e.type !== "task")));
     };
     window.addEventListener(GCAL_SYNCED_EVENT, onSynced);
     return () => window.removeEventListener(GCAL_SYNCED_EVENT, onSynced);
@@ -203,7 +203,7 @@ export default function Home() {
       // 3. Profile Stats
       getProfile(todayStr).then(p => setProfile(withDevXp(p)));
       getRecentNotes(30).then(setMoodData);
-      getEventsByDateRange(addDays(today, 1), addDays(today, 14)).then(data => {
+      getCalendarEvents(addDays(today, 1), addDays(today, 14)).then(data => {
         setFutureEvents(data.filter(e => e.type !== "task"));
       });
 

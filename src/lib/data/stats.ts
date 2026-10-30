@@ -5,8 +5,9 @@ import { habitLog, event, note, smartMission, reliefRecommendation, seasonSnapsh
 import type { StatName, Stats } from "@/lib/types";
 import { XP_VALUES, RPG_TITLES, LEVEL_UP_XP } from "@/lib/constants";
 import { startOfMonth, endOfMonth, endOfDay, format, subMonths, addDays, min, getDaysInMonth, differenceInCalendarMonths, parseISO } from "date-fns";
-import { and, or, gte, lte, eq, inArray, min as minOf } from "drizzle-orm";
+import { and, or, gt, gte, lt, lte, eq, inArray, min as minOf, sql } from "drizzle-orm";
 import { MAX_ERA, liveEraIndex, seasonEras } from "@/lib/eras";
+import { earnedDays } from "@/lib/multi-day";
 
 export async function statsForPeriod(userId: string, startDate: Date, endDate: Date, referenceDate: Date = new Date()) {
   try {
@@ -27,7 +28,10 @@ export async function statsForPeriod(userId: string, startDate: Date, endDate: D
           eq(event.userId, userId),
           or(
             and(gte(event.startTime, startDate), lte(event.startTime, endDate)),
-            and(gte(event.date, startStr), lte(event.date, endStr))
+            and(gte(event.date, startStr), lte(event.date, endStr)),
+            // A multi-day event that began before this period and runs into it, or that's backdated
+            // and so may still be paying out after it ended (see earnedDays)
+            and(eq(event.type, "event"), lt(event.date, startStr), or(gt(event.endTime, startDate), gt(event.createdAt, sql`${event.date}::timestamp`)))
           )
         )
       ),
@@ -91,12 +95,9 @@ export async function statsForPeriod(userId: string, startDate: Date, endDate: D
         totalXP += xp;
         stats.strength += xp;
       } else if (e.type === "event") {
-        const eventTime = e.startTime ? new Date(e.startTime) : null;
-        if (eventTime && eventTime < referenceDate) {
-          xp = reward;
-          totalXP += xp;
-          stats.wealth += xp;
-        }
+        xp = reward * earnedDays(e, startDate, endDate, referenceDate);
+        totalXP += xp;
+        stats.wealth += xp;
       }
     });
 

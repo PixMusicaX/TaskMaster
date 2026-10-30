@@ -1,23 +1,21 @@
 // Events that run across several days are one row, shown on each day as "Title (Day 1/3)"
 // (safe to import from the client)
-import { addDays, differenceInCalendarDays, isSameDay, parseISO, startOfDay } from "date-fns";
+import { addDays, differenceInCalendarDays, format, isSameDay, parseISO, setHours, setMinutes, startOfDay } from "date-fns";
 import type { EventRow } from "@/lib/types";
 
 type Span = Pick<EventRow, "type" | "date" | "startTime" | "endTime">;
 
 const DAY_MS = 86_400_000;
 
-// First day and number of days. Null for anything on one day: a timed event under 24 hours stays
-// on its start day even if it runs past midnight. Tasks stay single too, having one tick.
+// First day, last day and number of days. Null for anything on one day, so an event running past
+// midnight counts as two. Tasks stay single, having one tick.
 function span(event: Span) {
   if (event.type !== "event" || !event.endTime) return null;
   const end = new Date(event.endTime);
   let first: Date;
   let last: Date;
   if (event.startTime) {
-    const start = new Date(event.startTime);
-    if (end.getTime() - start.getTime() < DAY_MS) return null;
-    first = startOfDay(start);
+    first = startOfDay(new Date(event.startTime));
     last = new Date(end.getTime() - 1); // Ending exactly at midnight doesn't touch the next day
   } else {
     // All-day ends come from Google, which stores the day after the last one
@@ -25,7 +23,7 @@ function span(event: Span) {
     last = addDays(parseISO(end.toISOString().slice(0, 10)), -1);
   }
   const days = differenceInCalendarDays(last, first) + 1;
-  return days > 1 ? { first, days } : null;
+  return days > 1 ? { first, last, days } : null;
 }
 
 export const multiDayLength = (event: Span) => span(event)?.days ?? 1;
@@ -40,6 +38,61 @@ export function multiDayPart(event: Span, day: Date) {
 
 export function occursOn(event: Span, day: Date) {
   return span(event) ? multiDayPart(event, day) !== null : isSameDay(new Date(event.startTime || event.date), day);
+}
+
+// Which of the next `days` days an event falls on, counted from tomorrow as 1. A multi-day event
+// already under way gives only the days it has left.
+export function upcomingDays(event: Span, today: Date, days: number) {
+  return Array.from({ length: days }, (_, i) => i + 1).filter(n => occursOn(event, addDays(today, n)));
+}
+
+// How an upcoming list describes a multi-day event seen from `day`: its dates if it hasn't begun,
+// or how far along it will be if it has. Null for a single day.
+export function multiDayLabel(event: Span, day: Date) {
+  const found = span(event);
+  const part = multiDayPart(event, day);
+  if (!found || !part) return null;
+  return part.day > 1 ? `Day ${part.day}/${part.total}` : `${format(found.first, "MMM dd")} – ${format(found.last, "MMM dd")}`;
+}
+
+// The end an event form describes, given its start. An end date with no time runs to the end of
+// that day. An end time with no later date is on the start day, or the next if it's earlier.
+export function formEnd(start: Date | null, startDate: string, endDate: string, endTime: string) {
+  const later = endDate > startDate;
+  // All-day ends are stored the way Google does: the day after the last one
+  if (!start) return later ? new Date(new Date(`${endDate}T00:00:00.000Z`).getTime() + DAY_MS) : null;
+  if (!later && !endTime) return null;
+  const [hours, minutes] = (endTime || "23:59").split(":").map(Number);
+  const end = setMinutes(setHours(later ? parseISO(endDate) : start, hours), minutes);
+  return end > start ? end : addDays(end, 1);
+}
+
+// The last day of a multi-day event, for anything that has to know every month it touches
+export function multiDayLastDate(event: Span) {
+  const found = span(event);
+  return found ? format(found.last, "yyyy-MM-dd") : null;
+}
+
+// How many times an event pays out in the period from `from` to `to`, as of `now`: once if it's
+// on one day, or once for each day of a longer one. Those payments land a day apart, starting on
+// its first day or the day it joined the planner, whichever is later, so backdating a long event
+// can't pay it all at once. A season only gets the payments inside it.
+export function earnedDays(event: Span & Pick<EventRow, "createdAt">, from: Date, to: Date, now: Date) {
+  const found = span(event);
+  if (!found) {
+    const begins = event.startTime ? new Date(event.startTime) : parseISO(event.date);
+    return begins >= from && begins < now ? 1 : 0;
+  }
+  const added = startOfDay(new Date(event.createdAt));
+  const onSchedule = found.first >= added;
+  const firstPayment = onSchedule ? found.first : added;
+  let earned = 0;
+  for (let i = 0; i < found.days; i++) {
+    const day = addDays(firstPayment, i);
+    const begins = i === 0 && onSchedule && event.startTime ? new Date(event.startTime) : day;
+    if (day >= startOfDay(from) && day <= to && begins < now) earned++;
+  }
+  return earned;
 }
 
 export function dayTitle(event: Span & Pick<EventRow, "title">, day: Date) {

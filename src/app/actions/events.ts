@@ -12,6 +12,7 @@ import { preferencesFor, saveHolidayRegion } from "@/lib/data/preferences";
 import { isHolidayRegion } from "@/lib/personalization";
 import { isDemoUser } from "@/lib/data/demo";
 import { isSyncable, shiftedEnd } from "@/lib/gcal/map";
+import { multiDayLastDate } from "@/lib/multi-day";
 import { connectionFor, pushSoon, queueRemoval, queueUpsert } from "@/lib/gcal/sync";
 
 // What a client may set on an event; ownership and system fields are never taken from it
@@ -123,7 +124,7 @@ export async function updateEvent(id: string, data: EventInput & SyncChoice) {
     .set({ ...input, gcalSync })
     .where(mine)
     .returning();
-  await invalidateSnapshots(userId, existing.date, updatedEvent?.date);
+  await invalidateSnapshots(userId, existing.date, multiDayLastDate(existing), updatedEvent?.date, updatedEvent && multiDayLastDate(updatedEvent));
 
   if (data.repeatsYearly || existing.repeatsYearly) {
     await syncRecurringEventsFor(userId);
@@ -137,18 +138,19 @@ export async function updateEvent(id: string, data: EventInput & SyncChoice) {
   return updatedEvent;
 }
 
-// An imported Google event becomes a real task or quest, and from here on earns XP like one
+// An imported Google event becomes a real task or quest, and from here on earns XP like one. It
+// joins the planner now rather than when it was imported, which is when its daily XP can start.
 export async function addToTaskmaster(id: string, type: "task" | "event", tier: string = "side") {
   const userId = await requireUserId();
   if (type !== "task" && type !== "event") return null;
   if (!["side", "main", "epic"].includes(tier)) return null;
   const mine = and(eq(event.id, id), eq(event.userId, userId), eq(event.gcalImported, true));
   const [updatedEvent] = await db.update(event)
-    .set({ type, tier: type === "task" ? "side" : tier, gcalImported: false })
+    .set({ type, tier: type === "task" ? "side" : tier, gcalImported: false, createdAt: new Date() })
     .where(mine)
     .returning();
   if (!updatedEvent) return null;
-  await invalidateSnapshots(userId, updatedEvent.date);
+  await invalidateSnapshots(userId, updatedEvent.date, multiDayLastDate(updatedEvent));
   revalidateEventPages();
   return updatedEvent;
 }
@@ -203,7 +205,7 @@ export async function deleteEvent(id: string) {
     // Otherwise just delete the single instance
     const pushNeeded = await queueRemoval(existing);
     await db.delete(event).where(mine);
-    await invalidateSnapshots(userId, existing.date);
+    await invalidateSnapshots(userId, existing.date, multiDayLastDate(existing));
     if (pushNeeded) pushSoon(userId);
   }
 

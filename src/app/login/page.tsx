@@ -102,7 +102,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           )}
 
           <p className="text-xs font-medium text-tm-blue-gray/80">
-            You&apos;ll be taken to Google to choose an account, then straight back here. See our{" "}
+            You&apos;ll be taken to Google to choose an account, then straight back here. By continuing you agree to our{" "}
+            <Link href="/terms" className="underline underline-offset-2 hover:text-foreground transition-colors">Terms of Service</Link>. See also our{" "}
             <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground transition-colors">Privacy Policy</Link>.
           </p>
         </div>

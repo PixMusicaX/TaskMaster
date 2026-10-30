@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import BrowserTheme from "@/components/browser-theme";
+import LegalPage, { LEGAL_LINK as LINK, LegalList as List, LegalSection as Section } from "@/components/legal-page";
 import { DEMO_HOURS } from "@/lib/demo";
 import { PRIVACY_CONTACT_URL, REPO_URL } from "@/lib/version";
 
@@ -13,38 +12,10 @@ export const metadata: Metadata = {
 const LAST_UPDATED = "October 31, 2026";
 const GOOGLE_DATA_POLICY = "https://developers.google.com/terms/api-services-user-data-policy";
 
-const LINK = "underline underline-offset-2 hover:text-foreground transition-colors";
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-3">
-      <h2 className="text-2xl font-display font-bold tracking-tight text-tm-purple-dark dark:text-tm-yellow">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function List({ children }: { children: React.ReactNode }) {
-  return <ul className="list-disc pl-5 space-y-2">{children}</ul>;
-}
-
-// Open to everyone, signed in or not: Google's reviewers and new visitors both need to read it.
 // When what the app collects or shares changes, this page and LAST_UPDATED change with it.
 export default function PrivacyPage() {
   return (
-    <main className="flex-1 w-full max-w-3xl mx-auto px-6 py-12 md:py-20 space-y-10">
-      <BrowserTheme />
-
-      <div className="space-y-4">
-        <Link href="/" className="inline-flex items-center gap-2 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray hover:text-foreground transition-colors">
-          <ArrowLeft size={14} />
-          TaskMaster
-        </Link>
-        <h1 className="text-4xl md:text-6xl font-display font-bold tracking-tight text-tm-purple-dark dark:text-tm-yellow">Privacy Policy</h1>
-        <p className="text-sm font-medium text-tm-blue-gray">Last updated {LAST_UPDATED}</p>
-      </div>
-
-      <div className="space-y-10 text-base font-medium leading-relaxed text-tm-blue-gray">
+    <LegalPage title="Privacy Policy" updated={LAST_UPDATED}>
         <p>
           TaskMaster is a personal planner with tasks, a calendar, habits, notes and game-style progress. This policy explains what the
           hosted app stores, who it shares data with and what choices you have. If you run TaskMaster yourself from
@@ -124,7 +95,7 @@ export default function PrivacyPage() {
             <li>We keep your data while you use your account.</li>
             <li>Items you delete are removed straight away. For events that began in Google, we keep the event&apos;s ID so it isn&apos;t imported again.</li>
             <li>Demo accounts and everything in them are deleted when you leave, or after {DEMO_HOURS} hours.</li>
-            <li>To delete your account and all its data, <a href={PRIVACY_CONTACT_URL} target="_blank" rel="noopener noreferrer" className={LINK}>contact us</a>. There&apos;s no delete button in the app yet.</li>
+            <li>You can delete your account and all its data yourself from Account → Cloud Storage. This also ends TaskMaster&apos;s access to Google Calendar. Events already in Google stay there.</li>
           </List>
         </Section>
 
@@ -139,9 +110,9 @@ export default function PrivacyPage() {
         <Section title="Contact">
           <p>
             For questions or data requests, <a href={PRIVACY_CONTACT_URL} target="_blank" rel="noopener noreferrer" className={LINK}>contact us here</a>.
+            Using TaskMaster is also covered by our <Link href="/terms" className={LINK}>Terms of Service</Link>.
           </p>
         </Section>
-      </div>
-    </main>
+    </LegalPage>
   );
 }

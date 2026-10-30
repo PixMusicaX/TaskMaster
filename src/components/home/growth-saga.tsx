@@ -353,7 +353,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   const yearCount = years.length;
   const marks = futureMarks(futureEvents, todayStr);
   // A string, so the effect below only rebuilds when the days really change
-  const markDays = marks.map(m => m.day).join();
+  const markDays = marks.map(m => `${m.day}-${m.lastDay}`).join();
 
   const times = sceneTimes(yearCount);
   const { length } = times;
@@ -393,7 +393,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
 
     const scope = createScope({ root: el }).add(() => {
       // A timeline only applies a tween's starting values once it reaches it, so hide the later beats up front
-      utils.set("[data-saga=core], [data-saga=era-core], [data-saga=reached], [data-saga=letter], [data-saga=caption], [data-saga=era-text], [data-saga=shape], [data-saga=stat], [data-saga=mood], [data-saga=stats-title], [data-saga=mood-title], [data-saga=gauge], [data-saga=tick], [data-saga=pace-tilt], [data-saga=pace-core], [data-saga=pace-text], [data-saga=chron], [data-saga=chron-title], [data-saga=chron-node], [data-saga=chron-halo], [data-saga=chron-year], [data-saga=chron-entry], [data-saga=chron-items], [data-saga=future], [data-saga=future-title], [data-saga=future-node], [data-saga=future-core], [data-saga=future-row], [data-saga=future-details], [data-saga=tavern], [data-saga=tavern-ring], [data-saga=tavern-core], [data-saga=seat-edge], [data-saga=tavern-title], [data-saga=tavern-row], [data-saga=clock], [data-saga=clock-case], [data-saga=clock-hands], [data-saga=clock-title], [data-saga=clock-part], [data-saga=clock-details], [data-saga=map], [data-saga=map-title], [data-saga=map-disc], [data-saga=map-warp], [data-saga=map-row], [data-saga=ask], [data-saga=ask-title], [data-saga=ask-row]", { opacity: 0 });
+      utils.set("[data-saga=core], [data-saga=era-core], [data-saga=reached], [data-saga=letter], [data-saga=caption], [data-saga=era-text], [data-saga=shape], [data-saga=stat], [data-saga=mood], [data-saga=stats-title], [data-saga=mood-title], [data-saga=gauge], [data-saga=tick], [data-saga=pace-tilt], [data-saga=pace-core], [data-saga=pace-text], [data-saga=chron], [data-saga=chron-title], [data-saga=chron-node], [data-saga=chron-halo], [data-saga=chron-year], [data-saga=chron-entry], [data-saga=chron-items], [data-saga=future], [data-saga=future-title], [data-saga=future-node], [data-saga=future-arc], [data-saga=future-core], [data-saga=future-row], [data-saga=future-details], [data-saga=tavern], [data-saga=tavern-ring], [data-saga=tavern-core], [data-saga=seat-edge], [data-saga=tavern-title], [data-saga=tavern-row], [data-saga=clock], [data-saga=clock-case], [data-saga=clock-hands], [data-saga=clock-title], [data-saga=clock-part], [data-saga=clock-details], [data-saga=map], [data-saga=map-title], [data-saga=map-disc], [data-saga=map-warp], [data-saga=map-row], [data-saga=ask], [data-saga=ask-title], [data-saga=ask-row], [data-saga=ask-link]", { opacity: 0 });
       utils.set("[data-saga=arc], [data-saga=level], [data-saga=grid], [data-saga=axis], [data-saga=gauge-fill], [data-saga=race-arc], [data-saga=time-arc]", { strokeDashoffset: 1 });
       paceXpEl.textContent = "0";
       totalEl.textContent = "0";
@@ -555,6 +555,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         .add("[data-saga=ask]", { opacity: [0, 1], scale: [0.2, 1], duration: 24, ease: "outBack(1.6)" }, askAt)
         .add("[data-saga=ask-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, askAt + 4)
         .add("[data-saga=ask-row]", { opacity: [0, 1], translateY: [16, 0], duration: 12, delay: stagger(4) }, askAt + 14)
+        // Opacity only: these are held on their points by their own translate
+        .add("[data-saga=ask-link]", { opacity: [0, 1], duration: 8, delay: stagger(3) }, askAt + 18)
         // Nothing moves in the tail; this only makes the script as long as the scroll
         .add(pad, { value: 1, duration: 1 }, length - 1);
 
@@ -604,6 +606,11 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       });
       all("seat-edge").forEach((edge, i) => {
         timeline.add(edge, { d: [SEAT_EDGES[i].straight, SEAT_EDGES[i].seat], duration: 14, ease: "outBack(1.3)" }, CLOCK_AT - 4);
+      });
+      // A multi-day line appears along its length as the sweep passes over it
+      all("future-arc").forEach(arc => {
+        const { angle, sweep } = (arc as HTMLElement).dataset;
+        timeline.add(arc, { opacity: [0, 1], duration: Math.max(3, (Number(sweep) / 360) * FUTURE_SWEEP), ease: "linear" }, futureAt + 6 + (Number(angle) / 360) * FUTURE_SWEEP);
       });
       all("future-node").forEach(node => {
         const angle = Number((node as HTMLElement).dataset.angle);

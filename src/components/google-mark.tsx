@@ -1,3 +1,6 @@
+import { ArrowDown, ArrowUp } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 // Google's own look. Imported events wear it until they're added to TaskMaster, so these colours
 // are fixed values: era, Persona and special-day themes never reach them.
 export const GOOGLE = {
@@ -22,6 +25,29 @@ export function GoogleMark({ size = 20, className }: { size?: number; className?
       <path fill={GOOGLE.yellow} d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
       <path fill={GOOGLE.red} d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
     </svg>
+  );
+}
+
+// On a TaskMaster item that's synced: which way it first went, up to Google or down from it
+export function GoogleSyncMark({ fromGoogle, className }: { fromGoogle: boolean; className?: string }) {
+  const Arrow = fromGoogle ? ArrowDown : ArrowUp;
+  const label = fromGoogle ? "Came from Google Calendar" : "Created here, synced to Google Calendar";
+  return (
+    <span role="img" aria-label={label} title={label} className={className}>
+      <span className="relative block">
+        <GoogleMark size={16} className="block" />
+        {/* A badge on the G's corner, nudging the way it points when the card is hovered */}
+        <span
+          className={cn(
+            "absolute -right-1 -bottom-1 w-2.5 h-2.5 rounded-full flex items-center justify-center transition-transform duration-300",
+            fromGoogle ? "group-hover:translate-y-0.5" : "group-hover:-translate-y-0.5"
+          )}
+          style={{ background: GOOGLE.text, boxShadow: `0 0 0 1px ${GOOGLE.surface}` }}
+        >
+          <Arrow size={8} strokeWidth={3.5} color={GOOGLE.surface} />
+        </span>
+      </span>
+    </span>
   );
 }
 
