@@ -54,7 +54,7 @@ export default function RankUpCeremony({ ceremony, onDone }: { ceremony: Ceremon
             />
 
             <motion.div
-              className="relative w-36 h-36 rounded-full bg-tm-purple-dark border-2 border-tm-yellow flex items-center justify-center text-tm-yellow shadow-[0_0_60px_-5px_var(--tm-yellow)]"
+              className="relative w-36 h-36 rounded-full bg-tm-purple-dark border-2 border-tm-yellow flex items-center justify-center text-tm-on-ink shadow-[0_0_60px_-5px_var(--tm-yellow)]"
               initial={{ scale: 0, rotate: -90 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 200, damping: 14, delay: 0.15 }}

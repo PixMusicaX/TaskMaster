@@ -226,7 +226,7 @@ function RecapBody({ recap, onClose }: { recap: SeasonRecap; onClose: () => void
       <motion.div variants={item}>
         <button
           onClick={onClose}
-          className="w-full py-3.5 rounded-2xl bg-tm-yellow text-tm-purple-dark font-bold uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition"
+          className="w-full py-3.5 rounded-2xl bg-tm-yellow text-tm-on-accent font-bold uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition"
         >
           Begin {recap.nextSeason.monthName}
         </button>

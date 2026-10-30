@@ -136,7 +136,7 @@ export default function TaskmasterDialog({ isOpen, onClose }: TaskmasterDialogPr
                   <button
                     type="submit"
                     disabled={!question.trim() || loading || (typeof remaining === 'number' && remaining <= 0)}
-                    className="self-end px-6 py-2 bg-tm-yellow text-tm-purple-dark font-mono font-semibold uppercase rounded-xl hover:scale-105 transition-all shadow-xl shadow-tm-yellow/20 disabled:opacity-50 disabled:hover:scale-100 flex items-center gap-2 text-xs tracking-[0.12em]"
+                    className="self-end px-6 py-2 bg-tm-yellow text-tm-on-accent font-mono font-semibold uppercase rounded-xl hover:scale-105 transition-all shadow-xl shadow-tm-yellow/20 disabled:opacity-50 disabled:hover:scale-100 flex items-center gap-2 text-xs tracking-[0.12em]"
                   >
                     {loading ? (
                       <span className="animate-pulse">Consulting...</span>

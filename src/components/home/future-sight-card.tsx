@@ -9,7 +9,7 @@ export default function FutureSightCard({ events }: { events: EventRow[] }) {
     <InsightCard
       icon={Eye}
       iconClassName="text-tm-yellow"
-      title="Future Sight"
+      title="Precognition"
       subtitle="Upcoming Quests"
       aside={<Pill className="hidden sm:block">Prophecy</Pill>}
       delay={0.5}

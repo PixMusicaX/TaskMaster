@@ -32,6 +32,7 @@ import MapCard from "@/components/home/map-card";
 import SeasonPaceCard from "@/components/home/season-pace-card";
 import ChronicleCard from "@/components/home/chronicle-card";
 import HeroQuote from "@/components/home/hero-quote";
+import { splitQuote } from "@/lib/quote";
 import GrowthSaga from "@/components/home/growth-saga";
 import { useScrollDissolve } from "@/lib/scroll-fx";
 
@@ -110,6 +111,7 @@ export default function Home() {
   // The one-time invitation to tell the AI about yourself
   const [inviteToPersonalize, setInviteToPersonalize] = useState(false);
   const [reliefLoading, setReliefLoading] = useState(false);
+  const [reliefFailed, setReliefFailed] = useState(false);
   const [prepLoading, setPrepLoading] = useState(false);
 
   const [updatingHabits, setUpdatingHabits] = useState<Set<string>>(new Set());
@@ -125,9 +127,7 @@ export default function Home() {
   const habitLogsSince = format(subDays(today, 6), "yyyy-MM-dd");
 
   const rawQuote = dailyQuote || smartMission?.quote || "Master your day, master your life.";
-  const quoteParts = rawQuote.split(/\s*[—-]\s*/).filter(Boolean);
-  const quoteText = quoteParts[0];
-  const quoteAuthor = quoteParts.length > 1 ? quoteParts.slice(1).join(" - ") : "";
+  const { text: quoteText, author: quoteAuthor } = splitQuote(rawQuote);
 
   const specialDays = tasks.filter(isTimedSpecialDay);
 
@@ -241,31 +241,44 @@ export default function Home() {
     fetchData();
   }, [today, todayStr, habitLogsSince]);
 
+  // Relief comes back empty when the server gave up, or throws when it can't be reached. Either way
+  // the Tavern says so, rather than looking as if it were still thinking.
+  const loadRelief = useCallback(async (fetcher: ReliefFetcher) => {
+    setReliefFailed(false);
+    try {
+      const next = await fetchReliefWithLocation(fetcher, todayStr);
+      setRelief(next);
+      setReliefFailed(!next);
+    } catch (err) {
+      console.error("Relief fetch error:", err);
+      setReliefFailed(true);
+    }
+  }, [todayStr]);
+
   // 5. AI Guidance, once the rank and era are on screen: the day's first visit generates it, which
   // is slow, and every request queued behind it would wait
   useEffect(() => {
     if (!themeReady) return;
     async function fetchGuidance() {
       setAiLoading(true);
-      try {
-        const [smartData, prepData, quoteData] = await Promise.all([
-          getSmartMission(todayStr, personaForToday()),
-          getPreparationTip(todayStr, personaForToday()),
-          getDailyQuote(todayStr)
-        ]);
-        setSmartMission(smartData);
-        setPrepTip(prepData ?? null);
-        setDailyQuote(quoteData);
+      // Each stands alone, so one failing leaves the others on the page
+      const [smartData, prepData, quoteData] = await Promise.allSettled([
+        getSmartMission(todayStr, personaForToday()),
+        getPreparationTip(todayStr, personaForToday()),
+        getDailyQuote(todayStr)
+      ]);
+      if (smartData.status === "fulfilled") setSmartMission(smartData.value);
+      if (prepData.status === "fulfilled") setPrepTip(prepData.value ?? null);
+      if (quoteData.status === "fulfilled") setDailyQuote(quoteData.value);
+      [smartData, prepData, quoteData].forEach(result => {
+        if (result.status === "rejected") console.error("AI Fetch error:", result.reason);
+      });
 
-        setRelief(await fetchReliefWithLocation(getReliefRecommendation, todayStr));
-      } catch (err) {
-        console.error("AI Fetch error:", err);
-      } finally {
-        setAiLoading(false);
-      }
+      await loadRelief(getReliefRecommendation);
+      setAiLoading(false);
     }
     fetchGuidance();
-  }, [todayStr, themeReady]);
+  }, [todayStr, themeReady, loadRelief]);
 
   // Dev tools: re-read the profile when the spoofed XP changes (never fires in production)
   useEffect(() => {
@@ -378,16 +391,24 @@ export default function Home() {
     setAiLoading(false);
   }
 
-  async function handleRegenerateRelief() {
+  async function reloadRelief(fetcher: ReliefFetcher) {
     setReliefLoading(true);
-    setRelief(await fetchReliefWithLocation(regenerateReliefRecommendation, todayStr));
+    await loadRelief(fetcher);
     setReliefLoading(false);
   }
 
-  const tavern = { relief, loading: reliefLoading, updating: updatingRelief, onToggle: handleReliefToggle, onRegenerate: handleRegenerateRelief };
+  const tavern = {
+    relief,
+    loading: reliefLoading,
+    failed: reliefFailed,
+    updating: updatingRelief,
+    onToggle: handleReliefToggle,
+    onRegenerate: () => reloadRelief(regenerateReliefRecommendation),
+    onRetry: () => reloadRelief(getReliefRecommendation),
+  };
 
   return (
-    <div className="min-h-full bg-transparent text-foreground selection:bg-tm-yellow selection:text-tm-purple-dark">
+    <div className="min-h-full bg-transparent text-foreground selection:bg-tm-yellow selection:text-tm-on-accent">
       <section className="relative min-h-screen flex flex-col items-center pt-28 pb-32 px-6 gap-12">
         {/* Central Hero: Clock */}
         <div ref={heroRef} className="flex flex-col items-center text-center gap-2 z-10">

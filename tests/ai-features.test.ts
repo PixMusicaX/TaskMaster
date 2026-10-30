@@ -7,7 +7,9 @@ import {
 import { getSmartMission, regenerateSmartMission, toggleSmartMission } from "@/app/actions/smart-missions";
 import { getPreparationTip, togglePreparationTip } from "@/app/actions/preparation";
 import { getDailyQuote } from "@/app/actions/daily-quote";
+import { splitQuote } from "@/lib/quote";
 import { reliefRecommendation, smartMission, dailyQuote } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { db } from "./helpers/test-db";
 import { setToday, insertRelief, jsonResponse } from "./helpers/fixtures";
 
@@ -167,5 +169,18 @@ describe("getDailyQuote", () => {
     const quote = await getDailyQuote("2026-09-28");
     expect(quote).toBe("Every grand legend begins with a single modest step.");
     expect(await db.select().from(dailyQuote)).toHaveLength(0);
+  });
+});
+
+describe("the quote of the day", () => {
+  it("splits text from author only at the spaced dash", () => {
+    expect(splitQuote("Well-being is a choice. — A. Author")).toEqual({ text: "Well-being is a choice.", author: "A. Author" });
+    expect(splitQuote("Rest.")).toEqual({ text: "Rest.", author: "" });
+  });
+  it("does not keep ZenQuotes' rate limit notice as the quote", async () => {
+    mockNetwork({ "zenquotes.io": [{ q: "Too many requests. Obtain an auth key for unlimited access.", a: "zenquotes.io" }] });
+    const quote = await getDailyQuote("2031-02-03");
+    expect(quote).toBe("Every grand legend begins with a single modest step.");
+    expect(await db.query.dailyQuote.findFirst({ where: eq(dailyQuote.date, "2031-02-03") })).toBeUndefined();
   });
 });

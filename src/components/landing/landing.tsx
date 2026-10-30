@@ -132,7 +132,7 @@ const THEME_NOTES = ["Six days a month", "Never the same dates twice", "Fonts, m
 type PersonaShow = { style: PersonaStyle; selected: number } | null;
 
 const LABEL = "text-caption font-mono font-semibold uppercase tracking-[0.12em]";
-const CTA = cn(LABEL, "inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-tm-yellow text-tm-purple-dark text-sm transition-transform hover:scale-[1.03] active:scale-95");
+const CTA = cn(LABEL, "inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-tm-yellow text-tm-on-accent text-sm transition-transform hover:scale-[1.03] active:scale-95");
 const BOARD = "tm-card tm-board relative border border-tm-blue-gray/10 dark:border-white/10";
 
 // A look around without an account: starts a throwaway planner filled with made-up data
@@ -499,7 +499,7 @@ export default function Landing() {
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <DemoButton className="hidden sm:inline-flex px-4 py-2 rounded-lg" />
-          <Link href="/login" onClick={signIn} className={cn(LABEL, "inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-tm-yellow text-tm-purple-dark transition-transform hover:scale-[1.04] active:scale-95")}>
+          <Link href="/login" onClick={signIn} className={cn(LABEL, "inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-tm-yellow text-tm-on-accent transition-transform hover:scale-[1.04] active:scale-95")}>
             Sign in <ArrowRight size={14} />
           </Link>
         </div>
@@ -950,7 +950,7 @@ function HabitsProp() {
                   <span data-flip={done ? "" : undefined} className="tm-3d relative block w-8 h-8 sm:w-10 sm:h-10">
                     <span data-front className="tm-face absolute inset-0 rounded-2xl border-2 border-tm-blue-gray/10 bg-white/5" />
                     <span data-back className="tm-face tm-face-back absolute inset-0 rounded-2xl border-2 bg-tm-yellow border-tm-yellow shadow-lg shadow-tm-yellow/20 flex items-center justify-center">
-                      <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" className="text-tm-purple-dark">
+                      <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" className="text-tm-on-accent">
                         <path d="M20 6 9 17l-5-5" />
                       </svg>
                     </span>
@@ -978,7 +978,7 @@ function SeasonsProp() {
               <div key={rank.title} className="tm-face absolute inset-0" style={{ transform: `rotateY(${i * 36}deg) translateZ(${RING_RADIUS}px)` }}>
                 <div className={cn(BOARD, "h-full p-3 flex flex-col items-center justify-center gap-3 text-center bg-background")}>
                   <CardFx />
-                  <span className="w-14 h-14 rounded-full bg-tm-purple-dark text-tm-yellow flex items-center justify-center"><RankCrest rank={rank.title} size={26} strokeWidth={1.5} /></span>
+                  <span className="w-14 h-14 rounded-full bg-tm-purple-dark text-tm-on-ink flex items-center justify-center"><RankCrest rank={rank.title} size={26} strokeWidth={1.5} /></span>
                   <span className="font-display font-bold uppercase text-sm md:text-base leading-none text-tm-purple-dark dark:text-tm-yellow">{rank.title}</span>
                   <span className={cn(LABEL, "text-tm-blue-gray")}>Level {rank.minLevel}+</span>
                 </div>
@@ -1051,7 +1051,7 @@ function PrivacyProp({ onSignIn }: { onSignIn: (event: React.MouseEvent) => void
           <span className={cn(LABEL, "mt-auto flex items-center gap-2 text-tm-orange-light")}><Github size={14} /> Source</span>
         </a>
       </div>
-      <span data-x className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-tm-purple-dark text-tm-yellow flex items-center justify-center shadow-xl pointer-events-none"><Lock size={20} /></span>
+      <span data-x className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-tm-purple-dark text-tm-on-ink flex items-center justify-center shadow-xl pointer-events-none"><Lock size={20} /></span>
     </div>
   );
 }

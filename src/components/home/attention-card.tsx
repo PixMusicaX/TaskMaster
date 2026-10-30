@@ -74,7 +74,7 @@ export default function AttentionCard(props: AttentionCardProps) {
           </div>
           <Link
             href={missingInfo[0] === "Note" ? "/notes" : "/habits"}
-            className="flex items-center justify-center gap-2 w-full py-3 bg-foreground/10 hover:bg-tm-yellow text-foreground hover:text-tm-purple-dark text-caption font-mono font-semibold uppercase rounded-xl transition-all border border-foreground/10 tracking-[0.12em]"
+            className="flex items-center justify-center gap-2 w-full py-3 bg-foreground/10 hover:bg-tm-yellow text-foreground hover:text-tm-on-accent text-caption font-mono font-semibold uppercase rounded-xl transition-all border border-foreground/10 tracking-[0.12em]"
           >
             Mend History <Plus size={14} />
           </Link>
@@ -121,7 +121,7 @@ export default function AttentionCard(props: AttentionCardProps) {
                 prepTip.completed ? "bg-tm-purple-dark border-tm-purple-dark dark:bg-tm-yellow dark:border-tm-yellow shadow-[0_0_10px_rgba(45,27,51,0.4)] dark:shadow-[0_0_10px_rgba(242,194,48,0.4)]" : "bg-white/5 border-tm-purple-dark/20 dark:border-tm-yellow/20 group-hover/prep:border-tm-purple-dark/50 dark:group-hover/prep:border-tm-yellow/50"
               )}
               checkSize={18}
-              checkClassName="text-white dark:text-tm-purple-dark"
+              checkClassName="text-white dark:text-tm-on-accent"
               idle={<Brain size={16} className="text-tm-purple-dark dark:text-tm-yellow" />}
             />
             <div className="flex-1 min-w-0">
@@ -166,7 +166,7 @@ export default function AttentionCard(props: AttentionCardProps) {
                 smartMission.completed ? "bg-tm-yellow border-tm-yellow shadow-[0_0_10px_rgba(242,194,48,0.4)]" : "bg-white/5 border-tm-yellow/20 group-hover/mission:border-tm-yellow/50"
               )}
               checkSize={18}
-              checkClassName="text-tm-purple-dark"
+              checkClassName="text-tm-on-accent"
               idle={<Zap size={16} className="text-tm-yellow" />}
             />
 

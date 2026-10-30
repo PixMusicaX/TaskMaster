@@ -151,7 +151,7 @@ export function P3DiscBack() {
   return (
     <div
       aria-hidden
-      className="absolute -inset-[3%] rounded-full bg-tm-purple-dark flex flex-col items-center justify-center gap-[3%] text-tm-yellow pointer-events-none motion-reduce:hidden"
+      className="absolute -inset-[3%] rounded-full bg-tm-purple-dark flex flex-col items-center justify-center gap-[3%] text-tm-on-ink pointer-events-none motion-reduce:hidden"
       style={{ ...hidden, transform: "rotateY(180deg)", boxShadow: "inset 0 0 0 0.3em var(--tm-yellow), inset 0 0 0 1.4em color-mix(in srgb, var(--tm-yellow) 16%, transparent)" }}
     >
       <svg viewBox="-50 -50 100 100" className="w-[26%]">

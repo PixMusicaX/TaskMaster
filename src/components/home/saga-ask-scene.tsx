@@ -9,7 +9,7 @@ import { CAPTION, TITLE } from "./saga-kit";
 export function AskTitle() {
   return (
     <div data-saga="ask-title" className="col-start-1 row-start-1 self-end flex flex-col items-center gap-1 motion-reduce:hidden">
-      <p className={cn(TITLE, "text-3xl sm:text-4xl")}>The Taskmaster</p>
+      <p className={cn(TITLE, "text-3xl sm:text-4xl")}>Taskmaster</p>
       <p className={CAPTION}>Need guidance?</p>
     </div>
   );

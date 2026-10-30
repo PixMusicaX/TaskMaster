@@ -39,7 +39,7 @@ export default function VaultHero() {
           initial={{ scale: 0.6, opacity: 0, rotate: -20 }}
           animate={{ scale: 1, opacity: 1, rotate: 0 }}
           transition={{ type: "spring", stiffness: 200, damping: 16 }}
-          className="absolute inset-4 rounded-full bg-tm-purple-dark text-tm-yellow flex items-center justify-center shadow-[0_0_40px_-8px_var(--tm-yellow)]"
+          className="absolute inset-4 rounded-full bg-tm-purple-dark text-tm-on-ink flex items-center justify-center shadow-[0_0_40px_-8px_var(--tm-yellow)]"
         >
           <RankCrest rank={rank} size={56} strokeWidth={1.5} />
         </motion.div>}
@@ -91,7 +91,7 @@ export default function VaultHero() {
                   className={cn(
                     "w-10 h-10 rounded-full flex items-center justify-center font-serif font-bold text-sm border-2 transition-colors",
                     reached
-                      ? "bg-tm-yellow border-tm-yellow text-tm-purple-dark"
+                      ? "bg-tm-yellow border-tm-yellow text-tm-on-accent"
                       : "bg-background border-tm-blue-gray/20 text-tm-blue-gray/50",
                     i === eraIndex && "shadow-[0_0_20px_-2px_var(--tm-yellow)]"
                   )}

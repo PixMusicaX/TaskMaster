@@ -72,7 +72,7 @@ function SpecialNav({ id }: { id: SpecialId }) {
             onClick={() => setMenuOpen(true)}
             aria-label="Open menu"
             aria-expanded={menuOpen}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-tm-yellow text-tm-purple-dark font-mono font-semibold uppercase tracking-[0.12em] text-[13px] shadow-[0_4px_18px_-6px_var(--tm-yellow)]"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-tm-yellow text-tm-on-accent font-mono font-semibold uppercase tracking-[0.12em] text-[13px] shadow-[0_4px_18px_-6px_var(--tm-yellow)]"
           >
             <Menu size={18} strokeWidth={2.8} />
             <span className="leading-none">Menu</span>

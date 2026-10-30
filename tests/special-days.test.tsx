@@ -4,7 +4,7 @@ import { cleanup, render } from "@testing-library/react";
 import {
   SPECIAL_DAYS, SPECIAL_IDS, SPECIAL_OFF_KEY, nextSpecialDay, pickSpecialDay, scheduledSpecial, specialForToday,
 } from "@/lib/special-days";
-import { PERSONA_ON_KEY, personaDaysInMonth, personaForToday, pickPersonaDays } from "@/lib/persona";
+import { PERSONA_ON_KEY, personaDaysInMonth, personaForToday } from "@/lib/persona";
 import { themeInitScript } from "@/lib/theme-init";
 import { SPECIAL_LOOKS } from "@/components/special/special-themes";
 import SpecialMenu from "@/components/special/special-menu";
@@ -16,7 +16,7 @@ vi.mock("@/components/progress/progress-provider", () => ({ useProgress: () => (
 
 // Every month from 2024 to 2033
 const MONTHS = Array.from({ length: 120 }, (_, i) => ({ year: 2024 + Math.floor(i / 12), month: i % 12 }));
-const specialDayOf = (year: number, month: number) => pickSpecialDay(year, month, pickPersonaDays(year, month));
+const specialDayOf = (year: number, month: number) => pickSpecialDay(year, month);
 
 beforeEach(() => {
   localStorage.clear();
@@ -45,7 +45,7 @@ describe("special days", () => {
     }
   });
 
-  it("picks one real day in every other month, the same each time, away from that month's Persona days", () => {
+  it("picks one real day in every other month, the same each time", () => {
     const seen = new Set<number>();
     for (const { year, month } of MONTHS) {
       const day = specialDayOf(year, month);
@@ -53,7 +53,6 @@ describe("special days", () => {
       expect(day).toBeLessThanOrEqual(new Date(year, month + 1, 0).getDate());
       expect(specialDayOf(year, month)).toBe(day);
       if (![0, 1, 9, 11].includes(month)) {
-        expect(personaDaysInMonth(year, month).has(day)).toBe(false);
         seen.add(day);
       }
     }
@@ -77,20 +76,21 @@ describe("special days", () => {
     expect(specialForToday()).toBeNull();
   });
 
-  it("takes the day from a Persona day that lands on it", () => {
-    // Find a fixed-date special day that is also a Persona day somewhere in ten years
-    const clash = MONTHS.flatMap(({ year, month }) => {
-      const day = { 0: 1, 1: 14, 9: 31, 11: 25 }[month];
-      return day && personaDaysInMonth(year, month).has(day) ? [new Date(year, month, day, 12)] : [];
-    })[0];
-    expect(clash).toBeDefined();
+  it("never shares a day with a Persona day, fixed dates included", () => {
+    for (let year = 2026; year < 2056; year++) {
+      for (let month = 0; month < 12; month++) {
+        expect(personaDaysInMonth(year, month).has(specialDayOf(year, month))).toBe(false);
+        expect(personaDaysInMonth(year, month).size).toBe(6);
+      }
+    }
+  });
 
+  it("leaves the player's Persona days alone with special days off", () => {
+    const [[day]] = [...personaDaysInMonth(2026, 2).entries()];
     localStorage.setItem(PERSONA_ON_KEY, "1");
-    vi.setSystemTime(clash);
-    expect(specialForToday()).not.toBeNull();
-    expect(personaForToday()).toBeNull();
-    // With special days off, the Persona day is back
     localStorage.setItem(SPECIAL_OFF_KEY, "1");
+    vi.setSystemTime(new Date(2026, 2, day, 12));
+    expect(specialForToday()).toBeNull();
     expect(personaForToday()).not.toBeNull();
   });
 });

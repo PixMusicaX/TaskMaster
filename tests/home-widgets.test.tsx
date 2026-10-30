@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import SeasonPaceCard, { raceGoal } from "@/components/home/season-pace-card";
 import EraHint from "@/components/home/era-hint";
-import { dailyTarget } from "@/components/home/growth-saga";
+import { dailyTarget, gaugeTicks, tickLabels } from "@/components/home/growth-saga";
+import { leftToday } from "@/components/home/saga-clock-scene";
+import TavernCard from "@/components/home/tavern-card";
+import { TavernEmblem } from "@/components/home/saga-tavern-scene";
 import ChronicleCard from "@/components/home/chronicle-card";
 import type { HistoryDay } from "@/app/actions/history";
 import type { Profile, SeasonPace } from "@/lib/types";
@@ -142,6 +145,31 @@ describe("EraHint", () => {
   });
 });
 
+describe("the season pace gauge's marks", () => {
+  const september = { ...pace, dayOfMonth: 30, daysInMonth: 31, lastMonthName: "September" };
+
+  it("marks last month's pace and final total apart while they differ", () => {
+    const ticks = gaugeTicks({ ...september, lastMonthPaceXP: 3000, lastMonthTotalXP: 3830 }, 4400);
+    expect(ticks.map(t => t.label)).toEqual(["Sep D30 · 3000", "Final · 3830"]);
+  });
+  it("makes them one mark once they are the same number", () => {
+    const ticks = gaugeTicks({ ...september, lastMonthPaceXP: 3830, lastMonthTotalXP: 3830 }, 4400);
+    expect(ticks.map(t => t.label)).toEqual(["Final · 3830"]);
+  });
+  it("pushes the labels of nearby marks apart", () => {
+    const labels = tickLabels([{ at: 0.86 }, { at: 0.87 }], 17);
+    expect(Math.abs(labels[0].y - labels[1].y)).toBeCloseTo(17);
+  });
+  it("leaves labels alone when they already clear each other", () => {
+    expect(tickLabels([{ at: 0.2 }, { at: 0.8 }], 17)).toEqual([tickLabels([{ at: 0.2 }], 17)[0], tickLabels([{ at: 0.8 }], 17)[0]]);
+  });
+  it("leaves labels alone when they run opposite ways from the top of the gauge", () => {
+    const labels = tickLabels([{ at: 0.42 }, { at: 0.58 }], 17);
+    expect(labels.map(l => l.anchor)).toEqual(["end", "start"]);
+    expect(labels[0].y).toBe(labels[1].y);
+  });
+});
+
 describe("dailyTarget (today's ring in the season pace scene)", () => {
   it("spreads what was needed this morning over the days left, today included", () => {
     // 301 XP to finish above 500, over 3 days: 101 a day
@@ -152,5 +180,36 @@ describe("dailyTarget (today's ring in the season pace scene)", () => {
   });
   it("is full when last month was already beaten before today", () => {
     expect(dailyTarget(620, 600, 500, 2)).toEqual({ earned: 20, target: 0, left: 0, progress: 1 });
+  });
+});
+
+describe("leftToday (the Clock scene)", () => {
+  it("counts down to midnight in hours and minutes", () => {
+    expect(leftToday(new Date(2026, 9, 30, 14, 0, 0))).toBe("9h 59m left today");
+  });
+  it("drops the hours in the last hour", () => {
+    expect(leftToday(new Date(2026, 9, 30, 23, 30, 0))).toBe("29m left today");
+  });
+});
+
+describe("the Tavern when relief can't be had", () => {
+  const noop = () => {};
+  const props = { relief: null, loading: false, updating: new Set<string>(), onToggle: noop, onRegenerate: noop };
+
+  it("says so on the card, and can ask again", () => {
+    const onRetry = vi.fn();
+    render(<TavernCard {...props} failed onRetry={onRetry} />);
+    expect(screen.getByText("The Tavern is shut. The fire went out.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /knock again/i }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+  it("says so in the saga's scene instead of thinking forever", () => {
+    render(<TavernEmblem {...props} failed onRetry={noop} active />);
+    expect(screen.getByText("Shut")).toBeTruthy();
+    expect(screen.queryByText("The Taskmaster is thinking")).toBeNull();
+  });
+  it("goes back to waiting while it asks again", () => {
+    render(<TavernEmblem {...props} loading failed onRetry={noop} active />);
+    expect(screen.getByText("The Taskmaster is thinking")).toBeTruthy();
   });
 });

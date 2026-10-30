@@ -16,7 +16,7 @@ export default function CharacterStatsCard({ profile }: { profile: Profile | nul
     <InsightCard
       icon={Crown}
       iconClassName="text-tm-yellow"
-      title="Character Stats"
+      title="Stats"
       subtitle="Current Attribute Progression"
       aside={<Pill className="hidden sm:block">Live Data</Pill>}
       delay={0.2}

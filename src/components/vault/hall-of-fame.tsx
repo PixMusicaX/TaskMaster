@@ -38,10 +38,10 @@ export default function HallOfFame({ seasons, loading, onViewAll }: HallOfFamePr
                       <h4 className="text-xl font-bold text-foreground leading-tight">{season.monthName}</h4>
                       <p className="text-xs font-mono font-semibold text-tm-blue-gray uppercase tracking-[0.12em]">{season.year}</p>
                     </div>
-                    <div className="relative w-12 h-12 rounded-2xl bg-tm-purple-dark text-tm-yellow flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="relative w-12 h-12 rounded-2xl bg-tm-purple-dark text-tm-on-ink flex items-center justify-center group-hover:scale-110 transition-transform">
                       <RankCrest rank={season.title} size={22} strokeWidth={1.75} />
                       {isBest && (
-                        <span className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-tm-yellow text-tm-purple-dark text-micro font-mono font-semibold uppercase tracking-[0.12em]">Best</span>
+                        <span className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-tm-yellow text-tm-on-accent text-micro font-mono font-semibold uppercase tracking-[0.12em]">Best</span>
                       )}
                     </div>
                   </div>

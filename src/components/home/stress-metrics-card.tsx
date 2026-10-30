@@ -19,7 +19,7 @@ export default function StressMetricsCard({ moodData }: { moodData: Pick<NoteRow
     <InsightCard
       icon={Zap}
       iconClassName="text-tm-orange-light"
-      title="Stress Metrics"
+      title="Aura"
       subtitle="30-Day Emotional Signature"
       aside={<Pill className="hidden sm:block">Live Data</Pill>}
       delay={0.6}

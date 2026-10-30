@@ -22,17 +22,23 @@
 }
 
 :root[data-rank="Squire"] {
-  --tm-yellow: #69A312;
-  --tm-orange-light: #A16207;
-  --tm-orange-dark: #3F6212;
-  --tm-blue-gray: #52525B;
-  --tm-purple-dark: #18181B;
-  --tm-red: #4D7C0F;
+  --tm-yellow: #0B7A75;
+  /* Verdigris */
+  --tm-orange-light: #B8531A;
+  /* Burnished Copper */
+  --tm-orange-dark: #A33F12;
+  /* Rust Copper */
+  --tm-blue-gray: #4A6567;
+  /* Weathered Slate */
+  --tm-purple-dark: #0F3533;
+  /* Deep Patina */
+  --tm-red: #C2402E;
+  /* Heraldic Red */
 }
 
 :root[data-rank="Vanguard"] {
-  --tm-yellow: #B8860B;
-  /* Ochre Gold */
+  --tm-yellow: #6B7A00;
+  /* Citron */
   --tm-orange-light: #BC8488;
   /* Dusty Rose */
   --tm-orange-dark: #5F8A8B;
@@ -68,10 +74,10 @@
 }
 
 :root[data-rank="Champion"] {
-  --tm-yellow: #C08B04;
-  /* Amber Gold */
-  --tm-orange-light: #8B5CF6;
-  /* Bright Violet */
+  --tm-yellow: #9333EA;
+  /* Royal Purple */
+  --tm-orange-light: #A16207;
+  /* Crown Gold */
   --tm-orange-dark: #6D28D9;
   /* Deep Purple */
   --tm-blue-gray: #5B21B6;
@@ -141,14 +147,19 @@
 }
 
 .dark[data-rank="Squire"] {
-  --tm-blue-gray: #A1A1AA;
-  --tm-orange-dark: #456B14;
-  /* Readability: lifted for contrast on the dark background */
+  --tm-yellow: #2DD4BF;
+  /* Bright Verdigris */
+  --tm-orange-light: #F0894A;
+  /* Polished Copper */
+  --tm-orange-dark: #E2672B;
+  --tm-blue-gray: #8FB3B3;
+  --tm-red: #F2705E;
+  /* Readability: the whole palette is lifted for contrast on the dark background */
 }
 
 .dark[data-rank="Vanguard"] {
   --tm-blue-gray: #94A3B8;
-  --tm-yellow: #B8860B;
+  --tm-yellow: #D6E03A;
   --tm-red: #C18E92;
 }
 
@@ -177,7 +188,8 @@
 
 .dark[data-rank="Champion"] {
   --tm-blue-gray: #C4B5FD;
-  --tm-yellow: #FDE047;
+  --tm-yellow: #C084FC;
+  --tm-orange-light: #FDE047;
   --tm-red: #D8B4FE;
   --tm-orange-dark: #7635DB;
   /* Readability: lifted for contrast on the dark background */
@@ -224,12 +236,19 @@
 /* Ink drawn on accent surfaces (bg-tm-yellow). Defaults to the palette's dark ink;
    ranks whose ink and accent are too close get black or white instead. */
 :root { --tm-on-accent: var(--tm-purple-dark); }
+:root[data-rank="Squire"]:not(.dark) { --tm-on-accent: #FFFFFF; }
+:root[data-rank="Vanguard"]:not(.dark) { --tm-on-accent: #FFFFFF; }
 :root[data-rank="Veteran"]:not(.dark) { --tm-on-accent: #FFFFFF; }
 :root[data-rank="Knight"]:not(.dark) { --tm-on-accent: #FFFFFF; }
+:root[data-rank="Champion"]:not(.dark) { --tm-on-accent: #FFFFFF; }
 :root[data-rank="Sentinel"]:not(.dark) { --tm-on-accent: #141014; }
 :root[data-rank="Paladin"]:not(.dark) { --tm-on-accent: #FFFFFF; }
 :root[data-rank="Hero"]:not(.dark) { --tm-on-accent: #141014; }
 .dark[data-rank="Hero"] { --tm-on-accent: #141014; }
+
+/* The reverse: the accent's colour on an ink surface (bg-tm-purple-dark). Unset, it is the accent
+   itself; Knight's accent and ink are both black in light mode. */
+:root[data-rank="Knight"]:not(.dark) { --tm-on-ink: #FFFFFF; }
 
 .bg-tm-yellow.text-tm-purple-dark,
 .bg-tm-yellow .text-tm-purple-dark {
@@ -246,6 +265,8 @@
   --color-tm-blue-gray: var(--tm-blue-gray);
   --color-tm-purple-dark: var(--tm-purple-dark);
   --color-tm-red: var(--tm-red);
+  --color-tm-on-accent: var(--tm-on-accent);
+  --color-tm-on-ink: var(--tm-on-ink, var(--tm-yellow));
 
   /* Small type scale for HUD labels: 10 / 11 / 12px, the floor for legible uppercase labels on phones */
   --text-micro: 0.625rem;

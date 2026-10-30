@@ -4,7 +4,6 @@ import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { CalendarDays, CheckSquare, Repeat, type LucideIcon } from "lucide-react";
 import type { HistoryDay } from "@/app/actions/history";
 import { noteTextLines, type EventRow } from "@/lib/types";
-import { useMounted } from "@/lib/use-mounted";
 import { cn, moodEmoji } from "@/lib/utils";
 import { C, CAPTION, R, TITLE, anchorAt, polar } from "./saga-kit";
 
@@ -13,49 +12,6 @@ import { C, CAPTION, R, TITLE, anchorAt, polar } from "./saga-kit";
 // orbit; the saga's scroll script animates them through their data-saga names.
 
 const RING = 166;
-
-// A real-time clock face tipped over in 3D inside the ring, behind the centre text; each scene
-// tips it about a different axis. The hands are set once from the time at mount and then turned
-// by CSS (see .tm-clock-hand), so nothing ticks in script, and each hand is only a sliver, which
-// keeps its GPU layer tiny.
-const HANDS = [
-  { name: "hour", seconds: 12 * 3600, length: "26%", className: "w-1 bg-tm-purple-dark dark:bg-tm-yellow" },
-  { name: "minute", seconds: 3600, length: "38%", className: "w-0.5 bg-tm-blue-gray" },
-  { name: "second", seconds: 60, length: "44%", className: "w-px bg-tm-orange-dark" },
-];
-
-function OrbitClock({ axis }: { axis: "x" | "y" }) {
-  // Seconds since midnight when this mounted. The hands are only drawn in the browser, since
-  // the server's clock is not the reader's.
-  const mounted = useMounted();
-  const [startedAt] = useState(() => {
-    const now = new Date();
-    return now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds() + now.getMilliseconds() / 1000;
-  });
-
-  return (
-    <div aria-hidden className="absolute inset-[14%]" style={{ perspective: 700 }}>
-      <div
-        className="absolute inset-0 rounded-full border-2 border-tm-blue-gray/30 opacity-70"
-        style={{ transform: axis === "x" ? "rotateX(62deg) rotateZ(-24deg)" : "rotateY(58deg) rotateZ(18deg)" }}
-      >
-        {Array.from({ length: 12 }, (_, i) => (
-          <span key={i} className="absolute inset-0" style={{ transform: `rotate(${i * 30}deg)` }}>
-            <span className={cn("absolute left-1/2 top-0 -translate-x-1/2 rounded-full bg-tm-blue-gray", i % 3 === 0 ? "w-1 h-[9%]" : "w-px h-[5%] opacity-60")} />
-          </span>
-        ))}
-        {mounted && HANDS.map(hand => (
-          <span
-            key={hand.name}
-            className={cn("tm-clock-hand absolute left-1/2 bottom-1/2 rounded-full", hand.className)}
-            style={{ height: hand.length, animationDuration: `${hand.seconds}s`, animationDelay: `${-(startedAt % hand.seconds)}s` }}
-          />
-        ))}
-        <span className="absolute left-1/2 top-1/2 w-2 h-2 -ml-1 -mt-1 rounded-full bg-tm-orange-dark" />
-      </div>
-    </div>
-  );
-}
 
 function plural(n: number, word: string) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -119,6 +75,18 @@ export function chronicleYears(days: HistoryDay[], todayStr: string): ChronicleY
 // How far round the ring (0 to 1) the sweep has to run to reach a year's node
 export const yearSweep = (index: number) => (index * YEAR_TURN) / 360;
 
+// Inside the ring, the growth rings of a tree cut across: never quite round, each drawn by its
+// radius and a seed that sets its wobble. One ring belongs to each year, further in the further
+// back, and the rest fill in between.
+const treeRing = (r: number, seed: number) => Array.from({ length: 60 }, (_, i) => {
+  const angle = i * 6;
+  const turn = (angle * Math.PI) / 180;
+  const p = polar(angle, r + 2.6 * Math.sin(3 * turn + seed) + 1.4 * Math.sin(7 * turn + seed * 2));
+  return `${p.x},${p.y}`;
+}).join(" ");
+const YEAR_RINGS = Array.from({ length: MAX_YEARS }, (_, i) => treeRing(136 - i * 22, i * 1.7));
+const FILLER_RINGS = [147, 125, 103, 81, 59, 44, 30].map((r, i) => treeRing(r, i * 2.3 + 0.8));
+
 export function ChronicleTitle({ todayStr }: { todayStr: string }) {
   return (
     <div data-saga="chron-title" className="col-start-1 row-start-1 self-end flex flex-col items-center gap-1 motion-reduce:hidden">
@@ -129,13 +97,16 @@ export function ChronicleTitle({ todayStr }: { todayStr: string }) {
 }
 
 // A ring that runs backwards: the years sit anticlockwise from twelve o'clock, a sweep reaches
-// back to the one in focus, and the centre shows that year. On wide screens that year's events,
-// tasks and habits fan out round the right of the ring.
+// back to the one in focus, its growth ring lights up inside, and the centre shows that year. On
+// wide screens that year's events, tasks and habits fan out round the right of the ring.
 export function ChronicleEmblem({ years }: { years: ChronicleYear[] }) {
   return (
     <div data-saga="chron" aria-hidden className="absolute inset-0 motion-reduce:hidden">
-      <OrbitClock axis="y" />
       <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full overflow-visible text-tm-orange-light">
+        <g className="text-tm-blue-gray/25" fill="none" stroke="currentColor" strokeWidth="1">
+          {FILLER_RINGS.map(points => <polygon key={points} points={points} />)}
+          {YEAR_RINGS.map(points => <polygon key={points} points={points} strokeWidth="2" />)}
+        </g>
         <circle className="text-tm-blue-gray/25" cx={C} cy={C} r={RING} fill="none" stroke="currentColor" strokeWidth="2" />
         {/* Mirrored so it draws anticlockwise from the top */}
         <circle
@@ -151,7 +122,10 @@ export function ChronicleEmblem({ years }: { years: ChronicleYear[] }) {
           const label = polar(-i * YEAR_TURN, R + 26);
           return (
             <g key={y.date}>
-              <g data-saga="chron-halo"><circle cx={node.x} cy={node.y} r="17" fill="currentColor" opacity="0.25" /></g>
+              <g data-saga="chron-halo">
+                <polygon points={YEAR_RINGS[i]} fill="none" stroke="currentColor" strokeWidth="3" />
+                <circle cx={node.x} cy={node.y} r="17" fill="currentColor" opacity="0.25" />
+              </g>
               <g data-saga="chron-node">
                 <circle cx={node.x} cy={node.y} r="7" fill="currentColor" />
                 <text
@@ -279,22 +253,48 @@ export function futureNodes(marks: FutureMark[]) {
 export function FutureTitle({ count }: { count: number }) {
   return (
     <div data-saga="future-title" className="col-start-1 row-start-1 self-end flex flex-col items-center gap-1 motion-reduce:hidden">
-      <p className={cn(TITLE, "text-3xl sm:text-4xl")}>Future Sight</p>
+      <p className={cn(TITLE, "text-3xl sm:text-4xl")}>Precognition</p>
       <p className={CAPTION}>The next {FUTURE_DAYS} days{count > 0 && <> · <span className="text-foreground">{plural(count, "event")}</span></>}</p>
     </div>
   );
 }
 
-// A two-week dial: a hand sweeps round it once and what lies ahead appears on its day. A day
+// Inside the two-week ring, a scrying lens: the fine fibres of an iris round the centre, with
+// ripples going out through it (see .tm-lens-ripple) while the scene is on stage
+const IRIS_INNER = 92;
+const IRIS_FIBRES = Array.from({ length: 72 }, (_, i) => {
+  const from = polar(i * 5, IRIS_INNER);
+  const to = polar(i * 5 + 3, IRIS_INNER + (i % 2 ? 26 : 42));
+  return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+}).join(" ");
+
+// The beam that sweeps the ring: a soft wedge trailing behind its leading edge
+const BEAM = [46, 28, 12].map(trail => {
+  const from = polar(-trail, RING);
+  const to = polar(0, RING);
+  return `M ${C} ${C} L ${from.x} ${from.y} A ${RING} ${RING} 0 0 1 ${to.x} ${to.y} Z`;
+});
+
+// A two-week dial: a beam sweeps round it once and what lies ahead appears on its day. A day
 // holding more than one kind of event shimmers between their colours (see .tm-node-shimmer).
-export function FutureEmblem({ marks }: { marks: FutureMark[] }) {
+export function FutureEmblem({ marks, active }: { marks: FutureMark[]; active: boolean }) {
   const next = marks.length > 0 ? marks.reduce((a, b) => (b.day < a.day ? b : a)) : null;
-  const hand = polar(0, RING);
+  const edge = polar(0, RING);
 
   return (
     <div data-saga="future" aria-hidden className="absolute inset-0 motion-reduce:hidden">
-      <OrbitClock axis="x" />
       <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full overflow-visible">
+        <path className="text-tm-blue-gray/30" d={IRIS_FIBRES} fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+        <circle className="text-tm-blue-gray/30" cx={C} cy={C} r={IRIS_INNER} fill="none" stroke="currentColor" strokeWidth="1.5" />
+        {[0, 2, 4].map(delay => (
+          <circle
+            key={delay}
+            className={cn("tm-lens-ripple text-tm-yellow", !active && "[animation-play-state:paused]")}
+            cx={C} cy={C} r={148}
+            fill="none" stroke="currentColor" strokeWidth="1.5"
+            style={{ animationDelay: `${-delay}s` }}
+          />
+        ))}
         <circle className="text-tm-blue-gray/25" cx={C} cy={C} r={RING} fill="none" stroke="currentColor" strokeWidth="2" />
         {Array.from({ length: FUTURE_DAYS }, (_, i) => {
           const from = polar((i / FUTURE_DAYS) * 360, RING - 7);
@@ -324,8 +324,8 @@ export function FutureEmblem({ marks }: { marks: FutureMark[] }) {
       </svg>
 
       <svg data-saga="future-hand" viewBox="0 0 400 400" className="absolute inset-0 w-full h-full overflow-visible text-tm-yellow">
-        <line x1={C} y1={C} x2={hand.x} y2={hand.y} stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-        <circle cx={hand.x} cy={hand.y} r="4" fill="currentColor" />
+        {BEAM.map(d => <path key={d} d={d} fill="currentColor" opacity="0.1" />)}
+        <circle cx={edge.x} cy={edge.y} r="4" fill="currentColor" />
       </svg>
 
       <div data-saga="future-core" className="absolute inset-0 flex flex-col items-center justify-center">

@@ -20,15 +20,16 @@ import { getReliefHistory, toggleReliefRecommendation } from "@/app/actions/reli
 import { getPreparationTipHistory, togglePreparationTip } from "@/app/actions/preparation";
 import { generatePruneArchive, deletePrunedData } from "@/app/actions/prune";
 import { cn } from "@/lib/utils";
-import { APP_VERSION } from "@/lib/version";
+import { APP_VERSION, CREATOR_URL, CREATOR_URL2, REPO_URL } from "@/lib/version";
 import type { PrepTipRow, ReliefRow, SmartMissionRow, TimelineSeason } from "@/lib/types";
 
 const flip = <T extends { id: string; completed: boolean }>(list: T[], id: string) =>
   list.map(item => item.id === id ? { ...item, completed: !item.completed } : item);
 
 const CREDITS: { href?: string; icon: typeof UserRound; title: string; description: string }[] = [
-  { icon: UserRound, title: "Creator", description: "Made by kk36 and PiX." },
-  { href: "https://github.com/PixMusicaX/TaskMaster", icon: Github, title: "GitHub", description: "Browse the TaskMaster source code." },
+  { href: CREATOR_URL2, icon: UserRound, title: "kk36", description: "Creator of TaskMaster." },
+  { href: CREATOR_URL, icon: UserRound, title: "PiX", description: "Creator of TaskMaster." },
+  { href: REPO_URL, icon: Github, title: "GitHub", description: "Browse the TaskMaster source code." },
 ];
 
 const noopSubscribe = () => () => {};

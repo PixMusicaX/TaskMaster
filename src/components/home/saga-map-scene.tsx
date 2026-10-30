@@ -15,7 +15,7 @@ const DISC_INSET = `${((C - (ROSE - 14)) / (C * 2)) * 100}%`;
 export function MapTitle({ info }: { info: MapInfo | null }) {
   return (
     <div data-saga="map-title" className="col-start-1 row-start-1 self-end flex flex-col items-center gap-1 motion-reduce:hidden">
-      <p className={cn(TITLE, "text-3xl sm:text-4xl")}>The Map</p>
+      <p className={cn(TITLE, "text-3xl sm:text-4xl")}>Map</p>
       <p className={cn(CAPTION, "min-h-4")}>
         {info ? <><span className="text-foreground">{info.name}</span> · {info.icon} {info.realm} Realm</> : "Feel the journey"}
       </p>

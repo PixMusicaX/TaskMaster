@@ -35,7 +35,7 @@ export default function CalendarPage() {
   // The month's special day gets its sticker too (and has the day to itself: no Persona mark on it)
   const specialOff = useSyncExternalStore(subscribeSpecialSetting, isSpecialOff, () => false);
   const daySpecial = (day: Date) => (specialOff ? null : scheduledSpecial(day));
-  const dayPersona = (day: Date) => (personaOff || daySpecial(day) ? null : scheduledPersona(day));
+  const dayPersona = (day: Date) => (personaOff ? null : scheduledPersona(day));
   const [showAdd, setShowAdd] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventRow | null>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -270,7 +270,7 @@ export default function CalendarPage() {
                 resetForm();
                 setShowAdd(true);
               }}
-              className="flex items-center gap-2 bg-tm-yellow backdrop-blur-xl text-tm-purple-dark px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl w-full sm:w-auto relative z-10"
+              className="flex items-center gap-2 bg-tm-yellow backdrop-blur-xl text-tm-on-accent px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl w-full sm:w-auto relative z-10"
             >
               <Plus size={20} /> New Item
             </button>
@@ -301,7 +301,7 @@ export default function CalendarPage() {
                     <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
                       <button
                         onClick={() => setNewType("task")}
-                        className={cn("flex-1 py-2 rounded-lg font-bold text-sm transition-all", newType === "task" ? "bg-tm-yellow text-tm-purple-dark" : "text-tm-blue-gray")}
+                        className={cn("flex-1 py-2 rounded-lg font-bold text-sm transition-all", newType === "task" ? "bg-tm-yellow text-tm-on-accent" : "text-tm-blue-gray")}
                       >
                         Task
                       </button>
@@ -329,7 +329,7 @@ export default function CalendarPage() {
                         <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] px-1">Quest Tier</p>
                         <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
                           {[
-                            { id: "side", label: "Side", color: "bg-tm-yellow", text: "text-tm-purple-dark" },
+                            { id: "side", label: "Side", color: "bg-tm-yellow", text: "text-tm-on-accent" },
                             { id: "main", label: "Main", color: "bg-tm-orange-light", text: "text-white" },
                             { id: "epic", label: "Epic", color: "bg-tm-orange-dark", text: "text-white" },
                           ].map((t) => (
@@ -419,7 +419,7 @@ export default function CalendarPage() {
 
                     <button
                       onClick={handleAddEvent}
-                      className="w-full bg-tm-yellow text-tm-purple-dark font-black py-4 rounded-2xl shadow-xl hover:bg-tm-yellow/80 transition-colors"
+                      className="w-full bg-tm-yellow text-tm-on-accent font-black py-4 rounded-2xl shadow-xl hover:bg-tm-yellow/80 transition-colors"
                     >
                       {editingEvent ? "UPDATE ITEM" : "SAVE ITEM"}
                     </button>
@@ -475,7 +475,7 @@ export default function CalendarPage() {
                       
                       <button 
                         onClick={() => setIsPickingMonth(false)} 
-                        className="p-2 bg-tm-yellow text-tm-purple-dark rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all"
+                        className="p-2 bg-tm-yellow text-tm-on-accent rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all"
                       >
                         <Check size={18} />
                       </button>
@@ -659,7 +659,7 @@ export default function CalendarPage() {
                     
                     <button 
                       onClick={() => setIsPickingMonth(false)} 
-                      className="p-2 bg-tm-yellow text-tm-purple-dark rounded-lg shadow-lg"
+                      className="p-2 bg-tm-yellow text-tm-on-accent rounded-lg shadow-lg"
                     >
                       <Check size={14} />
                     </button>
@@ -711,7 +711,7 @@ export default function CalendarPage() {
                       className={cn(
                         "aspect-square flex flex-col items-center justify-center rounded-xl transition-colors relative",
                         !isCurrentMonth ? "opacity-20" : "opacity-100",
-                        isSelected ? "text-tm-purple-dark" : "hover:bg-white/5",
+                        isSelected ? "text-tm-on-accent" : "hover:bg-white/5",
                         isToday && !isSelected && "border border-tm-orange-dark text-tm-orange-dark"
                       )}
                     >
@@ -726,9 +726,9 @@ export default function CalendarPage() {
                       {special && <SpecialDayBadge id={special} size={9} className="absolute -top-1 -right-1" />}
                       <span className="text-sm font-bold">{format(day, "d")}</span>
                       <div className="flex gap-0.5 mt-0.5 h-1">
-                        {hasTask && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-purple-dark" : "bg-tm-yellow")} />}
-                        {hasEvent && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-purple-dark/60" : "bg-tm-orange-light")} />}
-                        {hasSpecialDay && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-purple-dark/40" : sdColor?.bg)} />}
+                        {hasTask && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-on-accent" : "bg-tm-yellow")} />}
+                        {hasEvent && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-on-accent/60" : "bg-tm-orange-light")} />}
+                        {hasSpecialDay && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-on-accent/40" : sdColor?.bg)} />}
                       </div>
                     </button>
                   );
@@ -823,7 +823,7 @@ export default function CalendarPage() {
                                       event.completed ? "bg-tm-yellow border-tm-yellow" : "border-tm-blue-gray/20 hover:border-tm-yellow"
                                     )}
                                     checkSize={12}
-                                    checkClassName="text-tm-purple-dark"
+                                    checkClassName="text-tm-on-accent"
                                   />
                                 </motion.button>
                               )}

@@ -23,7 +23,7 @@ export default function DemoBanner() {
       <p className="text-caption font-mono font-semibold uppercase tracking-[0.12em] truncate">
         Demo<span className="hidden sm:inline"> · nothing here is saved</span>
       </p>
-      <button onClick={() => leave(true)} disabled={leaving} className="px-3 py-1.5 rounded-full bg-tm-yellow text-tm-purple-dark text-caption font-mono font-semibold uppercase tracking-[0.12em] hover:scale-[1.04] transition-transform disabled:opacity-60">
+      <button onClick={() => leave(true)} disabled={leaving} className="px-3 py-1.5 rounded-full bg-tm-yellow text-tm-on-accent text-caption font-mono font-semibold uppercase tracking-[0.12em] hover:scale-[1.04] transition-transform disabled:opacity-60">
         Sign in<span className="hidden sm:inline"> for real</span>
       </button>
       <button onClick={() => leave(false)} disabled={leaving} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-caption font-mono font-semibold uppercase tracking-[0.12em] transition-colors disabled:opacity-60">

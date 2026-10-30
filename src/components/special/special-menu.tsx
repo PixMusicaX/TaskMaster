@@ -223,7 +223,7 @@ function MenuItems({ layout, items, selected, current, select, onClose }: ItemsP
               >
                 <Link {...link(i)} aria-label={item.label} className={cn(
                   "flex items-center justify-center w-12 h-12 md:w-16 md:h-16 rounded-full border-2 outline-none transition-colors",
-                  on ? "bg-tm-yellow border-tm-yellow text-tm-purple-dark shadow-[0_0_24px_-4px_var(--tm-yellow)]" : "bg-background border-tm-blue-gray/30 text-tm-blue-gray"
+                  on ? "bg-tm-yellow border-tm-yellow text-tm-on-accent shadow-[0_0_24px_-4px_var(--tm-yellow)]" : "bg-background border-tm-blue-gray/30 text-tm-blue-gray"
                 )}>
                   <Icon size={22} />
                 </Link>
@@ -252,7 +252,7 @@ function MenuItems({ layout, items, selected, current, select, onClose }: ItemsP
             >
               <Link {...link(i)} className={cn(
                 "block p-4 md:p-6 rounded-2xl border-2 outline-none transition-colors min-h-[6.5rem] md:min-h-[9rem]",
-                on ? "bg-tm-yellow border-tm-yellow text-tm-purple-dark shadow-xl" : "bg-background/70 border-tm-blue-gray/20 text-foreground"
+                on ? "bg-tm-yellow border-tm-yellow text-tm-on-accent shadow-xl" : "bg-background/70 border-tm-blue-gray/20 text-foreground"
               )}>
                 <Icon size={22} className={on ? "" : "text-tm-yellow"} />
                 <span className="block mt-3 md:mt-5 text-xl md:text-3xl font-bold leading-none" style={font}>{item.label}</span>

@@ -3,14 +3,14 @@
 // They're opt-in: nothing changes until the player turns them on in Account → Settings.
 //
 // The days come from a shuffle seeded by the month, so every device agrees and they never move
-// once the month starts. There's always a normal day between two Persona days, and the two days
-// of the same game sit at least a week apart.
+// once the month starts. There's always a normal day between two Persona days, the two days of
+// the same game sit at least a week apart, and none ever lands on the month's special day.
 //
 // <html data-persona="p3|p4|p5"> carries today's style (set before first paint by lib/theme-init.ts,
 // kept current by the theme provider). P3 follows the clock (blue by day, Dark Hour green by night);
 // P4 is always light and P5 always dark for now.
 import { DEV_TOOLS_ENABLED } from "./dev-xp";
-import { getDevSpecialOverride, specialForToday } from "./special-days";
+import { getDevSpecialOverride, pickSpecialDay } from "./special-days";
 
 export type PersonaStyle = "p3" | "p4" | "p5";
 export const PERSONA_STYLES: PersonaStyle[] = ["p3", "p4", "p5"];
@@ -33,11 +33,12 @@ export const PERSONA_FORCED_THEME: Record<PersonaStyle, "light" | "dark" | null>
 export const PERSONA_FONTS_URL =
   "https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;700&family=Jost:ital,wght@0,300;0,400;0,500;0,700;1,500&family=M+PLUS+Rounded+1c:wght@500;800;900&family=Archivo+Black&family=Permanent+Marker&family=M+PLUS+1p:wght@800;900&family=Playfair+Display:wght@800;900&display=swap";
 
-// Day of month → style for the given month (0-based). Self-contained, with no outside references:
-// lib/theme-init.ts embeds its source in the <head> script.
-export function pickPersonaDays(year: number, month: number): Record<number, string> {
+// Day of month → style for the given month (0-based), leaving out `avoid` (the month's special
+// day). Self-contained, with no outside references: lib/theme-init.ts embeds its source in the
+// <head> script.
+export function pickPersonaDays(year: number, month: number, avoid: number): Record<number, string> {
   let seed = 2166136261;
-  const key = "persona:" + year + "-" + (month + 1);
+  const key = "persona:v2:" + year + "-" + (month + 1);
   for (let k = 0; k < key.length; k++) {
     seed ^= key.charCodeAt(k);
     seed = Math.imul(seed, 16777619) >>> 0;
@@ -57,6 +58,7 @@ export function pickPersonaDays(year: number, month: number): Record<number, str
       const d = 1 + Math.floor(rand() * length);
       if (days.indexOf(d) === -1) days.push(d);
     }
+    if (days.indexOf(avoid) !== -1) continue;
     days.sort(function (a, b) { return a - b; });
     let spaced = true;
     for (let i = 1; i < days.length; i++) if (days[i] - days[i - 1] < 2) spaced = false;
@@ -78,11 +80,14 @@ export function pickPersonaDays(year: number, month: number): Record<number, str
     return out;
   }
   // Unreachable in practice; an even spread keeps the rules
-  return { 3: "p3", 8: "p4", 13: "p5", 18: "p3", 23: "p4", 28: "p5" };
+  const shift = (avoid - 3) % 5 === 0 ? 1 : 0;
+  const even: Record<number, string> = {};
+  even[3 + shift] = "p3"; even[8 + shift] = "p4"; even[13 + shift] = "p5"; even[18 + shift] = "p3"; even[23 + shift] = "p4"; even[28 + shift] = "p5";
+  return even;
 }
 
 export function personaDaysInMonth(year: number, month: number): Map<number, PersonaStyle> {
-  const picked = pickPersonaDays(year, month);
+  const picked = pickPersonaDays(year, month, pickSpecialDay(year, month));
   return new Map(Object.entries(picked).map(([day, style]) => [Number(day), style as PersonaStyle]));
 }
 
@@ -93,7 +98,7 @@ export function scheduledPersona(date: Date): PersonaStyle | null {
   const key = `${date.getFullYear()}-${date.getMonth()}`;
   let days = monthCache.get(key);
   if (!days) {
-    days = pickPersonaDays(date.getFullYear(), date.getMonth());
+    days = pickPersonaDays(date.getFullYear(), date.getMonth(), pickSpecialDay(date.getFullYear(), date.getMonth()));
     monthCache.set(key, days);
   }
   return (days[date.getDate()] as PersonaStyle | undefined) ?? null;
@@ -155,15 +160,13 @@ export function subscribePersonaSetting(cb: () => void) {
   return () => window.removeEventListener(PERSONA_SETTING_EVENT, cb);
 }
 
-// Today's style: the dev override wins, then the player's switch, then the calendar. A special
-// day (lib/special-days.ts) has the stage to itself, so a Persona day that lands on one is skipped.
+// Today's style: the dev override wins, then the player's switch, then the calendar
 export function personaForToday(now = new Date()): PersonaStyle | null {
   const forcedSpecial = getDevSpecialOverride();
   if (forcedSpecial && forcedSpecial !== "off") return null;
   const forced = getDevPersonaOverride();
   if (forced === "off") return null;
   if (forced) return forced;
-  if (specialForToday(now)) return null;
   return isPersonaOff() ? null : scheduledPersona(now);
 }
 

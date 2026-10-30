@@ -81,7 +81,7 @@ export default function Chronicle({ missions, preps, reliefs, loading, onToggle,
             onClick={() => setTab(t.id)}
             className={cn(
               "relative flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-caption font-mono font-semibold uppercase tracking-[0.12em] transition-colors",
-              tab === t.id ? "text-tm-purple-dark" : "text-tm-blue-gray hover:text-foreground"
+              tab === t.id ? "text-tm-on-accent" : "text-tm-blue-gray hover:text-foreground"
             )}
           >
             {tab === t.id && (

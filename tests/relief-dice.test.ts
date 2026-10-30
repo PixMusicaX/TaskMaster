@@ -75,8 +75,8 @@ describe("the Persona voice", () => {
   it("takes the client's style, or falls back to the calendar", () => {
     expect(resolvePersonaStyle("p4", "2026-10-04")).toBe("p4");
     expect(resolvePersonaStyle(null, "2026-10-10")).toBeNull();
-    expect(resolvePersonaStyle("nonsense", "2026-10-10")).toBe(scheduledPersona(new Date(2026, 9, 10)));
-    expect(resolvePersonaStyle(undefined, "2026-10-10")).toBe("p5");
+    expect(resolvePersonaStyle("nonsense", "2026-10-18")).toBe(scheduledPersona(new Date(2026, 9, 18)));
+    expect(resolvePersonaStyle(undefined, "2026-10-18")).toBe("p5");
     expect(resolvePersonaStyle(undefined, "2026-10-04")).toBeNull();
   });
 });

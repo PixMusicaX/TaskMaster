@@ -287,8 +287,9 @@ export default function Navbar() {
         </motion.button>
       </div>
 
-      {/* Half height on phones so the gas doesn't cover content while scrolling */}
-      <div className="relative h-px w-full overflow-visible origin-top scale-y-50 opacity-80 lg:scale-y-100 lg:opacity-100">
+      {/* Half height on phones so the gas doesn't cover content while scrolling. It clears away
+          while the saga's Clock is on stage, which has an aura of the same gas (see growth-saga.tsx) */}
+      <div className="relative h-px w-full overflow-visible origin-top scale-y-50 opacity-80 lg:scale-y-100 lg:opacity-100 transition-opacity duration-700 [html[data-saga-clock]_&]:opacity-0">
         <GaseousDivider
           hoveredSide={null}
           variant="artpaint"

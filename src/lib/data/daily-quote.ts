@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { dailyQuote } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
+const QUOTE_TIMEOUT = 4000;
+
 export async function dailyQuoteFor(clientDateStr?: string) {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
 
@@ -16,7 +18,9 @@ export async function dailyQuoteFor(clientDateStr?: string) {
       return existing.quote;
     }
 
-    const response = await fetch("https://zenquotes.io/api/today", { next: { revalidate: 86400 } });
+    // The saved row above is the day's cache, so this always asks for today's. Everything else on
+    // the home page queues behind this call, so it gives up quickly and the fallback takes over.
+    const response = await fetch("https://zenquotes.io/api/today", { cache: "no-store", signal: AbortSignal.timeout(QUOTE_TIMEOUT) });
     if (!response.ok) {
       throw new Error(`ZenQuotes API status ${response.status}`);
     }
@@ -30,6 +34,11 @@ export async function dailyQuoteFor(clientDateStr?: string) {
     const author = data[0]?.a?.trim();
     if (!quote) {
       throw new Error("ZenQuotes returned empty quote");
+    }
+    // Over its rate limit it answers 200 with a notice in place of the quote, which must not be
+    // saved as everyone's quote of the day
+    if (/too many requests|auth key/i.test(quote) || /zenquotes/i.test(author ?? "")) {
+      throw new Error("ZenQuotes rate limit reached");
     }
 
     const formatted = author ? `${quote} — ${author}` : quote;

@@ -28,7 +28,7 @@ export default function LevelUpToast({ level }: { level: number | null }) {
               transition={{ duration: 3, ease: "linear" }}
             />
             <motion.div
-              className="relative w-12 h-12 rounded-xl bg-tm-yellow text-tm-purple-dark flex items-center justify-center text-2xl font-display font-bold"
+              className="relative w-12 h-12 rounded-xl bg-tm-yellow text-tm-on-accent flex items-center justify-center text-2xl font-display font-bold"
               initial={{ rotate: -20, scale: 0.4 }}
               animate={{ rotate: 0, scale: 1 }}
               transition={{ type: "spring", stiffness: 400, damping: 12, delay: 0.1 }}

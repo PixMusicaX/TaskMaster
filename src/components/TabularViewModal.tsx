@@ -164,7 +164,7 @@ export default function TabularViewModal<T extends object>({ title, isOpen, onCl
                 
                 <button
                   onClick={onClose}
-                  className="w-full md:w-auto px-10 py-4 bg-tm-yellow text-tm-purple-dark font-semibold uppercase text-sm rounded-2xl shadow-xl shadow-tm-yellow/10 hover:scale-105 active:scale-95 transition-all"
+                  className="w-full md:w-auto px-10 py-4 bg-tm-yellow text-tm-on-accent font-semibold uppercase text-sm rounded-2xl shadow-xl shadow-tm-yellow/10 hover:scale-105 active:scale-95 transition-all"
                 >
                   Return to Dashboard
                 </button>

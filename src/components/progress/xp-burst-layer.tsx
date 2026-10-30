@@ -26,7 +26,7 @@ export default function XpBurstLayer({ bursts }: { bursts: XpBurst[] }) {
               transition={{ duration: 1.2, ease: "easeOut", times: [0, 0.15, 0.7, 1] }}
             >
               <span className={b.delta > 0
-                ? "px-2.5 py-1 rounded-full bg-tm-yellow text-tm-purple-dark text-xs font-black shadow-[0_4px_20px_-4px_var(--tm-yellow)] whitespace-nowrap"
+                ? "px-2.5 py-1 rounded-full bg-tm-yellow text-tm-on-accent text-xs font-black shadow-[0_4px_20px_-4px_var(--tm-yellow)] whitespace-nowrap"
                 : "px-2.5 py-1 rounded-full bg-tm-blue-gray/80 text-white text-xs font-black whitespace-nowrap"}>
                 {b.delta > 0 ? "+" : ""}{b.delta} XP
               </span>

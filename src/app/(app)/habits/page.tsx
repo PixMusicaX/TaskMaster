@@ -224,7 +224,7 @@ export default function HabitsPage() {
                 className={cn(
                   "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-black transition-all backdrop-blur-xl border shadow-2xl w-full sm:w-auto",
                   showArchive
-                    ? "bg-tm-purple-dark text-tm-yellow border-tm-purple-dark"
+                    ? "bg-tm-purple-dark text-tm-on-ink border-tm-purple-dark"
                     : "bg-white/20 dark:bg-white/5 border-white/20 text-tm-purple-dark dark:text-tm-yellow saturate-150"
                 )}
               >
@@ -232,7 +232,7 @@ export default function HabitsPage() {
               </button>
               <button
                 onClick={() => setShowAdd(true)}
-                className="flex items-center gap-2 bg-tm-yellow backdrop-blur-xl text-tm-purple-dark px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl w-full sm:w-auto"
+                className="flex items-center gap-2 bg-tm-yellow backdrop-blur-xl text-tm-on-accent px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl w-full sm:w-auto"
               >
                 <Plus size={20} /> Add Habit
               </button>
@@ -306,7 +306,7 @@ export default function HabitsPage() {
                               }}
                               className={cn(
                                 "w-10 h-10 rounded-xl border font-bold text-xs transition-all",
-                                isSelected ? "bg-tm-yellow text-tm-purple-dark border-tm-yellow shadow-md" : "bg-white/5 border-white/10 text-tm-blue-gray"
+                                isSelected ? "bg-tm-yellow text-tm-on-accent border-tm-yellow shadow-md" : "bg-white/5 border-white/10 text-tm-blue-gray"
                               )}
                             >
                               {day.label}
@@ -318,7 +318,7 @@ export default function HabitsPage() {
 
                     <button
                       onClick={editingHabit ? handleUpdateHabit : handleAddHabit}
-                      className="w-full bg-tm-yellow text-tm-purple-dark font-black py-4 rounded-2xl shadow-xl hover:bg-tm-yellow/80 transition-colors"
+                      className="w-full bg-tm-yellow text-tm-on-accent font-black py-4 rounded-2xl shadow-xl hover:bg-tm-yellow/80 transition-colors"
                     >
                       {editingHabit ? "UPDATE HABIT" : "CREATE HABIT"}
                     </button>
@@ -495,7 +495,7 @@ export default function HabitsPage() {
                                 )
                               )}
                               checkSize={20}
-                              checkClassName="text-tm-purple-dark"
+                              checkClassName="text-tm-on-accent"
                               idle={isActive ? <Check size={20} className="text-tm-yellow opacity-0 group-hover/check:opacity-40 transition-opacity" /> : null}
                             />
                           </motion.button>

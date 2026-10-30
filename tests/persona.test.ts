@@ -41,8 +41,8 @@ describe("persona days", () => {
   });
 
   it("is the same every time for a month, and differs between months", () => {
-    expect(pickPersonaDays(2026, 9)).toEqual(pickPersonaDays(2026, 9));
-    const layouts = new Set(MONTHS.map(({ year, month }) => JSON.stringify(pickPersonaDays(year, month))));
+    expect(pickPersonaDays(2026, 9, 31)).toEqual(pickPersonaDays(2026, 9, 31));
+    const layouts = new Set(MONTHS.map(({ year, month }) => JSON.stringify(pickPersonaDays(year, month, 1))));
     expect(layouts.size).toBeGreaterThan(100);
   });
 
@@ -55,7 +55,7 @@ describe("persona days", () => {
 
   it("finds the next Persona day after today", () => {
     const next = nextPersonaDay(new Date(2026, 9, 4, 12))!;
-    expect(next.date.getDate()).toBe(10);
+    expect(next.date.getDate()).toBe(12);
     expect(next.style).toBe(scheduledPersona(next.date));
   });
 

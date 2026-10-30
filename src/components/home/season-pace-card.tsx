@@ -64,7 +64,7 @@ export default function SeasonPaceCard({ profile, pace, className }: { profile: 
     <InsightCard
       icon={Flag}
       iconClassName="text-tm-yellow"
-      title="Season Pace"
+      title="Pace"
       subtitle={pace ? `Racing ${pace.lastMonthName}` : "Racing last month"}
       aside={pace && <Pill className="hidden sm:block">Day {pace.dayOfMonth}</Pill>}
       delay={0.3}

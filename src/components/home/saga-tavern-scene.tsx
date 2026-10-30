@@ -12,21 +12,50 @@ import { C, CAPTION, TITLE, polar } from "./saga-kit";
 // moves a fixed set of wrappers (its data-saga names) and everything that depends on the data
 // changes inside them with plain CSS transitions, so a late answer never rebuilds the script.
 
-const RING = 166;
+export const RING = 166;
 // The ring is three arcs, one per suggestion, each lit once that suggestion is done
 const SEATS = 3;
 const GAP = 14;
 const ARC = 360 / SEATS - GAP;
-const SEAT_PATHS = Array.from({ length: SEATS }, (_, i) => {
+export const SEAT_PATHS = Array.from({ length: SEATS }, (_, i) => {
   const from = polar(i * (360 / SEATS) + GAP / 2, RING);
   const to = polar(i * (360 / SEATS) + GAP / 2 + ARC, RING);
   return `M ${from.x} ${from.y} A ${RING} ${RING} 0 0 1 ${to.x} ${to.y}`;
+});
+
+const curve = (...points: { x: number; y: number }[]) => {
+  const [start, ...rest] = points.map(p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`);
+  return `M ${start} C ${rest.join(" ")}`;
+};
+const between = (a: { x: number; y: number }, b: { x: number; y: number }, t: number) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+// How far a cubic's handles reach to follow an arc of the seats' length, and a point's handle along the ring
+const REACH = (4 / 3) * Math.tan((ARC * Math.PI) / 720) * RING;
+const handle = (degrees: number, way: number) => {
+  const at = polar(degrees, RING);
+  const along = polar(degrees + 90, REACH);
+  return { x: at.x + way * (along.x - C), y: at.y + way * (along.y - C) };
+};
+
+// The hand-over from the moods to the Clock: the triangle's corners sit in the gaps between the
+// seats, so each side of it bows out onto the ring, where the watch's case takes over. Each edge is
+// the same cubic straight and curved, so the script can tween from one to the other.
+export const SEAT_EDGES = Array.from({ length: SEATS }, (_, i) => {
+  const corner = polar(i * (360 / SEATS), RING);
+  const next = polar((i + 1) * (360 / SEATS), RING);
+  const start = i * (360 / SEATS) + GAP / 2;
+  return {
+    straight: curve(corner, between(corner, next, 1 / 3), between(corner, next, 2 / 3), next),
+    seat: curve(polar(start, RING), handle(start, 1), handle(start + ARC, -1), polar(start + ARC, RING)),
+  };
 });
 
 export interface TavernProps {
   relief: Relief | null;
   // A fresh set of suggestions has been asked for
   loading: boolean;
+  // The suggestions could not be had, and `onRetry` asks again
+  failed: boolean;
+  onRetry: () => void;
   updating: Set<string>;
   onToggle: (index: number) => void;
   onRegenerate: () => void;
@@ -59,32 +88,55 @@ export function TavernTitle({ relief }: Pick<TavernProps, "relief">) {
 }
 
 // The ring's three arcs light as the suggestions are done; the centre counts them and holds the
-// "new suggestions" button. While the AI is working the ring pulses and the centre says so.
-export function TavernEmblem({ relief, loading, onRegenerate, active }: Pick<TavernProps, "relief" | "loading" | "onRegenerate"> & { active: boolean }) {
+// "new suggestions" button. While the AI is working the ring pulses and the centre says so, and if
+// it comes back with nothing the centre says that too, with a way to ask again.
+export function TavernEmblem({ relief, loading, failed, onRegenerate, onRetry, active }: Pick<TavernProps, "relief" | "loading" | "failed" | "onRegenerate" | "onRetry"> & { active: boolean }) {
   const list = seats(relief);
   const done = list.filter(s => s.done).length;
-  const waiting = loading || !relief;
+  const shut = failed && !relief && !loading;
+  const waiting = !shut && (loading || !relief);
   const canRegenerate = !!relief && !relief.completed;
 
   return (
     <div data-saga="tavern" className="absolute inset-0 motion-reduce:hidden">
       <svg data-saga="tavern-seats" aria-hidden viewBox="0 0 400 400" className={cn("absolute inset-0 w-full h-full overflow-visible", waiting && "animate-pulse")}>
-        {SEAT_PATHS.map((d, i) => (
-          <g key={i}>
-            <path className="text-tm-blue-gray/25" d={d} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-            <path
-              className={cn("transition-opacity duration-700", i === 0 ? "text-tm-yellow" : "text-tm-orange-light", list[i]?.done ? "opacity-100" : "opacity-0")}
-              d={d} fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round"
-            />
-          </g>
-        ))}
-        {waiting && (
-          <circle className="text-tm-yellow animate-spin-slow origin-center" cx={C} cy={C} r={RING - 22} fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="60 200" strokeLinecap="round" opacity="0.7" />
-        )}
+        {/* A group of its own, since the pulse above claims the svg's opacity */}
+        <g data-saga="tavern-ring">
+          {SEAT_PATHS.map((d, i) => (
+            <g key={i}>
+              <path className="text-tm-blue-gray/40" d={d} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+              <path
+                className={cn("transition-opacity duration-700", i === 0 ? "text-tm-yellow" : "text-tm-orange-light", list[i]?.done ? "opacity-100" : "opacity-0")}
+                d={d} fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round"
+              />
+            </g>
+          ))}
+          {waiting && (
+            <circle className="text-tm-yellow animate-spin-slow origin-center" cx={C} cy={C} r={RING - 22} fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="60 200" strokeLinecap="round" opacity="0.7" />
+          )}
+        </g>
       </svg>
 
       <div data-saga="tavern-core" className="absolute inset-0 flex flex-col items-center justify-center text-center px-10">
-        {waiting ? (
+        {shut ? (
+          <>
+            <span className={CAPTION}>The Tavern is</span>
+            <span className={cn(TITLE, "text-3xl sm:text-4xl leading-none my-1")}>Shut</span>
+            <span className={CAPTION}>The fire went out</span>
+            <button
+              type="button"
+              onClick={onRetry}
+              tabIndex={active ? undefined : -1}
+              className={cn(
+                CAPTION,
+                "mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-tm-blue-gray/25 hover:text-tm-yellow hover:border-tm-yellow/50 active:scale-95 transition",
+                active && "pointer-events-auto"
+              )}
+            >
+              <RotateCw size={12} /> Knock again
+            </button>
+          </>
+        ) : waiting ? (
           <>
             <span className={CAPTION}>{loading ? "Finding new" : "Scanning for"}</span>
             <span className={cn(TITLE, "text-3xl sm:text-4xl leading-none my-1 animate-pulse")}>{loading ? "Paths" : "Relief"}</span>
@@ -119,9 +171,10 @@ export function TavernEmblem({ relief, loading, onRegenerate, active }: Pick<Tav
 
 // The three suggestions as tappable rows. There are always three rows, placeholders until the
 // suggestions arrive, and they can only be tapped while the scene is on stage.
-export function TavernDetails({ relief, loading, updating, onToggle, active }: Omit<TavernProps, "onRegenerate"> & { active: boolean }) {
+export function TavernDetails({ relief, loading, failed, updating, onToggle, active }: Omit<TavernProps, "onRegenerate" | "onRetry"> & { active: boolean }) {
   const list = seats(relief);
   const reward = relief?.xpReward === 5 ? 10 : relief?.xpReward;
+  const shut = failed && !relief && !loading;
   const waiting = loading || !relief;
 
   return (
@@ -132,7 +185,11 @@ export function TavernDetails({ relief, loading, updating, onToggle, active }: O
         const busy = updating.has(key);
         return (
           <div key={i} data-saga="tavern-row" className="w-full max-w-sm">
-            {waiting || !seat ? (
+            {shut ? (
+              <p className="h-8 [@media(max-height:720px)]:h-7 flex items-center justify-center text-sm font-medium text-tm-blue-gray">
+                {i === 0 && "No relief could be found. Your day is still safe."}
+              </p>
+            ) : waiting || !seat ? (
               <div className="tm-skeleton h-8 [@media(max-height:720px)]:h-7" />
             ) : (
               <button
@@ -153,7 +210,7 @@ export function TavernDetails({ relief, loading, updating, onToggle, active }: O
                     seat.done ? "bg-tm-yellow border-tm-yellow" : "border-tm-blue-gray/40 group-hover/seat:border-tm-yellow/60"
                   )}
                   checkSize={14}
-                  checkClassName="text-tm-purple-dark"
+                  checkClassName="text-tm-on-accent"
                   idle={i === 0
                     ? <Sparkles size={12} className="text-tm-yellow" />
                     : <ReliefTypeIcon type={seat.type} size={12} className="text-tm-blue-gray" />}

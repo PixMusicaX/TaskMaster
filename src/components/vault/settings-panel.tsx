@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
-import { Bell, CalendarDays, MapPin, PartyPopper, Settings, Sparkles, Volume2 } from "lucide-react";
+import { Bell, CalendarDays, MapPin, MoonStar, PartyPopper, Settings, Sparkles, Volume2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { SPRING } from "@/lib/motion";
@@ -10,7 +10,8 @@ import { isMuted, setMuted, subscribeMuted } from "@/lib/sfx";
 import GlassCard from "@/components/glass-card";
 import VaultSection from "./vault-section";
 import { PERSONA_NAMES, isPersonaOff, nextPersonaDay, setPersonaOff, subscribePersonaSetting } from "@/lib/persona";
-import { usePersona } from "@/components/theme-provider";
+import { usePersona, useTheme } from "@/components/theme-provider";
+import { isAutoDarkOff, setAutoDarkOff, subscribeAutoDark } from "@/lib/auto-dark";
 import { HOLIDAY_REGIONS } from "@/lib/personalization";
 import { SPECIAL_DAYS, isSpecialOff, nextSpecialDay, setSpecialOff, subscribeSpecialSetting } from "@/lib/special-days";
 import { useSpecial } from "@/components/theme-provider";
@@ -79,6 +80,8 @@ interface SettingsPanelProps {
 
 export default function SettingsPanel({ notificationPermission, locationPermission, onEnableNotifications, onEnableLocation, holidayRegion, holidayBusy, holidayStatus, onHolidayRegionChange }: SettingsPanelProps) {
   const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
+  const { theme } = useTheme();
+  const autoDarkOff = useSyncExternalStore(subscribeAutoDark, isAutoDarkOff, () => false);
   const personaOff = useSyncExternalStore(subscribePersonaSetting, isPersonaOff, () => true);
   const personaToday = usePersona();
   const next = nextPersonaDay();
@@ -102,6 +105,15 @@ export default function SettingsPanel({ notificationPermission, locationPermissi
       <GlassCard className="p-5 md:p-8 space-y-6">
         <SettingRow icon={Volume2} title="Sounds" description="Completion, level-up and rank-up sounds, plus haptics on supported phones.">
           <Switch on={!muted} onClick={() => setMuted(!muted)} label="Sounds" />
+        </SettingRow>
+        <div className="h-px bg-tm-blue-gray/10" />
+        <SettingRow
+          icon={MoonStar}
+          title="Auto dark mode"
+          description="Goes dark from 6pm to 6am. Turn it off to keep the theme you pick."
+          status={autoDarkOff ? `Staying ${theme} on this device` : undefined}
+        >
+          <Switch on={!autoDarkOff} onClick={() => setAutoDarkOff(!autoDarkOff, theme)} label="Auto dark mode" />
         </SettingRow>
         <div className="h-px bg-tm-blue-gray/10" />
         <SettingRow

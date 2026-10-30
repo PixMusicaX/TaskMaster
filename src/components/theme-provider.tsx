@@ -3,6 +3,7 @@
 import * as React from "react";
 import { MotionConfig } from "framer-motion";
 import { ERAS, eraById, type Era, type EraId } from "@/lib/eras";
+import { AUTO_DARK_EVENT, isAutoDarkOff, pickedTheme, rememberTheme } from "@/lib/auto-dark";
 import { DEV_PERSONA_EVENT, PERSONA_SETTING_EVENT, PERSONA_FONTS_URL, PERSONA_FORCED_THEME, personaForToday, type PersonaStyle } from "@/lib/persona";
 import { DEV_SPECIAL_EVENT, SPECIAL_FONTS_URL, SPECIAL_FORCED_THEME, SPECIAL_SETTING_EVENT, SPECIAL_SWAPS_THEME, specialForToday, type SpecialId } from "@/lib/special-days";
 
@@ -47,14 +48,14 @@ const THEME_SOURCE_EVENT = "tm-theme-source";
 const browserDark = () => window.matchMedia("(prefers-color-scheme: dark)");
 
 // Dark from 6pm to 6am, light otherwise (same rule as lib/theme-init.ts), unless today's Persona
-// style pins a theme or the page follows the browser
+// style pins a theme, the page follows the browser, or auto dark mode is off for the player's pick
 const clockTheme = (): Theme => {
   const persona = readPersona();
   const special = readSpecial();
   const forced = persona ? PERSONA_FORCED_THEME[persona] : special ? SPECIAL_FORCED_THEME[special] : null;
   if (forced) return forced;
   const h = new Date().getHours();
-  const dark = browserThemed > 0 ? browserDark().matches : h < 6 || h >= 18;
+  const dark = browserThemed > 0 ? browserDark().matches : isAutoDarkOff() ? pickedTheme() === "dark" : h < 6 || h >= 18;
   // Glitch day gets it backwards on purpose
   return dark !== (special === SPECIAL_SWAPS_THEME) ? "dark" : "light";
 };
@@ -144,6 +145,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener(DEV_PERSONA_EVENT, sync);
     window.addEventListener(PERSONA_SETTING_EVENT, sync);
     window.addEventListener(THEME_SOURCE_EVENT, sync);
+    window.addEventListener(AUTO_DARK_EVENT, sync);
     window.addEventListener(DEV_SPECIAL_EVENT, sync);
     window.addEventListener(SPECIAL_SETTING_EVENT, sync);
     // React owns <html>'s className and writes it back without "dark" whenever it re-renders the
@@ -159,6 +161,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener(DEV_PERSONA_EVENT, sync);
       window.removeEventListener(PERSONA_SETTING_EVENT, sync);
       window.removeEventListener(THEME_SOURCE_EVENT, sync);
+      window.removeEventListener(AUTO_DARK_EVENT, sync);
       window.removeEventListener(DEV_SPECIAL_EVENT, sync);
       window.removeEventListener(SPECIAL_SETTING_EVENT, sync);
     };
@@ -168,8 +171,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // P4 and P5 days, and a few special days, have a single look
     if (persona && PERSONA_FORCED_THEME[persona]) return;
     if (special && SPECIAL_FORCED_THEME[special]) return;
-    // No localStorage.setItem for theme - we don't want to remember it!
+    // Only remembered with auto dark mode off; otherwise the clock takes over at the next 6am/6pm
     wanted = theme === "light" ? "dark" : "light";
+    if (isAutoDarkOff()) rememberTheme(special === SPECIAL_SWAPS_THEME ? theme : wanted);
     document.documentElement.classList.toggle("dark", wanted === "dark");
     notify();
   };

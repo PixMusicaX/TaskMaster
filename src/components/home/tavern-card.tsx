@@ -11,12 +11,14 @@ import { ReliefTypeIcon } from "./icons";
 interface TavernCardProps {
   relief: Relief | null;
   loading: boolean;
+  failed: boolean;
   updating: Set<string>;
   onToggle: (index: number) => void;
   onRegenerate: () => void;
+  onRetry: () => void;
 }
 
-export default function TavernCard({ relief, loading, updating, onToggle, onRegenerate }: TavernCardProps) {
+export default function TavernCard({ relief, loading, failed, updating, onToggle, onRegenerate, onRetry }: TavernCardProps) {
   const reward = relief?.xpReward === 5 ? 10 : relief?.xpReward;
   const canRegenerate = !!relief && !relief.completed;
 
@@ -52,7 +54,7 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
           <div className="flex flex-col gap-6">
             {/* Primary Suggestion */}
             <div className="relative">
-              <div className="absolute -top-3 left-4 px-2 bg-tm-purple-dark border border-tm-yellow/20 rounded text-micro font-mono font-semibold uppercase text-tm-yellow tracking-[0.12em] z-20">
+              <div className="absolute -top-3 left-4 px-2 bg-tm-purple-dark border border-tm-yellow/20 rounded text-micro font-mono font-semibold uppercase text-tm-on-ink tracking-[0.12em] z-20">
                 Primary Path
               </div>
               <button
@@ -74,7 +76,7 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
                       relief.completed ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/30 group-hover/card:border-tm-yellow/50"
                     )}
                     checkSize={18}
-                    checkClassName="text-tm-purple-dark"
+                    checkClassName="text-tm-on-accent"
                     idle={<Sparkles size={14} className="text-tm-yellow" />}
                   />
                   <div className="flex-1">
@@ -124,7 +126,7 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
                               "w-8 h-8 rounded-xl border transition-colors",
                               isAltCompleted ? "bg-tm-yellow border-tm-yellow" : "bg-white/5 border-tm-blue-gray/20 group-hover/alt:border-tm-yellow/40"
                             )}
-                            checkClassName="text-tm-purple-dark"
+                            checkClassName="text-tm-on-accent"
                             idle={<ReliefTypeIcon type={alt.type} size={14} className="text-tm-blue-gray group-hover/alt:text-tm-yellow" />}
                           />
                           <span className="text-tiny font-mono font-semibold text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/10">+{reward} XP</span>
@@ -139,6 +141,17 @@ export default function TavernCard({ relief, loading, updating, onToggle, onRege
                 </div>
               </div>
             )}
+          </div>
+        ) : failed ? (
+          <div className="flex flex-col items-center gap-3 text-center py-12">
+            <p className="text-sm font-semibold text-foreground">The Tavern is shut. The fire went out.</p>
+            <p className="text-sm text-tm-blue-gray">No relief could be found. Your day is still safe.</p>
+            <button
+              onClick={onRetry}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-tm-blue-gray/25 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray hover:text-tm-yellow hover:border-tm-yellow/50 active:scale-95 transition"
+            >
+              <RotateCw size={12} /> Knock again
+            </button>
           </div>
         ) : (
           <div className="text-center py-12 opacity-50">

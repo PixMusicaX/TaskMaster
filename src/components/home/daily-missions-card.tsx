@@ -62,7 +62,7 @@ export default function DailyMissionsCard({ habits, loading, todayStr, weekday, 
                 "w-8 h-8 rounded-xl border-2 transition-colors",
                 isDone ? "bg-tm-yellow border-tm-yellow" : "border-tm-blue-gray/30 group-hover/card:border-tm-yellow/50"
               )}
-              checkClassName="text-tm-purple-dark"
+              checkClassName="text-tm-on-accent"
               idle={<HabitIconRender icon={habit.icon} className="text-tm-yellow/50 group-hover/card:text-tm-yellow" size={14} />}
             />
             <div className="flex-1">

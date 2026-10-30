@@ -20,8 +20,10 @@ import {
 import type { MapInfo } from "@/components/map-generator";
 import { AskDetails, AskEmblem, AskTaskmasterButton, AskTitle } from "./saga-ask-scene";
 import { MapDetails, MapEmblem, MapTitle } from "./saga-map-scene";
-import { TavernDetails, TavernEmblem, TavernTitle, type TavernProps } from "./saga-tavern-scene";
+import { RING, SEAT_EDGES, TavernDetails, TavernEmblem, TavernTitle, type TavernProps } from "./saga-tavern-scene";
 import { METER_MAX_XP, meterScale, raceGoal } from "./season-pace-card";
+import ClockAura, { type AuraState } from "./saga-clock-aura";
+import { ClockDetails, ClockEmblem, ClockTitle, DIAL } from "./saga-clock-scene";
 import { P3DiscBack, P3Stage, addP3Script } from "./saga-p3";
 import { P4Stage, P4TvBack, P4TvFront, addP4Script } from "./saga-p4";
 import { P5AppCard, P5PhoneBack, P5PhoneFront, P5Stage, addP5Script } from "./saga-p5";
@@ -61,6 +63,8 @@ const GAUGE = 166;
 const GAUGE_START = polar(GAUGE_FROM, GAUGE);
 const GAUGE_END = polar(GAUGE_FROM + GAUGE_SWEEP, GAUGE);
 const GAUGE_PATH = `M ${GAUGE_START.x} ${GAUGE_START.y} A ${GAUGE} ${GAUGE} 0 1 1 ${GAUGE_END.x} ${GAUGE_END.y}`;
+// The level ring's arc becomes the gauge's fill: the gauge is three quarters of a circle
+const GAUGE_OF_RING = GAUGE_SWEEP / 360;
 // How far the pace rings tip over and slant, in degrees
 const PACE_TIP = 58;
 const PACE_SLANT = -14;
@@ -75,17 +79,18 @@ const TIME_COLOR = "color-mix(in srgb, var(--tm-orange-dark) 55%, var(--tm-yello
 
 const even = (r: number) => STATS.map(() => r);
 const STAT_GRID = LEVELS.map(l => polygon(STAT_ANGLES, even(RADAR * l)));
-// The mood triangle grown out to the Tavern's ring: turned a sixth of the way round, its corners
-// are the middles of the three seats (see the hand-over in the script)
-const SEAT_SHAPE = polygon(MOOD_ANGLES, even(166));
-const SEAT_TURN = 60;
+// The mood triangle grown out to the Clock's case, with its corners where the Tavern's seats part.
+// It turns a third of the way round on the way, which lands it back on itself (see the hand-over
+// in the script)
+const SEAT_SHAPE = polygon(MOOD_ANGLES, even(RING));
+const SEAT_TURN = 120;
 const MOOD_GRID = LEVELS.map(l => polygon(MOOD_ANGLES, even(RADAR * l)));
 
 // The scroll script, in svh of scrolling. The orbit assembles during the approach (the half screen
 // before the stage pins) and fills while pinned; its centre then turns from level to era while the
 // level ring tips over, the season's XP gauge turns in with its two tipped rings, the radar draws
-// inside the dotted circle for the stats and reshapes for the moods, the Tavern seats the day's
-// relief, Future Sight sweeps the next two weeks, the Chronicle reaches back through the years, a
+// inside the dotted circle for the stats and reshapes for the moods, the Clock tells the time, the
+// Tavern seats the day's relief, Future Sight sweeps the next two weeks, the Chronicle reaches back through the years, a
 // compass gives way to the map and the orbit returns whole around the Taskmaster. The dial's
 // turning is not part of the script (see its effect).
 const APPROACH = 50;
@@ -93,7 +98,11 @@ const ERA_AT = 108;
 const PACE_AT = 162;
 const STATS_AT = 250;
 const MOOD_AT = 322;
-const TAVERN_AT = 394;
+const CLOCK_AT = 394;
+// How thick the Clock's aura is at rest, and how far its hole opens as it blows away
+const AURA_REST = 0.9;
+const AURA_GONE = 340;
+const TAVERN_AT = 474;
 // The Chronicle steps through its years, one YEAR_STEP of scroll each
 const YEAR_STEP = 40;
 const FUTURE_LENGTH = 84;
@@ -112,15 +121,16 @@ function sceneTimes(years: number) {
   const askAt = mapAt + MAP_LENGTH;
   const drawn = [
     { id: "standing", label: "Standing", from: 0, holdsAt: ERA_AT - 14 },
-    { id: "era", label: "Era Status", from: ERA_AT + 6, holdsAt: PACE_AT - 16 },
-    { id: "pace", label: "Season Pace", from: PACE_AT + 6, holdsAt: STATS_AT - 32 },
-    { id: "stats", label: "Character Stats", from: STATS_AT + 8, holdsAt: MOOD_AT - 16 },
-    { id: "mood", label: "Stress Metrics", from: MOOD_AT + 10, holdsAt: TAVERN_AT - 24 },
+    { id: "era", label: "Era", from: ERA_AT + 6, holdsAt: PACE_AT - 16 },
+    { id: "pace", label: "Pace", from: PACE_AT + 6, holdsAt: STATS_AT - 32 },
+    { id: "stats", label: "Stats", from: STATS_AT + 8, holdsAt: MOOD_AT - 16 },
+    { id: "mood", label: "Aura", from: MOOD_AT + 10, holdsAt: CLOCK_AT - 24 },
+    { id: "clock", label: "Time", from: CLOCK_AT + 2, holdsAt: TAVERN_AT - 24 },
     { id: "tavern", label: "Tavern", from: TAVERN_AT + 2, holdsAt: futureAt - 28 },
-    { id: "future", label: "Future Sight", from: futureAt + 2, holdsAt: chronAt - 24 },
+    { id: "future", label: "Precognition", from: futureAt + 2, holdsAt: chronAt - 24 },
     ...(years > 0 ? [{ id: "chronicle", label: "Chronicle", from: chronAt + 2, holdsAt: chronAt + 10 + 18 }] : []),
-    { id: "map", label: "The Map", from: mapAt + 2, holdsAt: askAt - 20 },
-    { id: "ask", label: "The Taskmaster", from: askAt + 2, holdsAt: askAt + 40 },
+    { id: "map", label: "Map", from: mapAt + 2, holdsAt: askAt - 20 },
+    { id: "ask", label: "Taskmaster", from: askAt + 2, holdsAt: askAt + 40 },
   ];
   // Where the scroll comes to rest: once per scene, and once per year inside the Chronicle
   const stops = drawn.flatMap(d => d.id === "chronicle" ? Array.from({ length: years }, (_, i) => d.holdsAt + i * YEAR_STEP) : [d.holdsAt]);
@@ -193,6 +203,40 @@ function TiltRing({ group, arc, r, progress, color, track = 0.07, front }: { gro
   );
 }
 
+// The marks on the gauge: last month's pace by today and its final total. Once today is past the
+// end of last month they are the same number, so they become one mark.
+export function gaugeTicks(pace: SeasonPace, max: number) {
+  const month = pace.lastMonthName.slice(0, 3);
+  const final = { at: pace.lastMonthTotalXP / max, className: "text-tm-blue-gray", dashed: true };
+  if (pace.lastMonthPaceXP === pace.lastMonthTotalXP) {
+    return [{ ...final, label: `Final · ${pace.lastMonthTotalXP}`, className: "text-foreground", dashed: false }];
+  }
+  return [
+    { label: `${month} D${pace.dayOfMonth} · ${pace.lastMonthPaceXP}`, at: pace.lastMonthPaceXP / max, className: "text-foreground", dashed: false },
+    { ...final, label: `Final · ${pace.lastMonthTotalXP}` },
+  ];
+}
+
+// Where each mark's label goes: just outside the rank ring, level with the mark. Two marks close
+// together would print on top of each other, so the pair is pushed apart until they clear `height`.
+export function tickLabels(ticks: { at: number }[], height: number) {
+  const labels = ticks.map(tick => {
+    const { x, y } = polar(gaugeAngle(tick.at), R + 28);
+    return { x, y, anchor: anchorAt(x) as "start" | "end" | "middle" };
+  });
+  if (labels.length < 2) return labels;
+  const [a, b] = labels;
+  // Running away from each other, either side of twelve or six o'clock, they can't touch
+  const opposite = a.anchor !== "middle" && b.anchor !== "middle" && a.anchor !== b.anchor;
+  const short = height - Math.abs(a.y - b.y);
+  if (!opposite && short > 0) {
+    const [upper, lower] = a.y <= b.y ? [a, b] : [b, a];
+    upper.y -= short / 2;
+    lower.y += short / 2;
+  }
+  return labels;
+}
+
 // How today is going against the daily target: the XP still needed when the day began to finish
 // above last month's total, spread over the days left (today included)
 export function dailyTarget(xp: number, xpBeforeToday: number, lastMonthTotalXP: number, daysLeft: number) {
@@ -205,7 +249,7 @@ export function dailyTarget(xp: number, xpBeforeToday: number, lastMonthTotalXP:
 
 // The analytics as one pinned scroll sequence. The season's emblem assembles (level, rank path),
 // turns to show the era, becomes the season's XP gauge, then holds a radar that draws the character
-// stats and reshapes into the 30-day moods, seats the day's relief suggestions, sweeps the next
+// stats and reshapes into the 30-day moods, seats the day's relief suggestions, tells the time, sweeps the next
 // two weeks, reaches back through today's date in past years, unrolls the map and ends on the
 // way to the Taskmaster. With reduced motion nothing pins or animates: the emblem sits in the page
 // flow with the plain cards (`fallback`) beneath it.
@@ -245,6 +289,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   const paceXpRef = useRef<HTMLSpanElement>(null);
   const dialRef = useRef<SVGSVGElement>(null);
   const dialDirection = useRef(1);
+  // What the Clock's aura draws, set by the script (see saga-clock-aura.tsx)
+  const aura = useRef<AuraState>({ presence: 0, density: AURA_REST, hole: DIAL });
   const levelRingTurns = useRef(false);
   const { rank: savedRank, era, persona } = useTheme();
   // Persona 3 days: the saga plays on the music player (see saga-p3.tsx)
@@ -289,10 +335,9 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   const meter = meterScale(xp, hasRival ? pace : null);
   const meterFill = Math.min(1, xp / meter.max);
   const overflowing = xp >= METER_MAX_XP;
-  const ticks = hasRival ? [
-    { label: `${pace.lastMonthName.slice(0, 3)} D${pace.dayOfMonth} · ${pace.lastMonthPaceXP}`, at: pace.lastMonthPaceXP / meter.max, className: "text-foreground", dashed: false },
-    { label: `Final · ${pace.lastMonthTotalXP}`, at: pace.lastMonthTotalXP / meter.max, className: "text-tm-blue-gray", dashed: true },
-  ] : [];
+  const ticks = hasRival ? gaugeTicks(pace, meter.max) : [];
+  // Inside a TV or phone screen the labels stack onto two lines (see below)
+  const tickPlaces = tickLabels(ticks, p4 || p5 ? 34 : 17);
   const daysLeft = pace ? pace.daysInMonth - pace.dayOfMonth : 0;
   const goal = pace ? raceGoal(xp, pace, daysLeft) : null;
   const delta = pace ? xp - pace.lastMonthPaceXP : 0;
@@ -315,6 +360,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   const scenes = times.drawn;
   const onTavern = scenes[scene]?.id === "tavern";
   const onAskScene = scenes[scene]?.id === "ask";
+  const onClock = scenes[scene]?.id === "clock";
   // A string, so the navigation below only resets when the stops really change
   const stopsKey = times.stops.join();
   const chronFrom = times.chronAt;
@@ -330,6 +376,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     paceXpEl.textContent = String(xp);
     if (prefersReducedMotion()) return;
 
+    const gas = aura.current;
     const total = { value: 0 };
     const season = { value: 0 };
     const pad = { value: 0 };
@@ -346,7 +393,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
 
     const scope = createScope({ root: el }).add(() => {
       // A timeline only applies a tween's starting values once it reaches it, so hide the later beats up front
-      utils.set("[data-saga=core], [data-saga=era-core], [data-saga=reached], [data-saga=letter], [data-saga=caption], [data-saga=era-text], [data-saga=shape], [data-saga=stat], [data-saga=mood], [data-saga=stats-title], [data-saga=mood-title], [data-saga=gauge], [data-saga=tick], [data-saga=pace-tilt], [data-saga=pace-core], [data-saga=pace-text], [data-saga=chron], [data-saga=chron-title], [data-saga=chron-node], [data-saga=chron-halo], [data-saga=chron-year], [data-saga=chron-entry], [data-saga=chron-items], [data-saga=future], [data-saga=future-title], [data-saga=future-node], [data-saga=future-core], [data-saga=future-row], [data-saga=future-details], [data-saga=tavern], [data-saga=tavern-title], [data-saga=tavern-row], [data-saga=map], [data-saga=map-title], [data-saga=map-disc], [data-saga=map-warp], [data-saga=map-row], [data-saga=ask], [data-saga=ask-title], [data-saga=ask-row]", { opacity: 0 });
+      utils.set("[data-saga=core], [data-saga=era-core], [data-saga=reached], [data-saga=letter], [data-saga=caption], [data-saga=era-text], [data-saga=shape], [data-saga=stat], [data-saga=mood], [data-saga=stats-title], [data-saga=mood-title], [data-saga=gauge], [data-saga=tick], [data-saga=pace-tilt], [data-saga=pace-core], [data-saga=pace-text], [data-saga=chron], [data-saga=chron-title], [data-saga=chron-node], [data-saga=chron-halo], [data-saga=chron-year], [data-saga=chron-entry], [data-saga=chron-items], [data-saga=future], [data-saga=future-title], [data-saga=future-node], [data-saga=future-core], [data-saga=future-row], [data-saga=future-details], [data-saga=tavern], [data-saga=tavern-ring], [data-saga=tavern-core], [data-saga=seat-edge], [data-saga=tavern-title], [data-saga=tavern-row], [data-saga=clock], [data-saga=clock-case], [data-saga=clock-hands], [data-saga=clock-title], [data-saga=clock-part], [data-saga=clock-details], [data-saga=map], [data-saga=map-title], [data-saga=map-disc], [data-saga=map-warp], [data-saga=map-row], [data-saga=ask], [data-saga=ask-title], [data-saga=ask-row]", { opacity: 0 });
       utils.set("[data-saga=arc], [data-saga=level], [data-saga=grid], [data-saga=axis], [data-saga=gauge-fill], [data-saga=race-arc], [data-saga=time-arc]", { strokeDashoffset: 1 });
       paceXpEl.textContent = "0";
       totalEl.textContent = "0";
@@ -356,8 +403,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         autoplay: onScroll({ target: el, enter: "center top", leave: "bottom bottom", sync: 0.85 }),
         onUpdate: ({ currentTime: t }) => {
           // The dial turns backwards through the moods and the Chronicle
-          dialDirection.current = (t >= MOOD_AT && t < TAVERN_AT) || (t >= chronAt && t < mapAt) ? -1 : 1;
-          levelRingTurns.current = t >= ERA_AT - 6 && t < PACE_AT + 12;
+          dialDirection.current = (t >= MOOD_AT && t < CLOCK_AT) || (t >= chronAt && t < mapAt) ? -1 : 1;
+          levelRingTurns.current = t >= ERA_AT - 6 && t < PACE_AT - 12;
           let current = 0;
           froms.forEach((from, i) => { if (t >= from) current = i; });
           setScene(current);
@@ -382,20 +429,20 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         .add("[data-saga=saturn]", { rotateX: [0, 74], duration: 30, ease: "inOut(2)" }, ERA_AT - 6)
         .add("[data-saga=saturn-tilt]", { rotate: [0, -16], duration: 30, ease: "inOut(2)" }, ERA_AT - 6)
         .add("[data-saga=era-text]", { opacity: [0, 1], translateY: [20, 0], duration: 16, delay: stagger(4) }, ERA_AT + 8)
-        // The rank ring dims and the season's XP gauge turns in inside it
-        // The era drops through the centre; the tipped level ring snaps flat and the gauge unrolls
-        // from where it lay
-        .add("[data-saga=era-core]", { opacity: 0, scale: 0.3, translateY: "45%", duration: 14, ease: "in(3)" }, PACE_AT - 6)
-        .add("[data-saga=era]", { opacity: 0, translateY: -20, duration: 14, ease: "in(2)" }, PACE_AT - 6)
-        .add("[data-saga=saturn]", { rotateX: [74, 0], duration: 12, ease: "inOut(3)" }, PACE_AT - 10)
-        .add("[data-saga=saturn-tilt]", { rotate: [-16, 0], duration: 12, ease: "inOut(3)" }, PACE_AT - 10)
-        .add("[data-saga=saturn-tilt]", { opacity: 0, scale: 1.18, duration: 8, ease: "in(2)" }, PACE_AT + 1)
+        // The era clears the centre, and the tipped level ring lies flat. Its arc swings round to where
+        // the gauge starts and stretches to the season's XP, and there it simply is the gauge's fill
+        .add("[data-saga=era-core]", { opacity: 0, scale: 0.2, duration: 12, ease: "in(3)" }, PACE_AT - 14)
+        .add("[data-saga=era]", { opacity: 0, translateY: -20, duration: 12, ease: "in(2)" }, PACE_AT - 12)
+        .add("[data-saga=saturn]", { rotateX: [74, 0], duration: 14, ease: "inOut(3)" }, PACE_AT - 12)
+        .add("[data-saga=saturn-tilt]", { rotate: [-16, GAUGE_FROM], duration: 20, ease: "inOut(3)" }, PACE_AT - 12)
+        .add("[data-saga=level]", { strokeDashoffset: [1 - levelProgress, 1 - meterFill * GAUGE_OF_RING], duration: 16, ease: "inOut(2)" }, PACE_AT - 6)
         .add("[data-saga=rings]", { opacity: 0.3, duration: 18 }, PACE_AT - 4)
         .add("[data-saga=dial-inner], [data-saga=next]", { opacity: 0, duration: 14 }, PACE_AT - 4)
-        .add("[data-saga=gauge]", { opacity: [0, 1], rotate: [-300, 0], scale: [1.1, 1], duration: 28, ease: "out(4)" }, PACE_AT + 1)
-        .add("[data-saga=gauge-fill]", { strokeDashoffset: [1, 1 - meterFill], duration: 22, ease: "inOut(2)" }, PACE_AT + 10)
+        .add("[data-saga=gauge-fill]", { strokeDashoffset: [1, 1 - meterFill], duration: 1, ease: "linear" }, PACE_AT + 9)
+        .add("[data-saga=gauge]", { opacity: [0, 1], duration: 6, ease: "linear" }, PACE_AT + 10)
+        .add("[data-saga=saturn-tilt]", { opacity: 0, duration: 6, ease: "linear" }, PACE_AT + 10)
         .add("[data-saga=tick]", { opacity: [0, 1], duration: 10, delay: stagger(3) }, PACE_AT + 22)
-        .add("[data-saga=pace-core]", { opacity: [0, 1], scale: [0.5, 1], duration: 18 }, PACE_AT + 4)
+        .add("[data-saga=pace-core]", { opacity: [0, 1], scale: [0.5, 1], duration: 18 }, PACE_AT + 6)
         .add(season, {
           value: [0, xp],
           duration: 24,
@@ -435,15 +482,38 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         .add("[data-saga=shape]", { rotate: [0, 360], duration: 30, ease: "inOut(3)" }, MOOD_AT)
         .add("[data-saga=mood]", { opacity: [0, 1], duration: 12, delay: stagger(5) }, MOOD_AT + 20)
         .add("[data-saga=mood-title]", { opacity: [0, 1], translateY: [24, 0], duration: 18 }, MOOD_AT + 14)
-        // The triangle lets go of its fill and grows out to the ring, turning until its corners
-        // sit where the Tavern's three seats are; the seats take over from it
-        .add("[data-saga=mood-title]", { opacity: 0, translateY: -30, duration: 12, ease: "in(2)" }, TAVERN_AT - 18)
-        .add("[data-saga=grid], [data-saga=axis]", { opacity: 0, duration: 8, ease: "in(2)" }, TAVERN_AT - 18)
-        .add("[data-saga=polygon]", { points: [moodShape, SEAT_SHAPE], fillOpacity: [1, 0], duration: 16, ease: "inOut(3)" }, TAVERN_AT - 16)
-        .add("[data-saga=shape]", { rotate: [360, 360 + SEAT_TURN], duration: 16, ease: "inOut(3)" }, TAVERN_AT - 16)
-        .add("[data-saga=radar]", { opacity: 0, duration: 8, ease: "in(2)" }, TAVERN_AT - 4)
-        // The Tavern: its three-seat ring turns in and the suggestions line up beneath it
-        .add("[data-saga=tavern]", { opacity: [0, 1], scale: [1.12, 1], rotate: [-24, 0], duration: 16 }, TAVERN_AT - 6)
+        // The triangle lets go of its fill and grows out to the ring, turning as it goes. Its corners
+        // part and its sides bow out onto the ring, where the watch's case closes round them
+        .add("[data-saga=mood-title]", { opacity: 0, translateY: -30, duration: 12, ease: "in(2)" }, CLOCK_AT - 18)
+        .add("[data-saga=grid], [data-saga=axis]", { opacity: 0, duration: 8, ease: "in(2)" }, CLOCK_AT - 18)
+        .add("[data-saga=dial-wrap]", { opacity: 0, duration: 10 }, CLOCK_AT - 10)
+        .add("[data-saga=polygon]", { points: [moodShape, SEAT_SHAPE], fillOpacity: [1, 0], duration: 14, ease: "inOut(3)" }, CLOCK_AT - 18)
+        .add("[data-saga=shape]", { rotate: [360, 360 + SEAT_TURN], duration: 28, ease: "inOut(3)" }, CLOCK_AT - 18)
+        .add("[data-saga=polygon]", { opacity: [1, 0], duration: 1, ease: "linear" }, CLOCK_AT - 4)
+        .add("[data-saga=seat-edge]", { opacity: [0, 1], duration: 1, ease: "linear" }, CLOCK_AT - 4)
+        .add("[data-saga=point]", { opacity: 0, duration: 6, ease: "in(2)" }, CLOCK_AT - 4)
+        .add("[data-saga=clock]", { opacity: [0, 1], duration: 1, ease: "linear" }, CLOCK_AT)
+        .add("[data-saga=clock-case]", { opacity: [0, 1], duration: 8, ease: "linear" }, CLOCK_AT + 8)
+        .add(gas, { presence: [0, 1], duration: 14, ease: "linear" }, CLOCK_AT + 8)
+        .add("[data-saga=radar]", { opacity: 0, duration: 8, ease: "linear" }, CLOCK_AT + 8)
+        // The Clock: the movement builds up inside the case, and the hands wind round over it
+        .add("[data-saga=clock-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, CLOCK_AT + 2)
+        .add("[data-saga=clock-part]", { opacity: [0, 1], scale: [0.4, 1], duration: 14, delay: stagger(3), ease: "outBack(1.4)" }, CLOCK_AT + 6)
+        .add("[data-saga=clock-hands]", { opacity: [0, 1], rotate: [-360, 0], duration: 22, ease: "out(3)" }, CLOCK_AT + 14)
+        .add("[data-saga=clock-details]", { opacity: [0, 1], translateY: [16, 0], duration: 12 }, CLOCK_AT + 12)
+        // The aura rolls in over the watch, the scene changes behind the gas, and the gas opens
+        // and blows away with the Tavern's ring standing where the case was
+        .add("[data-saga=clock-title]", { opacity: 0, translateY: -30, duration: 12, ease: "in(2)" }, TAVERN_AT - 16)
+        .add("[data-saga=clock-details]", { opacity: 0, translateY: 24, duration: 12, ease: "in(2)" }, TAVERN_AT - 16)
+        .add(gas, { hole: [DIAL, 0], density: [AURA_REST, 1], duration: 20, ease: "inOut(2)" }, TAVERN_AT - 20)
+        .add("[data-saga=dial-wrap]", { opacity: 1, duration: 2, ease: "linear" }, TAVERN_AT - 2)
+        .add("[data-saga=tavern]", { opacity: [0, 1], duration: 1, ease: "linear" }, TAVERN_AT - 2)
+        .add("[data-saga=tavern-ring]", { opacity: [0, 1], duration: 2, ease: "linear" }, TAVERN_AT - 2)
+        .add("[data-saga=clock]", { opacity: 0, duration: 2, ease: "linear" }, TAVERN_AT - 2)
+        .add(gas, { hole: [0, AURA_GONE], duration: 22, ease: "in(2)" }, TAVERN_AT)
+        .add(gas, { presence: 0, duration: 14, ease: "linear" }, TAVERN_AT + 8)
+        // The Tavern: the count rises in the middle of the ring and the suggestions line up beneath it
+        .add("[data-saga=tavern-core]", { opacity: [0, 1], scale: [0.5, 1], duration: 16 }, TAVERN_AT + 2)
         .add("[data-saga=tavern-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, TAVERN_AT + 2)
         .add("[data-saga=tavern-row]", { opacity: [0, 1], translateY: [16, 0], duration: 12, delay: stagger(4) }, TAVERN_AT + 8)
         // The seats spin up into a blur, and the two-week dial spins down out of it
@@ -499,7 +569,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         timeline.add(label, { translateX: Math.sin(turn) * 44, translateY: -Math.cos(turn) * 44, opacity: 0, duration: 10, ease: "in(2)" }, at);
       };
       all("stat").forEach((label, i) => flyOut(label, STAT_ANGLES[i], MOOD_AT - 10 + i));
-      all("mood").forEach((label, i) => flyOut(label, i * 120, TAVERN_AT - 20 + i));
+      all("mood").forEach((label, i) => flyOut(label, i * 120, CLOCK_AT - 20 + i));
       // Future Sight leaves: with a Chronicle to come, its hand comes back and winds the dial
       // backwards into the past; with none, the dial just spins away
       if (yearCount > 0) {
@@ -530,7 +600,10 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       all("point").forEach((point, i) => {
         timeline
           .add(point, { cx: [statPoints[i][0], moodPoints[i][0]], cy: [statPoints[i][1], moodPoints[i][1]], duration: 30, ease: "inOut(3)" }, MOOD_AT)
-          .add(point, { cx: [moodPoints[i][0], seatPoints[i][0]], cy: [moodPoints[i][1], seatPoints[i][1]], duration: 16, ease: "inOut(3)" }, TAVERN_AT - 16);
+          .add(point, { cx: [moodPoints[i][0], seatPoints[i][0]], cy: [moodPoints[i][1], seatPoints[i][1]], duration: 14, ease: "inOut(3)" }, CLOCK_AT - 18);
+      });
+      all("seat-edge").forEach((edge, i) => {
+        timeline.add(edge, { d: [SEAT_EDGES[i].straight, SEAT_EDGES[i].seat], duration: 14, ease: "outBack(1.3)" }, CLOCK_AT - 4);
       });
       all("future-node").forEach(node => {
         const angle = Number((node as HTMLElement).dataset.angle);
@@ -576,6 +649,14 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     return () => { scope.revert(); };
   }, [progress, levelProgress, rank, xp, totalXP, statShape, moodShape, length, yearCount, markDays, era.id, meterFill, raceProgress, timeProgress, tickCount, p3, p4, p5]);
 
+  // While the Clock is on stage its aura is the gas on screen, so the navbar's divider clears away
+  useEffect(() => {
+    if (!onClock) return;
+    const root = document.documentElement;
+    root.dataset.sagaClock = "";
+    return () => { delete root.dataset.sagaClock; };
+  }, [onClock]);
+
   // The dial never stops: it drifts while the page is still and spins up with the scroll speed,
   // turning backwards through the moods. The two pace rings turn with it in their own planes, one
   // each way, and so does the level ring while it is tipped over for the era (in the standing it
@@ -607,7 +688,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       dial.style.transform = `rotate(${angle.toFixed(2)}deg)`;
       spins.forEach((spin, i) => { spin.style.transform = `rotate(${(angle * (i % 2 ? -RING_TURN : RING_TURN)).toFixed(2)}deg)`; });
       if (levelRingTurns.current) levelAngle += Math.abs(speed) * RING_TURN * dt;
-      else levelAngle += (Math.round(levelAngle / 360) * 360 - levelAngle) * Math.min(1, dt * 6);
+      else levelAngle += (Math.round(levelAngle / 360) * 360 - levelAngle) * Math.min(1, dt * 12);
       levelSpins.forEach(spin => { spin.style.transform = `rotate(${levelAngle.toFixed(2)}deg)`; });
     };
     const start = () => { if (!raf) { last = performance.now(); lastY = window.scrollY; raf = requestAnimationFrame(frame); } };
@@ -885,12 +966,12 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
             </p>
 
             <div data-saga="era" className="col-start-1 row-start-1 self-end motion-reduce:hidden">
-              <p data-saga="era-text" className={cn(TITLE, "text-3xl sm:text-4xl")}>Era Status</p>
+              <p data-saga="era-text" className={cn(TITLE, "text-3xl sm:text-4xl")}>Era</p>
             </div>
 
             <div data-saga="pace-title" className="col-start-1 row-start-1 self-end motion-reduce:hidden">
               <div data-saga="pace-text" className="space-y-1">
-                <p className={cn(TITLE, "text-3xl sm:text-4xl")}>Season Pace</p>
+                <p className={cn(TITLE, "text-3xl sm:text-4xl")}>Pace</p>
                 {pace && (
                   <p className={cn("text-sm font-semibold", !hasRival ? "text-tm-blue-gray" : delta > 0 ? "text-tm-yellow" : delta < 0 ? "text-tm-orange-dark" : "text-tm-blue-gray")}>
                     {!hasRival
@@ -904,17 +985,18 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
             </div>
 
             <div data-saga="stats-title" className="col-start-1 row-start-1 self-end flex flex-col items-center gap-1 motion-reduce:hidden">
-              <p className={cn(TITLE, "text-3xl sm:text-4xl")}>Character Stats</p>
+              <p className={cn(TITLE, "text-3xl sm:text-4xl")}>Stats</p>
               <p className={CAPTION}>Total <span ref={totalRef} className="tabular-nums text-foreground" /> XP</p>
             </div>
 
             <div data-saga="mood-title" className="col-start-1 row-start-1 self-end flex flex-col items-center gap-1 motion-reduce:hidden">
-              <p className={cn(TITLE, "text-3xl sm:text-4xl")}>Stress Metrics</p>
+              <p className={cn(TITLE, "text-3xl sm:text-4xl")}>Aura</p>
               <p className={CAPTION}>{moodData.length > 0 ? "30-day emotional signature" : "Awaiting pulse"}</p>
             </div>
 
             {yearCount > 0 && <ChronicleTitle todayStr={todayStr} />}
             <FutureTitle count={marks.length} />
+            <ClockTitle />
             <TavernTitle relief={tavern.relief} />
             <MapTitle info={mapInfo} />
             <AskTitle />
@@ -1006,7 +1088,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
             </div>
 
             <div data-saga="era-core" className="absolute inset-0 flex flex-col items-center justify-center motion-reduce:hidden">
-              <span className={CAPTION}>Era</span>
+              <span className={CAPTION}>Now in</span>
               <span className="text-7xl sm:text-8xl font-display font-bold leading-none text-tm-purple-dark dark:text-tm-yellow">{era.numeral}</span>
               <span className={cn(CAPTION, "mt-2")}>{era.name}</span>
             </div>
@@ -1027,8 +1109,10 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
             </div>
 
             {yearCount > 0 && <ChronicleEmblem years={years} />}
-            <FutureEmblem marks={marks} />
-            <TavernEmblem relief={tavern.relief} loading={tavern.loading} onRegenerate={tavern.onRegenerate} active={onTavern} />
+            <ClockEmblem />
+            <FutureEmblem marks={marks} active={onFuture} />
+            <ClockAura state={aura} dial={DIAL} />
+            <TavernEmblem relief={tavern.relief} loading={tavern.loading} failed={tavern.failed} onRegenerate={tavern.onRegenerate} onRetry={tavern.onRetry} active={onTavern} />
             <AskEmblem onAsk={onAsk} active={onAskScene} />
             {!reduced && (
               <MapEmblem profile={profile} moodData={moodData} completionScore={completionScore} onInfo={setMapInfo} active={scenes[scene]?.id === "map"} />
@@ -1055,17 +1139,17 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
                   style={{ "--fill": meterFill } as React.CSSProperties}
                 />
               )}
-              {ticks.map(tick => {
+              {ticks.map((tick, t) => {
                 const angle = gaugeAngle(tick.at);
                 const inner = polar(angle, GAUGE - 13);
                 const outer = polar(angle, GAUGE + 13);
-                const label = polar(angle, R + 28);
+                const label = tickPlaces[t];
                 return (
                   <g key={tick.label} data-saga="tick" className={tick.className}>
                     <line x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray={tick.dashed ? "3 5" : undefined} />
                     <text
                       x={label.x} y={label.y}
-                      textAnchor={anchorAt(label.x)}
+                      textAnchor={label.anchor}
                       dominantBaseline="middle" fontSize="13" fill="currentColor"
                       className="font-mono font-semibold uppercase"
                     >
@@ -1127,6 +1211,9 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
                   const p = polar(STAT_ANGLES[i], r);
                   return <circle key={i} data-saga="point" cx={p.x} cy={p.y} r="5" fill="currentColor" />;
                 })}
+                {SEAT_EDGES.map(edge => (
+                  <path key={edge.seat} data-saga="seat-edge" d={edge.straight} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                ))}
               </svg>
             </div>
           </div>
@@ -1163,7 +1250,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
             <FutureDetails marks={marks} active={onFuture} />
             <MapDetails info={mapInfo} />
             <AskDetails onAsk={onAsk} active={onAskScene} />
-            <TavernDetails relief={tavern.relief} loading={tavern.loading} updating={tavern.updating} onToggle={tavern.onToggle} active={onTavern} />
+            <TavernDetails relief={tavern.relief} loading={tavern.loading} failed={tavern.failed} updating={tavern.updating} onToggle={tavern.onToggle} active={onTavern} />
+            <ClockDetails />
 
             {/* One label for each of the two rings */}
             <div data-saga="pace-title" className="col-start-1 row-start-1 flex justify-center motion-reduce:hidden">
@@ -1219,7 +1307,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
               <ChevronRight size={18} />
             </button>
           </div>
-          <span className={cn(CAPTION, "-mt-1 [@media(max-height:720px)]:hidden")}>{scenes[scene]?.label}</span>
+          <span className={cn(CAPTION, "-mt-1 [@media(max-height:720px)]:hidden", scenes[scene]?.id === "clock" && "bg-gradient-to-r from-tm-orange-dark via-tm-orange-light to-tm-yellow bg-clip-text text-transparent")}>{scenes[scene]?.label}</span>
         </div>
 
         {/* The quick way out, at the right edge of the screen */}

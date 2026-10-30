@@ -4,13 +4,13 @@
 //
 // January, February, October and December fall on a fixed date; every other month the day is
 // picked by a shuffle seeded by the month, so every device agrees and it never moves once the
-// month starts. It steers clear of that month's Persona days where it can, and on the day itself
-// the special theme wins over a Persona day.
+// month starts. It is settled first, and the month's Persona days are picked around it, so the
+// two never share a day.
 //
 // <html data-special="..."> carries today's theme (set before first paint by lib/theme-init.ts,
 // kept current by the theme provider). On by default; the account page can switch them off.
 import { DEV_TOOLS_ENABLED } from "./dev-xp";
-import { getDevPersonaOverride, pickPersonaDays } from "./persona";
+import { getDevPersonaOverride } from "./persona";
 
 export const SPECIAL_IDS = ["snow", "cafe", "garden", "glitch", "sakura", "beach", "space", "maps", "library", "halloween", "leaves", "cabin"] as const;
 export type SpecialId = (typeof SPECIAL_IDS)[number];
@@ -45,10 +45,9 @@ export const SPECIAL_SWAPS_THEME: SpecialId = "glitch";
 export const SPECIAL_FONTS_URL =
   "https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Cinzel:wght@700;900&family=Orbitron:wght@700;900&family=Fredoka:wght@500;700&display=swap";
 
-// Day of the month that is special in the given month (0-based). `avoid` holds days to steer clear
-// of (that month's Persona days). Self-contained, with no outside references: lib/theme-init.ts
-// embeds its source in the <head> script.
-export function pickSpecialDay(year: number, month: number, avoid: Record<number, unknown>): number {
+// Day of the month that is special in the given month (0-based). Self-contained, with no outside
+// references: lib/theme-init.ts embeds its source in the <head> script.
+export function pickSpecialDay(year: number, month: number): number {
   const fixed: Record<number, number> = { 0: 1, 1: 14, 9: 31, 11: 25 };
   if (fixed[month]) return fixed[month];
   let seed = 2166136261;
@@ -58,16 +57,12 @@ export function pickSpecialDay(year: number, month: number, avoid: Record<number
     seed = Math.imul(seed, 16777619) >>> 0;
   }
   const length = new Date(year, month + 1, 0).getDate();
-  for (let attempt = 0; attempt < 60; attempt++) {
-    // mulberry32
-    seed = (seed + 0x6d2b79f5) >>> 0;
-    let t = seed;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    const day = 1 + Math.floor((((t ^ (t >>> 14)) >>> 0) / 4294967296) * length);
-    if (!avoid[day]) return day;
-  }
-  return 15;
+  // mulberry32
+  seed = (seed + 0x6d2b79f5) >>> 0;
+  let t = seed;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return 1 + Math.floor((((t ^ (t >>> 14)) >>> 0) / 4294967296) * length);
 }
 
 const dayCache = new Map<string, number>();
@@ -79,7 +74,7 @@ export function scheduledSpecial(date: Date): SpecialId | null {
   const key = `${year}-${month}`;
   let day = dayCache.get(key);
   if (!day) {
-    day = pickSpecialDay(year, month, pickPersonaDays(year, month));
+    day = pickSpecialDay(year, month);
     dayCache.set(key, day);
   }
   return day === date.getDate() ? SPECIAL_IDS[month] : null;
@@ -89,7 +84,7 @@ export function scheduledSpecial(date: Date): SpecialId | null {
 export function nextDateOf(id: SpecialId, now = new Date()): Date {
   const { month } = SPECIAL_DAYS[id];
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const inYear = (year: number) => new Date(year, month, pickSpecialDay(year, month, pickPersonaDays(year, month)));
+  const inYear = (year: number) => new Date(year, month, pickSpecialDay(year, month));
   const date = inYear(today.getFullYear());
   return date >= today ? date : inYear(today.getFullYear() + 1);
 }
