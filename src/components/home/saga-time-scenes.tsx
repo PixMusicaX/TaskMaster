@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { differenceInCalendarDays, format, parseISO } from "date-fns";
+import { addDays, format, parseISO } from "date-fns";
 import { CalendarDays, CheckSquare, Repeat, type LucideIcon } from "lucide-react";
 import type { HistoryDay } from "@/app/actions/history";
+import { GOOGLE } from "@/components/google-mark";
+import { multiDayLabel, upcomingDays } from "@/lib/multi-day";
 import { noteTextLines, type EventRow } from "@/lib/types";
 import { cn, moodEmoji } from "@/lib/utils";
 import { C, CAPTION, R, TITLE, anchorAt, polar } from "./saga-kit";
@@ -212,42 +214,82 @@ export const FUTURE_DAYS = 14;
 
 // One colour per kind of event, shared by the dial's nodes and the list's dots
 function kindOf(e: EventRow) {
-  if (e.type === "special_day") return { label: "Special Day", color: "var(--tm-orange-dark)" };
+  // Not in TaskMaster yet, so it keeps Google's colours whatever the theme
+  if (e.gcalImported) return { label: "Google Event", colors: [GOOGLE.blue, GOOGLE.red, GOOGLE.yellow, GOOGLE.green] };
+  if (e.type === "special_day") return { label: "Special Day", colors: ["var(--tm-orange-dark)"] };
   const tier = e.tier?.toLowerCase();
   const color = tier === "epic" ? "var(--tm-red)" : tier === "main" ? "var(--tm-yellow)" : "var(--tm-orange-light)";
-  return { label: `${e.tier ?? "Side"} Quest`, color };
+  return { label: `${e.tier ?? "Side"} Quest`, colors: [color] };
 }
 
 export interface FutureMark {
   id: string;
   title: string;
   date: Date;
+  // Takes the date's place in the list for a multi-day event
+  when: string | null;
+  // The first and last day it covers on the dial. A multi-day event already under way starts at tomorrow.
   day: number;
+  lastDay: number;
   kind: string;
   color: string;
+  colors: string[];
 }
 
 export function futureMarks(events: EventRow[], todayStr: string): FutureMark[] {
   const today = parseISO(todayStr);
   return events.flatMap(e => {
-    const date = new Date(e.date);
-    const day = differenceInCalendarDays(date, today);
-    if (day < 1 || day > FUTURE_DAYS) return [];
-    const { label, color } = kindOf(e);
-    return [{ id: e.id, title: e.title, date, day, kind: label, color }];
+    const days = upcomingDays(e, today, FUTURE_DAYS);
+    if (days.length === 0) return [];
+    const date = addDays(today, days[0]);
+    const { label, colors } = kindOf(e);
+    return [{ id: e.id, title: e.title, date, when: multiDayLabel(e, date), day: days[0], lastDay: days[days.length - 1], kind: label, color: colors[0], colors }];
   });
 }
+
+const dayAngle = (day: number) => ((day - 1) / FUTURE_DAYS) * 360;
 
 // One node per day on the dial, with the colour of each kind of event that falls on it
 export function futureNodes(marks: FutureMark[]) {
   const days = new Map<number, { day: number; count: number; colors: string[] }>();
   marks.forEach(m => {
-    const node = days.get(m.day) ?? { day: m.day, count: 0, colors: [] };
-    node.count++;
-    if (!node.colors.includes(m.color)) node.colors.push(m.color);
-    days.set(m.day, node);
+    for (let day = m.day; day <= m.lastDay; day++) {
+      const node = days.get(day) ?? { day, count: 0, colors: [] };
+      node.count++;
+      m.colors.forEach(color => { if (!node.colors.includes(color)) node.colors.push(color); });
+      days.set(day, node);
+    }
   });
-  return Array.from(days.values()).map(n => ({ ...n, angle: ((n.day - 1) / FUTURE_DAYS) * 360 }));
+  return Array.from(days.values()).map(n => ({ ...n, angle: dayAngle(n.day) }));
+}
+
+// Several colours cycle through .tm-node-shimmer, which reads them from these variables
+function shimmerProps(colors: string[]) {
+  return {
+    className: colors.length > 1 ? "tm-node-shimmer" : undefined,
+    "data-colors": Math.min(4, colors.length),
+    style: {
+      color: colors[0],
+      ...Object.fromEntries(colors.slice(0, 4).map((color, i) => [`--c${i + 1}`, color])),
+    } as React.CSSProperties,
+  };
+}
+
+// The line joining a multi-day event's days round the ring: a soft glow with a highlight running
+// along it (see .tm-gauge-shimmer). No blur: anything filtered would be repainted on every frame.
+function FutureArc({ mark }: { mark: FutureMark }) {
+  const fromAngle = dayAngle(mark.day);
+  const toAngle = dayAngle(mark.lastDay);
+  const from = polar(fromAngle, RING);
+  const to = polar(toAngle, RING);
+  const d = `M ${from.x} ${from.y} A ${RING} ${RING} 0 ${toAngle - fromAngle > 180 ? 1 : 0} 1 ${to.x} ${to.y}`;
+  return (
+    <g data-saga="future-arc" data-angle={fromAngle} data-sweep={toAngle - fromAngle} {...shimmerProps(mark.colors)}>
+      <path d={d} fill="none" stroke="currentColor" strokeWidth="12" strokeLinecap="round" opacity="0.2" />
+      <path d={d} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+      <path className="tm-gauge-shimmer" d={d} pathLength={1} fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeDasharray="0.12 1" style={{ "--fill": 1 } as React.CSSProperties} />
+    </g>
+  );
 }
 
 export function FutureTitle({ count }: { count: number }) {
@@ -301,6 +343,7 @@ export function FutureEmblem({ marks, active }: { marks: FutureMark[]; active: b
           const to = polar((i / FUTURE_DAYS) * 360, RING + 7);
           return <line key={i} className="text-tm-blue-gray/50" x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="currentColor" strokeWidth="2" strokeLinecap="round" />;
         })}
+        {marks.filter(m => m.lastDay > m.day).map(mark => <FutureArc key={mark.id} mark={mark} />)}
         {futureNodes(marks).map(node => {
           const at = polar(node.angle, RING);
           const size = Math.min(12, 7 + node.count);
@@ -309,12 +352,7 @@ export function FutureEmblem({ marks, active }: { marks: FutureMark[]; active: b
               key={node.day}
               data-saga="future-node"
               data-angle={node.angle}
-              className={node.colors.length > 1 ? "tm-node-shimmer" : undefined}
-              data-colors={Math.min(4, node.colors.length)}
-              style={{
-                color: node.colors[0],
-                ...Object.fromEntries(node.colors.slice(0, 4).map((color, i) => [`--c${i + 1}`, color])),
-              } as React.CSSProperties}
+              {...shimmerProps(node.colors)}
             >
               <circle cx={at.x} cy={at.y} r={size + 7} fill="currentColor" opacity="0.2" />
               <circle cx={at.x} cy={at.y} r={size} fill="currentColor" />
@@ -386,7 +424,7 @@ export function FutureDetails({ marks, active }: { marks: FutureMark[]; active: 
           {rows.map((m, i) => (
             <div key={`${m.id}-${i}`} data-saga="future-row" className="flex items-center gap-3 text-left" style={{ height: ROW }}>
               <span className="w-2 h-2 shrink-0 rounded-full" style={{ background: m.color }} />
-              <span className={cn(CAPTION, "shrink-0 text-foreground")}>{format(m.date, "MMM dd")}</span>
+              <span className={cn(CAPTION, "shrink-0 text-foreground")}>{m.when ?? format(m.date, "MMM dd")}</span>
               <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground/90" title={m.kind}>{m.title}</span>
               <span className={cn(CAPTION, "shrink-0")}>{m.day === 1 ? "Tomorrow" : format(m.date, "EEE")}</span>
             </div>

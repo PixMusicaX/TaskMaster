@@ -1,11 +1,20 @@
 import { Eye } from "lucide-react";
 import { addDays, format, isSameDay } from "date-fns";
 import { GOOGLE, GoogleMark } from "@/components/google-mark";
+import { multiDayLabel, upcomingDays } from "@/lib/multi-day";
 import { cn } from "@/lib/utils";
 import type { EventRow } from "@/lib/types";
 import InsightCard, { Pill } from "./insight-card";
+import { FUTURE_DAYS } from "./saga-time-scenes";
 
 export default function FutureSightCard({ events }: { events: EventRow[] }) {
+  // A multi-day event already under way shows from tomorrow
+  const today = new Date();
+  const upcoming = events.flatMap(e => {
+    const [first] = upcomingDays(e, today, FUTURE_DAYS);
+    return first ? [{ e, eventDate: addDays(today, first) }] : [];
+  });
+
   return (
     <InsightCard
       icon={Eye}
@@ -17,10 +26,9 @@ export default function FutureSightCard({ events }: { events: EventRow[] }) {
       className="border-tm-yellow/20"
     >
       <div className="flex-1 space-y-4 relative z-10">
-        {events.length > 0 ? (
+        {upcoming.length > 0 ? (
           <div className="space-y-3">
-            {events.slice(0, 5).map((e, idx) => {
-              const eventDate = new Date(e.date);
+            {upcoming.slice(0, 5).map(({ e, eventDate }, idx) => {
               return (
                 <div
                   key={idx}
@@ -40,6 +48,7 @@ export default function FutureSightCard({ events }: { events: EventRow[] }) {
                       <p style={e.gcalImported ? { color: GOOGLE.muted } : undefined} className="flex items-center gap-1.5 text-caption font-mono font-semibold uppercase text-tm-blue-gray/60 tracking-[0.12em] mt-1">
                         {e.gcalImported && <GoogleMark size={11} />}
                         {e.gcalImported ? "Google Event" : e.type === "special_day" ? "Special Day" : `${e.tier} Quest`}
+                        {multiDayLabel(e, eventDate) && <span>· {multiDayLabel(e, eventDate)}</span>}
                       </p>
                     </div>
                   </div>
