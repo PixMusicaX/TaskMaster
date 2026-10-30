@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import LegalPage, { LEGAL_LINK as LINK, LegalList as List, LegalSection as Section } from "@/components/legal-page";
 import { DEMO_HOURS } from "@/lib/demo";
-import { PRIVACY_CONTACT_URL, REPO_URL } from "@/lib/version";
+import { CONTACT_EMAIL, REPO_URL } from "@/lib/version";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | TaskMaster",
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
 
         <Section title="Contact">
           <p>
-            For questions or data requests, <a href={PRIVACY_CONTACT_URL} target="_blank" rel="noopener noreferrer" className={LINK}>contact us here</a>.
+            For questions or data requests, email <a href={`mailto:${CONTACT_EMAIL}`} className={LINK}>{CONTACT_EMAIL}</a>.
             Using TaskMaster is also covered by our <Link href="/terms" className={LINK}>Terms of Service</Link>.
           </p>
         </Section>

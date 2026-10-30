@@ -86,6 +86,16 @@
   75% { color: var(--c4); }
 }
 
+/* Growth saga: the comet going round the Taskmaster's inner ring */
+.tm-ask-comet {
+  transform-box: view-box;
+  transform-origin: center;
+  animation: tm-ask-comet 16s linear infinite;
+}
+@keyframes tm-ask-comet {
+  to { transform: rotate(360deg); }
+}
+
 /* Growth saga: a ripple going out through Future Sight's lens. Its delay spaces it from the others. */
 .tm-lens-ripple {
   transform-box: fill-box;

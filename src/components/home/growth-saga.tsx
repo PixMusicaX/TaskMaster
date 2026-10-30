@@ -546,16 +546,14 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         .add("[data-saga=map-needle]", { opacity: 0, scale: 0.2, duration: 10, ease: "in(2)" }, mapAt + 42)
         .add("[data-saga=map-disc]", { opacity: [0, 1], scale: [0, 1], rotate: [-270, 0], duration: 28, ease: "out(4)" }, mapAt + 44)
         .add("[data-saga=map-row]", { opacity: [0, 1], translateY: [16, 0], duration: 12, delay: stagger(4) }, mapAt + 58)
-        // The Taskmaster: the map folds away into the centre, the orbit comes back whole and the
-        // way to the Taskmaster opens in the middle of it
+        // The Taskmaster: the map folds away into the centre and the rank rings stay gone, leaving
+        // the scene's own single ring round the way to the Taskmaster
         .add("[data-saga=map]", { opacity: 0, scale: 0.3, rotate: 90, duration: 18, ease: "in(2)" }, askAt - 16)
         .add("[data-saga=map-title], [data-saga=map-details]", { opacity: 0, duration: 12, ease: "in(2)" }, askAt - 14)
-        .add("[data-saga=rings], [data-saga=dial-wrap]", { opacity: 1, duration: 20 }, askAt - 8)
-        .add("[data-saga=rings]", { rotate: [0, 360], duration: 40, ease: "inOut(3)" }, askAt - 8)
+        .add("[data-saga=rings], [data-saga=dial-wrap]", { opacity: 0, duration: 12 }, askAt - 8)
         .add("[data-saga=ask]", { opacity: [0, 1], scale: [0.2, 1], duration: 24, ease: "outBack(1.6)" }, askAt)
         .add("[data-saga=ask-title]", { opacity: [0, 1], translateY: [24, 0], duration: 16 }, askAt + 4)
         .add("[data-saga=ask-row]", { opacity: [0, 1], translateY: [16, 0], duration: 12, delay: stagger(4) }, askAt + 14)
-        // Opacity only: these are held on their points by their own translate
         .add("[data-saga=ask-link]", { opacity: [0, 1], duration: 8, delay: stagger(3) }, askAt + 18)
         // Nothing moves in the tail; this only makes the script as long as the scroll
         .add(pad, { value: 1, duration: 1 }, length - 1);
