@@ -7,7 +7,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInte
 import { motion, AnimatePresence } from "framer-motion";
 import { getCalendarEvents, addEvent, addToTaskmaster, toggleEventCompletion, deleteEvent, updateEvent, getAllEvents } from "@/app/actions/events";
 import { getGoogleCalendarStatus, syncGoogleCalendar } from "@/app/actions/google-calendar";
-import SyncLogic from "@/components/sync-logic";
+import GoogleSyncBar from "@/components/google-sync-bar";
 import GoogleEventCard from "@/components/google-event-card";
 import { GoogleChip, GoogleDot, GoogleSyncMark } from "@/components/google-mark";
 import { isSyncable } from "@/lib/gcal/map";
@@ -66,6 +66,7 @@ export default function CalendarPage() {
   const [newEndTime, setNewEndTime] = useState("");
   const [newGoogleSync, setNewGoogleSync] = useState(true);
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const [googleSyncing, setGoogleSyncing] = useState(false);
   const [isTabularOpen, setIsTabularOpen] = useState(false);
   const [isPickingMonth, setIsPickingMonth] = useState(false);
@@ -122,12 +123,20 @@ export default function CalendarPage() {
     initialLoad.current = false;
   }, [fetchEvents]);
 
+  const loadGoogleStatus = useCallback(() => getGoogleCalendarStatus().then(s => {
+    setGoogleConnected(s.connected);
+    setGoogleError(s.error);
+  }).catch(e => console.error(e)), []);
+
   useEffect(() => {
-    getGoogleCalendarStatus().then(s => setGoogleConnected(s.connected)).catch(e => console.error(e));
-    const onSynced = () => fetchEvents(false);
+    loadGoogleStatus();
+    const onSynced = () => {
+      fetchEvents(false);
+      loadGoogleStatus();
+    };
     window.addEventListener(GCAL_SYNCED_EVENT, onSynced);
     return () => window.removeEventListener(GCAL_SYNCED_EVENT, onSynced);
-  }, [fetchEvents]);
+  }, [fetchEvents, loadGoogleStatus]);
 
   // The full archive is only needed for the table view, so load it (fresh) when that opens
   useEffect(() => {
@@ -227,7 +236,7 @@ export default function CalendarPage() {
     setGoogleSyncing(true);
     try {
       const { changed } = await syncGoogleCalendar(true);
-      await fetchEvents(false);
+      await Promise.all([fetchEvents(false), loadGoogleStatus()]);
       if (changed > 0) window.dispatchEvent(new CustomEvent("profile-updated"));
     } finally {
       setGoogleSyncing(false);
@@ -316,18 +325,7 @@ export default function CalendarPage() {
               <h1 className="text-4xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow">Calendar</h1>
               <p className="text-tm-blue-gray font-medium">Plan your weeks and months ahead.</p>
 
-              {googleConnected && (
-                <div className="flex items-center gap-4 mt-2">
-                  <button
-                    onClick={handleGoogleSync}
-                    disabled={googleSyncing}
-                    className="inline-flex items-center gap-1.5 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray hover:text-foreground transition-colors disabled:opacity-50"
-                  >
-                    <RefreshCw size={12} className={cn(googleSyncing && "animate-spin")} /> {googleSyncing ? "Syncing…" : "Sync"}
-                  </button>
-                  <SyncLogic />
-                </div>
-              )}
+              {googleConnected && <GoogleSyncBar error={googleError} syncing={googleSyncing} onSync={handleGoogleSync} />}
 
               {profile && (
                 <div className="flex flex-wrap gap-2 mt-4">
@@ -969,7 +967,7 @@ export default function CalendarPage() {
                               <h4 className={cn("font-bold text-sm transition-colors", event.completed && "text-tm-blue-gray")}><StrikeText done={event.completed}>{dayTitle(event, selectedDate)}</StrikeText></h4>
                             </div>
                             <div className="flex items-center shrink-0">
-                              {event.gcalSync && isSyncable(event) && (
+                              {googleConnected && event.gcalSync && isSyncable(event) && (
                                 <GoogleSyncMark fromGoogle={event.gcalOrigin} className="p-1 ml-2" />
                               )}
                               {/* Folded away on desktop so the G sits at the edge, and slides left as these open */}

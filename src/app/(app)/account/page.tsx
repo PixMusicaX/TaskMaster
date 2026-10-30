@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { format, subDays } from "date-fns";
 import Link from "next/link";
-import { Database, Download, AlertTriangle, ExternalLink, Github, Heart, UserRound } from "lucide-react";
+import { Database, Download, AlertTriangle, ExternalLink, Github, Heart, Trash2, UserRound } from "lucide-react";
 import GlassCard from "@/components/glass-card";
 import TabularViewModal from "@/components/TabularViewModal";
 import VaultHero from "@/components/vault/vault-hero";
@@ -13,6 +13,8 @@ import SettingsPanel from "@/components/vault/settings-panel";
 import GoogleCalendarPanel from "@/components/vault/google-calendar-panel";
 import AccountPanel, { AiGuidePanel, PersonalizePanel, useAccount } from "@/components/vault/account-panel";
 import { changeHolidayRegion } from "@/app/actions/events";
+import { deleteAccount } from "@/app/actions/account";
+import { clearAccountStorage } from "@/components/account-scope";
 import { HOLIDAY_REGIONS } from "@/lib/personalization";
 import VaultSection from "@/components/vault/vault-section";
 import { getSeasonTimeline } from "@/app/actions/gamification";
@@ -82,6 +84,7 @@ export default function AccountPage() {
 
   const [openTable, setOpenTable] = useState<"seasons" | ChronicleKind | null>(null);
   const [pruneLoading, setPruneLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   // The browser's current permission, overridden by the answer to our own request
   const browserNotificationPermission = useSyncExternalStore(noopSubscribe, readNotificationPermission, () => "default");
   const [requestedPermission, setRequestedPermission] = useState<string | null>(null);
@@ -117,6 +120,30 @@ export default function AccountPage() {
       alert("Failed to prune database.");
     }
     setPruneLoading(false);
+  }
+
+  async function handleDeleteAccount() {
+    // Two warnings, then the word itself typed out, as nothing here can be brought back
+    if (!confirm("Warning 1 of 2: this permanently deletes your account: tasks, events, habits, notes, progress, seasons and saved AI keys. Continue?")) return;
+    if (!confirm("Warning 2 of 2: this cannot be undone, and there is no backup. Events already in Google Calendar stay there. Delete your account for good?")) return;
+    const typed = prompt("Type DELETE to permanently delete your account.");
+    if (typed !== "DELETE") return;
+
+    setDeleting(true);
+    try {
+      const result = await deleteAccount(typed);
+      if (result && !result.success) {
+        alert(result.message);
+        setDeleting(false);
+        return;
+      }
+      clearAccountStorage();
+      try { localStorage.removeItem("tm_user"); } catch { /* storage blocked */ }
+    } catch (err) {
+      console.error(err);
+      alert("Could not delete your account.");
+      setDeleting(false);
+    }
   }
 
   async function handleToggle(kind: ChronicleKind, id: string) {
@@ -288,6 +315,25 @@ export default function AccountPage() {
                 <span>Cannot be undone. Do not prune unless necessary!</span>
               </div>
             </div>
+
+            {account && !account.demo && (
+              <div className="pt-5 border-t border-tm-blue-gray/10 space-y-4">
+                <div>
+                  <h3 className="text-xl font-bold text-foreground leading-tight">Delete Account</h3>
+                  <p className="text-sm text-tm-blue-gray mt-2 max-w-2xl font-medium">
+                    Permanently delete your account and everything in it. Events already in Google Calendar stay there, but TaskMaster loses access to them.
+                  </p>
+                </div>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                  className="flex items-center gap-3 px-6 py-4 rounded-xl font-mono font-semibold uppercase tracking-[0.12em] text-caption transition-all active:scale-95 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 hover:border-red-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Trash2 size={16} />
+                  {deleting ? "Deleting…" : "Delete Account"}
+                </button>
+              </div>
+            )}
           </div>
         </GlassCard>
       </VaultSection>
@@ -320,7 +366,8 @@ export default function AccountPage() {
       <div className="pt-12 text-center border-t border-tm-blue-gray/10">
         <p className="text-xs font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">
           Version {APP_VERSION} • TaskMaster • By kk36 and PiX •{" "}
-          <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+          <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link> •{" "}
+          <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
         </p>
       </div>
 

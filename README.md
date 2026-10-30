@@ -81,7 +81,7 @@ on your deployed domain) as another authorised redirect URI, and add the
 for this scope; each player connects from Account → Google Calendar. While the app is in testing
 mode, only listed test users can connect and their access lasts seven days, so they'll need to
 reconnect. Public use needs Google's app verification, and your Branding page should point to
-`/privacy` on your domain.
+`/privacy` and `/terms` on your domain.
 
 **AI keys are per player, not in `.env`:** each account adds its own Gemini, Claude or Groq key
 under Account → AI Guide. Without one the AI cards fall back to their offline versions.
