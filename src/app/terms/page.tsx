@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import LegalPage, { LEGAL_LINK, LegalList, LegalSection } from "@/components/legal-page";
-import { PRIVACY_CONTACT_URL, REPO_URL } from "@/lib/version";
+import { CONTACT_EMAIL, REPO_URL } from "@/lib/version";
 
 export const metadata: Metadata = {
   title: "Terms of Service | TaskMaster",
@@ -68,7 +68,8 @@ export default function TermsPage() {
 
       <LegalSection title="Ending your use">
         <p>
-          You can stop using TaskMaster at any time, and delete your account and its data from the Account page.
+          You can stop using TaskMaster at any time. You can also delete your account yourself from Account → Cloud Storage. That permanently removes the account and everything in it,
+          and it can&apos;t be undone. Events already in Google Calendar stay there.
           We may suspend or close accounts that break these terms.
         </p>
       </LegalSection>
@@ -79,7 +80,7 @@ export default function TermsPage() {
 
       <LegalSection title="Contact">
         <p>
-          For questions about these terms, <a href={PRIVACY_CONTACT_URL} target="_blank" rel="noopener noreferrer" className={LEGAL_LINK}>contact us here</a>.
+          For questions about these terms, email <a href={`mailto:${CONTACT_EMAIL}`} className={LEGAL_LINK}>{CONTACT_EMAIL}</a>.
         </p>
       </LegalSection>
     </LegalPage>
