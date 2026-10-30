@@ -3,7 +3,9 @@ import { AlertCircle, Clock as ClockIcon } from "lucide-react";
 import CompletionCheck from "@/components/ui/completion-check";
 import StrikeText from "@/components/ui/strike-text";
 import { format, isSameDay } from "date-fns";
+import { GOOGLE, GoogleMark } from "@/components/google-mark";
 import { XP_VALUES } from "@/lib/constants";
+import { dayTitle, multiDayLength, occursOn } from "@/lib/multi-day";
 import type { EventRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import WidgetCard from "./widget-card";
@@ -37,7 +39,7 @@ export default function ActiveQuestsCard({ tasks, loading, today, updating, onTo
       footerLabel="Quest Board"
       delay={0.4}
     >
-      {tasks.filter(t => t.type !== "special_day").map(task => {
+      {tasks.filter(t => t.type !== "special_day" && (multiDayLength(t) === 1 ? t.date >= format(today, "yyyy-MM-dd") || t.type === "task" : occursOn(t, today))).map(task => {
         const isEvent = task.type === "event";
         return (
           <motion.button
@@ -45,6 +47,7 @@ export default function ActiveQuestsCard({ tasks, loading, today, updating, onTo
             onClick={() => !isEvent && onToggle(task.id, task.completed)}
             disabled={updating.has(task.id)}
             whileTap={isEvent ? undefined : { scale: 0.97 }}
+            style={task.gcalImported ? { background: GOOGLE.surface, borderColor: GOOGLE.border, color: GOOGLE.text } : undefined}
             className={cn(
               "w-full flex flex-col gap-2 p-4 rounded-[1.5rem] border transition-all duration-500 text-left group/card",
               updating.has(task.id) && "pointer-events-none",
@@ -67,23 +70,23 @@ export default function ActiveQuestsCard({ tasks, loading, today, updating, onTo
                   task.completed ? "bg-tm-blue-gray border-tm-blue-gray" : "bg-white/5 border-tm-orange-light/20 group-hover/card:border-tm-orange-light/50"
                 )}
                 checkClassName="text-white"
-                idle={isEvent ? <ClockIcon size={14} className="text-tm-orange-light" /> : <TaskIcon title={task.title} className="text-tm-orange-light/50 group-hover/card:text-tm-orange-light" size={14} />}
+                idle={task.gcalImported ? <GoogleMark size={14} /> : isEvent ? <ClockIcon size={14} className="text-tm-orange-light" /> : <TaskIcon title={task.title} className="text-tm-orange-light/50 group-hover/card:text-tm-orange-light" size={14} />}
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                  <p className={cn(
+                  <p style={task.gcalImported ? { color: GOOGLE.muted } : undefined} className={cn(
                     "text-tiny font-mono font-semibold uppercase tracking-[0.12em]",
                     task.type === "task" ? "text-tm-blue-gray" :
                       task.tier === "epic" ? "text-tm-orange-dark" :
                         task.tier === "main" ? "text-tm-orange-light" :
                           "text-tm-yellow"
                   )}>
-                    {task.type === "event" ? `${task.tier} Quest` : "Objective"}
+                    {task.gcalImported ? "Google Event" : task.type === "event" ? `${task.tier} Quest` : "Objective"}
                   </p>
-                  <span className="text-tiny font-mono font-semibold text-tm-orange-light bg-tm-orange-light/10 px-1.5 py-0.5 rounded border border-tm-orange-light/20">+{questXP(task)} XP</span>
+                  {!task.gcalImported && <span className="text-tiny font-mono font-semibold text-tm-orange-light bg-tm-orange-light/10 px-1.5 py-0.5 rounded border border-tm-orange-light/20">+{questXP(task)} XP</span>}
                 </div>
-                <h4 className="text-sm font-semibold text-foreground/90 truncate"><StrikeText className="truncate align-bottom" done={task.completed && !isEvent}>{task.title}</StrikeText></h4>
-                <div className="flex items-center gap-2 mt-1 text-tiny font-mono font-semibold text-tm-blue-gray uppercase tracking-[0.12em]">
+                <h4 style={task.gcalImported ? { color: GOOGLE.text } : undefined} className="text-sm font-semibold text-foreground/90 truncate"><StrikeText className="truncate align-bottom" done={task.completed && !isEvent}>{dayTitle(task, today)}</StrikeText></h4>
+                <div style={task.gcalImported ? { color: GOOGLE.muted } : undefined} className="flex items-center gap-2 mt-1 text-tiny font-mono font-semibold text-tm-blue-gray uppercase tracking-[0.12em]">
                   {task.startTime && (
                     <>
                       <ClockIcon size={10} />

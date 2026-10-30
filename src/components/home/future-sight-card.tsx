@@ -1,5 +1,6 @@
 import { Eye } from "lucide-react";
 import { addDays, format, isSameDay } from "date-fns";
+import { GOOGLE, GoogleMark } from "@/components/google-mark";
 import { cn } from "@/lib/utils";
 import type { EventRow } from "@/lib/types";
 import InsightCard, { Pill } from "./insight-card";
@@ -21,9 +22,13 @@ export default function FutureSightCard({ events }: { events: EventRow[] }) {
             {events.slice(0, 5).map((e, idx) => {
               const eventDate = new Date(e.date);
               return (
-                <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all group/event gap-3">
+                <div
+                  key={idx}
+                  style={e.gcalImported ? { background: GOOGLE.surface, borderColor: GOOGLE.border } : undefined}
+                  className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all group/event gap-3"
+                >
                   <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <div className={cn(
+                    <div style={e.gcalImported ? { background: GOOGLE.blue, borderColor: GOOGLE.blue, color: "#FFFFFF" } : undefined} className={cn(
                       "w-10 h-10 shrink-0 rounded-xl flex flex-col items-center justify-center border transition-all",
                       e.type === "special_day" ? "bg-tm-orange-dark/10 border-tm-orange-dark/20 text-tm-orange-dark" : "bg-tm-yellow/10 border-tm-yellow/20 text-tm-yellow"
                     )}>
@@ -31,13 +36,14 @@ export default function FutureSightCard({ events }: { events: EventRow[] }) {
                       <span className="text-lg font-bold leading-none mt-0.5">{format(eventDate, "dd")}</span>
                     </div>
                     <div className="min-w-0 flex-1 py-1">
-                      <h4 className="font-bold text-sm text-foreground/90 break-words leading-snug">{e.title}</h4>
-                      <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray/60 tracking-[0.12em] mt-1">
-                        {e.type === "special_day" ? "Special Day" : `${e.tier} Quest`}
+                      <h4 style={e.gcalImported ? { color: GOOGLE.text } : undefined} className="font-bold text-sm text-foreground/90 break-words leading-snug">{e.title}</h4>
+                      <p style={e.gcalImported ? { color: GOOGLE.muted } : undefined} className="flex items-center gap-1.5 text-caption font-mono font-semibold uppercase text-tm-blue-gray/60 tracking-[0.12em] mt-1">
+                        {e.gcalImported && <GoogleMark size={11} />}
+                        {e.gcalImported ? "Google Event" : e.type === "special_day" ? "Special Day" : `${e.tier} Quest`}
                       </p>
                     </div>
                   </div>
-                  <div className="text-caption font-mono font-semibold uppercase text-tm-blue-gray/70 tracking-[0.12em] shrink-0 text-right">
+                  <div style={e.gcalImported ? { color: GOOGLE.muted } : undefined} className="text-caption font-mono font-semibold uppercase text-tm-blue-gray/70 tracking-[0.12em] shrink-0 text-right">
                     {isSameDay(eventDate, addDays(new Date(), 1)) ? "Tomorrow" : format(eventDate, "EEEE")}
                   </div>
                 </div>

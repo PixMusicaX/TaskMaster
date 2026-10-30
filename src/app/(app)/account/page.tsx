@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { format, subDays } from "date-fns";
+import Link from "next/link";
 import { Database, Download, AlertTriangle, ExternalLink, Github, Heart, UserRound } from "lucide-react";
 import GlassCard from "@/components/glass-card";
 import TabularViewModal from "@/components/TabularViewModal";
@@ -9,6 +10,7 @@ import VaultHero from "@/components/vault/vault-hero";
 import HallOfFame from "@/components/vault/hall-of-fame";
 import Chronicle, { type ChronicleKind } from "@/components/vault/chronicle";
 import SettingsPanel from "@/components/vault/settings-panel";
+import GoogleCalendarPanel from "@/components/vault/google-calendar-panel";
 import AccountPanel, { AiGuidePanel, PersonalizePanel, useAccount } from "@/components/vault/account-panel";
 import { changeHolidayRegion } from "@/app/actions/events";
 import { HOLIDAY_REGIONS } from "@/lib/personalization";
@@ -238,6 +240,8 @@ export default function AccountPage() {
         onHolidayRegionChange={handleHolidayRegion}
       />
 
+      <GoogleCalendarPanel demo={!!account?.demo} />
+
       <AiGuidePanel account={account} />
 
       <PersonalizePanel account={account} />
@@ -315,7 +319,8 @@ export default function AccountPage() {
       {/* Footer */}
       <div className="pt-12 text-center border-t border-tm-blue-gray/10">
         <p className="text-xs font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">
-          Version {APP_VERSION} • TaskMaster • By kk36 and PiX
+          Version {APP_VERSION} • TaskMaster • By kk36 and PiX •{" "}
+          <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
         </p>
       </div>
 

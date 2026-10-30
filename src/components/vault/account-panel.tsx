@@ -13,10 +13,10 @@ import { AI_PROVIDERS, AI_PROVIDER_INFO, type AiProvider, type AiSettingsView } 
 
 type Account = Awaited<ReturnType<typeof getAccount>>;
 
-const LABEL = "text-caption font-mono font-semibold uppercase tracking-[0.12em]";
+export const LABEL = "text-caption font-mono font-semibold uppercase tracking-[0.12em]";
 const BUTTON = cn(LABEL, "inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed");
-const BUTTON_PRIMARY = cn(BUTTON, "bg-tm-yellow/10 hover:bg-tm-yellow/20 text-tm-yellow border border-tm-yellow/20 hover:border-tm-yellow/40");
-const BUTTON_QUIET = cn(BUTTON, "bg-tm-blue-gray/10 hover:bg-tm-blue-gray/20 text-tm-blue-gray border border-tm-blue-gray/10");
+export const BUTTON_PRIMARY = cn(BUTTON, "bg-tm-yellow/10 hover:bg-tm-yellow/20 text-tm-yellow border border-tm-yellow/20 hover:border-tm-yellow/40");
+export const BUTTON_QUIET = cn(BUTTON, "bg-tm-blue-gray/10 hover:bg-tm-blue-gray/20 text-tm-blue-gray border border-tm-blue-gray/10");
 const FIELD = "w-full px-4 py-3 rounded-xl bg-tm-blue-gray/5 border border-tm-blue-gray/15 text-sm text-foreground placeholder:text-tm-blue-gray/50 outline-none focus:border-tm-yellow/50";
 
 // "Chrome on Windows" from a user-agent string, as far as it can be told

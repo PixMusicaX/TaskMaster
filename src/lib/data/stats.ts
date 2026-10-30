@@ -79,6 +79,7 @@ export async function statsForPeriod(userId: string, startDate: Date, endDate: D
 
     // Add Event/Task XP
     events.forEach((e) => {
+      if (e.gcalImported) return; // Earns nothing until it's added to TaskMaster
       let xp = 0;
       const tier = e.tier?.toLowerCase() || "side";
       const reward = tier === "epic" ? XP_VALUES.QUEST_EPIC :
@@ -300,7 +301,7 @@ export async function seasonTimelineFor(userId: string, clientDateStr?: string, 
   const [[notes], [logs], [events]] = await Promise.all([
     db.select({ first: minOf(note.date) }).from(note).where(eq(note.userId, userId)),
     db.select({ first: minOf(habitLog.date) }).from(habitLog).where(and(eq(habitLog.userId, userId), eq(habitLog.completed, true))),
-    db.select({ first: minOf(event.date) }).from(event).where(and(eq(event.userId, userId), eq(event.isApi, false))),
+    db.select({ first: minOf(event.date) }).from(event).where(and(eq(event.userId, userId), eq(event.isApi, false), eq(event.gcalImported, false))),
   ]);
   const firsts = [notes?.first, logs?.first, events?.first].filter((d): d is string => !!d).sort();
   const sinceFirst = firsts.length ? differenceInCalendarMonths(now, parseISO(firsts[0])) + 1 : 1;

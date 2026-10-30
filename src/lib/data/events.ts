@@ -1,7 +1,7 @@
 // Event queries shared between actions, for one user (server only)
 import { db } from "@/db";
 import { event } from "@/db/schema";
-import { eq, and, gte, lte, asc, inArray } from "drizzle-orm";
+import { eq, and, or, gte, gt, lt, lte, asc, inArray } from "drizzle-orm";
 import { format } from "date-fns";
 import { invalidateSnapshots } from "./stats";
 
@@ -15,6 +15,26 @@ export async function eventsByDateRange(userId: string, start: Date, end: Date) 
       lte(event.date, endStr)
     )
   ).orderBy(asc(event.date), asc(event.startTime));
+}
+
+// The calendar's view: also events that began before the range and run into it
+export async function calendarEventsByDateRange(userId: string, start: Date, end: Date) {
+  const startStr = format(start, "yyyy-MM-dd");
+  const endStr = format(end, "yyyy-MM-dd");
+  return await db.select().from(event).where(
+    and(
+      eq(event.userId, userId),
+      or(
+        and(gte(event.date, startStr), lte(event.date, endStr)),
+        and(eq(event.type, "event"), lt(event.date, startStr), gt(event.endTime, start))
+      )
+    )
+  ).orderBy(asc(event.date), asc(event.startTime));
+}
+
+// What the AI may see: events imported from Google stay out until the player adds them to TaskMaster
+export async function plannerEventsByDateRange(userId: string, start: Date, end: Date) {
+  return (await eventsByDateRange(userId, start, end)).filter(e => !e.gcalImported);
 }
 
 export async function syncRecurringEventsFor(userId: string) {
@@ -55,6 +75,9 @@ export async function syncRecurringEventsFor(userId: string) {
       date: targetDate,
       completed: false,
       isApi: true, // Mark instances as system-managed
+      gcalEventId: null, // Yearly repeats stay in the app
+      gcalEtag: null,
+      gcalSync: false,
       startTime: sourceEvent.startTime ? new Date(new Date(sourceEvent.startTime).setFullYear(year)) : null,
       endTime: sourceEvent.endTime ? new Date(new Date(sourceEvent.endTime).setFullYear(year)) : null,
     }];

@@ -9,7 +9,7 @@ import { resolvePersonaStyle } from "@/lib/persona";
 import { requireUserId } from "@/lib/current-user";
 import { profileFor, invalidateSnapshots } from "@/lib/data/stats";
 import { habitsFor } from "@/lib/data/habits";
-import { eventsByDateRange } from "@/lib/data/events";
+import { plannerEventsByDateRange } from "@/lib/data/events";
 import { dailyQuoteFor } from "@/lib/data/daily-quote";
 import { safeGenerateContent } from "@/lib/ai-utils";
 import { AiNotConfiguredError } from "@/lib/ai-config";
@@ -43,7 +43,7 @@ async function missionFor(userId: string, clientDateStr?: string, persona?: stri
           const [profile, habitData, taskData, notesData, history, personal] = await Promise.all([
             profileFor(userId, today),
             habitsFor(userId, today), // only names are needed, so skip log history
-            eventsByDateRange(userId, twoWeeksAgo, clientNow),
+            plannerEventsByDateRange(userId, twoWeeksAgo, clientNow),
             db.select().from(note).where(and(eq(note.userId, userId), gte(note.date, twoWeeksAgoStr))),
             missionHistoryFor(userId, twoWeeksAgoStr),
             personalizationFor(userId)

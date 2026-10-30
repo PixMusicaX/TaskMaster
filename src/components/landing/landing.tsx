@@ -723,6 +723,7 @@ function VersionLinks() {
   return (
     <div data-x className={cn(LABEL, "flex flex-wrap items-center justify-center gap-6 text-tm-blue-gray")}>
       <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 hover:text-foreground transition-colors"><Github size={14} /> Source</a>
+      <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
     </div>
   );
 }

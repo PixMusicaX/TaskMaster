@@ -9,7 +9,7 @@ import { isRepeat, rollReliefBrief } from "@/lib/relief-dice";
 import { resolvePersonaStyle } from "@/lib/persona";
 import { requireUserId } from "@/lib/current-user";
 import { invalidateSnapshots } from "@/lib/data/stats";
-import { eventsByDateRange } from "@/lib/data/events";
+import { plannerEventsByDateRange } from "@/lib/data/events";
 import { reliefsWithCarriedLocation } from "@/lib/data/relief";
 import { safeGenerateContent } from "@/lib/ai-utils";
 import { AiNotConfiguredError } from "@/lib/ai-config";
@@ -124,7 +124,7 @@ async function reliefFor(
           const twoWeeksAgoStr = format(twoWeeksAgo, "yyyy-MM-dd");
           // Mood comes from the last two weeks; the do-not-repeat list reaches back four months
           const [taskData, notesData, history, personal] = await Promise.all([
-            eventsByDateRange(userId, twoWeeksAgo, clientNow),
+            plannerEventsByDateRange(userId, twoWeeksAgo, clientNow),
             db.select().from(note).where(and(eq(note.userId, userId), gte(note.date, twoWeeksAgoStr))),
             reliefHistoryFor(userId, format(subDays(clientNow, RELIEF_MEMORY_DAYS), "yyyy-MM-dd")),
             personalizationFor(userId)
