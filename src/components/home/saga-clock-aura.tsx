@@ -72,6 +72,8 @@ export default function ClockAura({ state, dial }: { state: RefObject<AuraState>
     };
     const observer = new ResizeObserver(size);
     observer.observe(canvas);
+    const emblem = canvas.parentElement?.parentElement;
+    if (emblem) observer.observe(emblem);
 
     // A closed line round the centre, at the radius `at` gives for each angle
     const trace = (at: (angle: number) => number) => {
@@ -107,7 +109,9 @@ export default function ClockAura({ state, dial }: { state: RefObject<AuraState>
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const unit = canvas.width / (HALF * 2);
+      // Scaled from the emblem, not the canvas: the canvas can be cut short by the screen's width,
+      // and the hole still has to match the dial exactly
+      const unit = ((emblem?.clientWidth ?? canvas.clientWidth / REACH) / 400) * (canvas.width / canvas.clientWidth);
       ctx.setTransform(unit, 0, 0, unit, canvas.width / 2, canvas.height / 2);
 
       // The hole only wobbles and feathers away from the dial, whose edge it follows at rest
@@ -180,7 +184,7 @@ export default function ClockAura({ state, dial }: { state: RefObject<AuraState>
     };
   }, [state, dial]);
 
-  // Never wider than the screen, which on a phone only trims gas that has already thinned out
+  // Never wider than the screen, which on a phone trims gas that has already thinned out
   return (
     <div aria-hidden className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 aspect-square motion-reduce:hidden" style={{ width: `${REACH * 100}%`, maxWidth: "100vw" }}>
       <canvas ref={canvasRef} className="block w-full h-full" />
