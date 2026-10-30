@@ -1,10 +1,52 @@
 import Image from "next/image";
+import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CAPTION, TITLE } from "./saga-kit";
+import { APP_VERSION, CREATOR_URL, CREATOR_URL2 } from "@/lib/version";
+import { CAPTION, R, TITLE, anchorAt, polar } from "./saga-kit";
 
 // The growth saga's closing scene: the orbit comes back whole with the way to the Taskmaster at
 // its centre, behind the app's own crest. The scroll script animates the pieces through their data-saga names.
+
+// The ring's last job: its stations carry the page's small print, each label running outwards
+// from its point on the orbit
+const STATIONS: { label: string; angle: number; href?: string; external?: boolean }[] = [
+  { label: "Privacy", angle: 45, href: "/privacy" },
+  { label: "Terms", angle: 135, href: "/terms" },
+  { label: `v${APP_VERSION}`, angle: 180 },
+  { label: "By kk36", angle: 225, href: CREATOR_URL2, external: true },
+  { label: "By PiX", angle: 315, href: CREATOR_URL, external: true },
+];
+
+function Station({ label, angle, href, external, active }: (typeof STATIONS)[number] & { active: boolean }) {
+  const at = polar(angle, R);
+  const side = anchorAt(at.x);
+  const className = cn(
+    "group/station absolute flex items-center gap-2 whitespace-nowrap",
+    side === "start" && "-translate-y-1/2 -translate-x-[7px]",
+    side === "end" && "flex-row-reverse -translate-y-1/2 translate-x-[7px]",
+    side === "middle" && "flex-col -translate-x-1/2 -translate-y-[7px]",
+    href && active && "pointer-events-auto"
+  );
+  const style = side === "end"
+    ? { right: `${100 - at.x / 4}%`, top: `${at.y / 4}%` }
+    : { left: `${at.x / 4}%`, top: `${at.y / 4}%` };
+  const inside = (
+    <>
+      <span className="relative flex w-3.5 h-3.5 shrink-0 items-center justify-center">
+        <span className="absolute inset-0 rounded-full bg-tm-yellow/20 scale-100 group-hover/station:scale-[1.8] transition-transform duration-300" />
+        <span className="relative w-2 h-2 rounded-full bg-tm-yellow shadow-[0_0_8px_var(--tm-yellow)]" />
+      </span>
+      <span className={cn(CAPTION, "group-hover/station:text-tm-yellow transition-colors")}>{label}</span>
+    </>
+  );
+
+  if (!href) return <div data-saga="ask-link" className={className} style={style}>{inside}</div>;
+  const tabIndex = active ? undefined : -1;
+  return external
+    ? <a data-saga="ask-link" href={href} target="_blank" rel="noopener noreferrer" tabIndex={tabIndex} className={className} style={style}>{inside}</a>
+    : <Link data-saga="ask-link" href={href} tabIndex={tabIndex} className={className} style={style}>{inside}</Link>;
+}
 
 export function AskTitle() {
   return (
@@ -34,6 +76,7 @@ export function AskEmblem({ onAsk, active }: { onAsk: () => void; active: boolea
         <Image src="/logo.png" alt="" width={240} height={240} className="w-full h-full object-cover invert hue-rotate-180 dark:invert-0 dark:hue-rotate-0 group-hover:scale-105 transition-transform duration-700" />
         <span className="absolute inset-0 bg-gradient-to-r from-tm-yellow/0 via-tm-yellow/20 to-tm-yellow/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
       </button>
+      {STATIONS.map(station => <Station key={station.label} {...station} active={active} />)}
     </div>
   );
 }
