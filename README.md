@@ -74,6 +74,15 @@ DATABASE_URL_UNPOOLED="postgresql://user:password@host/neondb?sslmode=require"
 `http://localhost:3000/api/auth/callback/google` (plus the same path on your deployed domain)
 as an authorised redirect URI.
 
+**Google Calendar sync (optional):** it uses the same OAuth client. In the Google Cloud console,
+enable the Google Calendar API, add `http://localhost:3000/api/gcal/callback` (plus the same path
+on your deployed domain) as another authorised redirect URI, and add the
+`https://www.googleapis.com/auth/calendar.events` scope to the consent screen. Sign-in doesn't ask
+for this scope; each player connects from Account → Google Calendar. While the app is in testing
+mode, only listed test users can connect and their access lasts seven days, so they'll need to
+reconnect. Public use needs Google's app verification, and your Branding page should point to
+`/privacy` on your domain.
+
 **AI keys are per player, not in `.env`:** each account adds its own Gemini, Claude or Groq key
 under Account → AI Guide. Without one the AI cards fall back to their offline versions.
 
@@ -89,6 +98,9 @@ node --env-file=.env scripts/migrate-multi-user.mjs you@gmail.com
 **Upgrading a database from before accounts existed (v7 and earlier):** skip `drizzle-kit push`
 and run only the script. It adds the sign-in tables and hands every existing record to that
 address. Try it with `--dry-run` first; it prints what it would do and changes nothing.
+
+**Upgrading for Google Calendar sync:** run `npx drizzle-kit push` once. It adds the sync columns
+to `Event` and three new tables, and existing rows aren't changed.
 
 ### 5. Run Locally
 ```bash

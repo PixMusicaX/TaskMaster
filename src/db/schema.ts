@@ -152,9 +152,55 @@ export const event = pgTable("Event", {
   repeatsYearly: boolean("repeatsYearly").default(false).notNull(),
   notification: boolean("notification").default(false).notNull(),
   isApi: boolean("isApi").default(false).notNull(),
+  // Google Calendar (see lib/gcal). A row with no gcalEventId has never reached Google.
+  gcalEventId: text("gcalEventId"),
+  gcalEtag: text("gcalEtag"), // Google's version of the event, to spot changes that are really ours
+  gcalSync: boolean("gcalSync").default(false).notNull(), // Keeps following its Google copy
+  gcalOrigin: boolean("gcalOrigin").default(false).notNull(), // Began in Google, so a delete here leaves Google alone
+  gcalImported: boolean("gcalImported").default(false).notNull(), // Not yet added to TaskMaster: no XP, hidden from the AI
+  gcalReadOnly: boolean("gcalReadOnly").default(false).notNull(), // Someone else's invite: can't be edited here
   createdAt: timestamp("createdAt", { precision: 3, mode: 'date' }).defaultNow().notNull(),
 }, (t) => [
-  index("Event_userId_date_idx").on(t.userId, t.date)
+  index("Event_userId_date_idx").on(t.userId, t.date),
+  uniqueIndex("Event_userId_gcalEventId_key").on(t.userId, t.gcalEventId)
+]);
+
+// One Google Calendar link per player, made apart from sign-in so its consent screen is only
+// shown to players who want it. The refresh token is encrypted (see lib/ai-config.ts).
+export const gcalConnection = pgTable("GcalConnection", {
+  userId: text("userId").primaryKey().references(() => user.id, { onDelete: 'cascade' }),
+  refreshToken: text("refreshToken").notNull(),
+  timeZone: text("timeZone"), // The calendar's own, filled in by the first sync
+  syncFrom: text("syncFrom"), // Format: YYYY-MM-DD. The first sync's day: nothing older is imported
+  syncToken: text("syncToken"), // Google's marker for "changes since the last sync"
+  syncStartedAt: timestamp("syncStartedAt", { precision: 3, mode: 'date' }), // Doubles as the lock between open tabs
+  lastSyncedAt: timestamp("lastSyncedAt", { precision: 3, mode: 'date' }),
+  fullSyncedAt: timestamp("fullSyncedAt", { precision: 3, mode: 'date' }),
+  lastError: text("lastError"), // "reconnect" or "failed"
+  createdAt: timestamp("createdAt", { precision: 3, mode: 'date' }).defaultNow().notNull(),
+});
+
+// Changes waiting to reach Google, so a failed call is retried and a deleted row can still be
+// removed there. eventId has no foreign key because the row may already be gone.
+export const gcalOutbox = pgTable("GcalOutbox", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  userId: text("userId").notNull().references(() => user.id, { onDelete: 'cascade' }),
+  eventId: text("eventId").notNull(),
+  gcalEventId: text("gcalEventId"),
+  op: text("op").notNull(), // upsert, delete
+  attempts: integer("attempts").default(0).notNull(),
+  createdAt: timestamp("createdAt", { precision: 3, mode: 'date' }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex("GcalOutbox_userId_eventId_key").on(t.userId, t.eventId)
+]);
+
+// Google events the player removed here. They stay in Google, and this stops the next full sync
+// from importing them again.
+export const gcalIgnored = pgTable("GcalIgnored", {
+  userId: text("userId").notNull().references(() => user.id, { onDelete: 'cascade' }),
+  gcalEventId: text("gcalEventId").notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.gcalEventId] })
 ]);
 
 export const smartMission = pgTable("SmartMission", {

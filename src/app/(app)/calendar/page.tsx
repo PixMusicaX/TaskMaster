@@ -2,10 +2,17 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import GlassCard from "@/components/glass-card";
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Coins, RotateCw, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
+import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Coins, RotateCw, RefreshCw, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
+import { addDays, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, setHours, setMinutes } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { getEventsByDateRange, addEvent, toggleEventCompletion, deleteEvent, updateEvent, getAllEvents } from "@/app/actions/events";
+import { getCalendarEvents, addEvent, addToTaskmaster, toggleEventCompletion, deleteEvent, updateEvent, getAllEvents } from "@/app/actions/events";
+import { getGoogleCalendarStatus, syncGoogleCalendar } from "@/app/actions/google-calendar";
+import SyncLogic from "@/components/sync-logic";
+import GoogleEventCard from "@/components/google-event-card";
+import { GoogleChip, GoogleDot, GoogleMark } from "@/components/google-mark";
+import { isSyncable } from "@/lib/gcal/map";
+import { GCAL_SYNCED_EVENT } from "@/lib/gcal/events";
+import { dayTitle, multiDayLength, occursOn } from "@/lib/multi-day";
 import { getProfile } from "@/app/actions/gamification";
 import { getMoodsByDateRange } from "@/app/actions/notes";
 import { getReliefHistory } from "@/app/actions/relief";
@@ -21,6 +28,16 @@ import { PERSONA_NAMES, isPersonaOff, scheduledPersona, subscribePersonaSetting 
 import { PersonaDayBadge } from "@/components/persona/persona-day-badge";
 import { SPECIAL_DAYS, isSpecialOff, scheduledSpecial, subscribeSpecialSetting } from "@/lib/special-days";
 import { SpecialDayBadge } from "@/components/special/special-day-badge";
+
+function timeLabel(event: EventRow) {
+  if (!event.startTime) return "All Day";
+  const start = new Date(event.startTime);
+  if (!event.endTime) return format(start, "HH:mm");
+  const end = new Date(event.endTime);
+  return multiDayLength(event) > 1
+    ? `${format(start, "MMM d, HH:mm")}–${format(end, "MMM d, HH:mm")}`
+    : `${format(start, "HH:mm")}–${format(end, "HH:mm")}`;
+}
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -45,6 +62,10 @@ export default function CalendarPage() {
   const [newNotification, setNewNotification] = useState(true);
   const [newRepeatsYearly, setNewRepeatsYearly] = useState(false);
   const [newDateStr, setNewDateStr] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [newEndTime, setNewEndTime] = useState("");
+  const [newGoogleSync, setNewGoogleSync] = useState(true);
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [googleSyncing, setGoogleSyncing] = useState(false);
   const [isTabularOpen, setIsTabularOpen] = useState(false);
   const [isPickingMonth, setIsPickingMonth] = useState(false);
   const [allEventsForTable, setAllEventsForTable] = useState<EventRow[]>([]);
@@ -79,7 +100,7 @@ export default function CalendarPage() {
     if (showLoader) setIsLoading(true);
     try {
       const [eventsData, profileData, notesData, reliefData] = await Promise.all([
-        getEventsByDateRange(startDate, endDate),
+        getCalendarEvents(startDate, endDate),
         getProfile(format(currentDate, "yyyy-MM-dd")),
         getMoodsByDateRange(format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd")),
         getReliefHistory(format(startDate, "yyyy-MM-dd"))
@@ -98,6 +119,13 @@ export default function CalendarPage() {
   useEffect(() => {
     fetchEvents(initialLoad.current);
     initialLoad.current = false;
+  }, [fetchEvents]);
+
+  useEffect(() => {
+    getGoogleCalendarStatus().then(s => setGoogleConnected(s.connected)).catch(e => console.error(e));
+    const onSynced = () => fetchEvents(false);
+    window.addEventListener(GCAL_SYNCED_EVENT, onSynced);
+    return () => window.removeEventListener(GCAL_SYNCED_EVENT, onSynced);
   }, [fetchEvents]);
 
   // The full archive is only needed for the table view, so load it (fresh) when that opens
@@ -126,7 +154,7 @@ export default function CalendarPage() {
   }, [events]);
 
   function openEdit(event: EventRow) {
-    if (event.isApi) return;
+    if (event.isApi || event.gcalReadOnly) return;
     setEditingEvent(event);
     setNewTitle(event.title);
     setNewType(event.type);
@@ -136,6 +164,8 @@ export default function CalendarPage() {
     setNewDateStr(format(dateObj, "yyyy-MM-dd"));
     setNewNotification(event.notification ?? true);
     setNewRepeatsYearly(event.repeatsYearly ?? false);
+    setNewEndTime(event.endTime && event.startTime ? format(new Date(event.endTime), "HH:mm") : "");
+    setNewGoogleSync(event.gcalSync);
     setSelectedDate(dateObj);
     setShowAdd(true);
   }
@@ -145,7 +175,20 @@ export default function CalendarPage() {
 
     const [hours, minutes] = newTime.split(":").map(Number);
     const baseDate = new Date(newDateStr);
-    const eventTime = newType === "special_day" ? null : setMinutes(setHours(baseDate, hours), minutes);
+    const eventTime = newType === "special_day" || keepsAllDay ? null : setMinutes(setHours(baseDate, hours), minutes);
+
+    // Only a changed end is sent, so editing a multi-day event's title doesn't shorten it
+    const originalEnd = editingEvent?.endTime && editingEvent.startTime ? format(new Date(editingEvent.endTime), "HH:mm") : "";
+    let endTime: Date | null | undefined;
+    if (newType === "event" && eventTime && newEndTime !== originalEnd) {
+      if (newEndTime) {
+        const [endHours, endMinutes] = newEndTime.split(":").map(Number);
+        const end = setMinutes(setHours(eventTime, endHours), endMinutes);
+        endTime = end > eventTime ? end : addDays(end, 1); // Ends after midnight
+      } else {
+        endTime = null;
+      }
+    }
 
     const eventData = {
       title: newTitle,
@@ -153,8 +196,10 @@ export default function CalendarPage() {
       type: newType,
       tier: newType === "task" ? "side" : newTier,
       startTime: eventTime,
+      endTime,
       notification: newNotification,
       repeatsYearly: newRepeatsYearly,
+      gcalSync: googleConnected ? newGoogleSync : undefined,
     };
 
     if (editingEvent) {
@@ -176,8 +221,27 @@ export default function CalendarPage() {
     setNewDateStr(format(selectedDate, "yyyy-MM-dd"));
     setNewNotification(true);
     setNewRepeatsYearly(false);
+    setNewEndTime("");
+    setNewGoogleSync(true);
     setEditingEvent(null);
     setShowAdd(false);
+  }
+
+  async function handleGoogleSync() {
+    setGoogleSyncing(true);
+    try {
+      const { changed } = await syncGoogleCalendar(true);
+      await fetchEvents(false);
+      if (changed > 0) window.dispatchEvent(new CustomEvent("profile-updated"));
+    } finally {
+      setGoogleSyncing(false);
+    }
+  }
+
+  async function handleAddToTaskmaster(id: string, type: "task" | "event", tier?: string) {
+    await addToTaskmaster(id, type, tier);
+    await fetchEvents(false);
+    window.dispatchEvent(new CustomEvent("profile-updated"));
   }
 
   async function handleDelete(id: string) {
@@ -225,7 +289,7 @@ export default function CalendarPage() {
   }, [allEventsForTable]);
 
   const selectedEvents = events
-    .filter((e) => isSameDay(new Date(e.startTime || e.date), selectedDate))
+    .filter((e) => occursOn(e, selectedDate))
     .filter((e) => {
       if (e.type === "special_day" && e.startTime) {
         const d = new Date(e.startTime);
@@ -239,6 +303,12 @@ export default function CalendarPage() {
       return 0;
     });
 
+  // A Google all-day event stays all-day when edited, and an import can't change what it is
+  const keepsAllDay = !!editingEvent?.gcalEventId && !editingEvent.startTime;
+  // The End time field only holds a time, so it can't describe an event ending days later
+  const keepsEnd = !!editingEvent && multiDayLength(editingEvent) > 1;
+  const showGoogleToggle = googleConnected && newType !== "special_day" && !newRepeatsYearly;
+
   const selectedLocation = reliefs.find(r => r.date === format(selectedDate, "yyyy-MM-dd"))?.location;
 
   return (
@@ -251,6 +321,19 @@ export default function CalendarPage() {
             <div>
               <h1 className="text-4xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow">Calendar</h1>
               <p className="text-tm-blue-gray font-medium">Plan your weeks and months ahead.</p>
+
+              {googleConnected && (
+                <div className="flex items-center gap-4 mt-2">
+                  <button
+                    onClick={handleGoogleSync}
+                    disabled={googleSyncing}
+                    className="inline-flex items-center gap-1.5 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray hover:text-foreground transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw size={12} className={cn(googleSyncing && "animate-spin")} /> {googleSyncing ? "Syncing…" : "Sync"}
+                  </button>
+                  <SyncLogic />
+                </div>
+              )}
 
               {profile && (
                 <div className="flex flex-wrap gap-2 mt-4">
@@ -298,7 +381,7 @@ export default function CalendarPage() {
                     <button onClick={resetForm}><X /></button>
                   </div>
                   <div className="space-y-4">
-                    <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
+                    {!editingEvent?.gcalImported && <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
                       <button
                         onClick={() => setNewType("task")}
                         className={cn("flex-1 py-2 rounded-lg font-bold text-sm transition-all", newType === "task" ? "bg-tm-yellow text-tm-on-accent" : "text-tm-blue-gray")}
@@ -322,9 +405,9 @@ export default function CalendarPage() {
                       >
                         Special Day
                       </button>
-                    </div>
+                    </div>}
 
-                    {newType === "event" && (
+                    {newType === "event" && !editingEvent?.gcalImported && (
                       <div className="flex flex-col gap-2">
                         <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] px-1">Quest Tier</p>
                         <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
@@ -354,7 +437,7 @@ export default function CalendarPage() {
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                     />
-                    <div className={cn("grid gap-4", newType !== "special_day" ? "grid-cols-2" : "grid-cols-1")}>
+                    <div className={cn("grid gap-4", newType !== "special_day" && !keepsAllDay ? "grid-cols-2" : "grid-cols-1")}>
                       <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
                         <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray mb-1 tracking-[0.12em]">Date</p>
                         <input
@@ -364,7 +447,7 @@ export default function CalendarPage() {
                           className="bg-transparent font-bold text-lg outline-none w-full [color-scheme:light] dark:[color-scheme:dark]"
                         />
                       </div>
-                      {newType !== "special_day" && (
+                      {newType !== "special_day" && !keepsAllDay && (
                         <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
                           <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray mb-1 tracking-[0.12em]">Time</p>
                           <input
@@ -377,6 +460,19 @@ export default function CalendarPage() {
                       )}
                     </div>
                     
+                    {newType === "event" && !keepsAllDay && !keepsEnd && (
+                      <div className="p-4 rounded-2xl bg-tm-yellow/5 border border-tm-yellow/10">
+                        <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray mb-1 tracking-[0.12em]">End time (optional)</p>
+                        <input
+                          type="time"
+                          aria-label="End time"
+                          value={newEndTime}
+                          onChange={(e) => setNewEndTime(e.target.value)}
+                          className="bg-transparent font-bold text-lg outline-none w-full [color-scheme:light] dark:[color-scheme:dark]"
+                        />
+                      </div>
+                    )}
+
                     {newType === "special_day" && (
                       <button
                         onClick={() => setNewRepeatsYearly(!newRepeatsYearly)}
@@ -416,6 +512,28 @@ export default function CalendarPage() {
                         />
                       </div>
                     </button>
+
+                    {showGoogleToggle && (
+                      <button
+                        onClick={() => setNewGoogleSync(!newGoogleSync)}
+                        aria-pressed={newGoogleSync}
+                        className={cn(
+                          "w-full flex items-center justify-between p-4 rounded-2xl border transition-all",
+                          newGoogleSync ? "bg-tm-yellow/10 border-tm-yellow text-tm-yellow" : "bg-white/5 border-white/10 text-tm-blue-gray"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <RefreshCw size={18} />
+                          <span className="text-sm font-bold">Sync to Google</span>
+                        </div>
+                        <div className={cn("w-10 h-5 rounded-full relative transition-colors", newGoogleSync ? "bg-tm-yellow" : "bg-tm-blue-gray/30")}>
+                          <motion.div
+                            animate={{ x: newGoogleSync ? 20 : 2 }}
+                            className="absolute top-1 w-3 h-3 bg-white rounded-full"
+                          />
+                        </div>
+                      </button>
+                    )}
 
                     <button
                       onClick={handleAddEvent}
@@ -534,7 +652,7 @@ export default function CalendarPage() {
                     const isCurrentMonth = isSameMonth(day, monthStart);
                     const isSelected = isSameDay(day, selectedDate);
                     const dayEvents = events
-                      .filter(e => isSameDay(new Date(e.startTime || e.date), day))
+                      .filter(e => occursOn(e, day))
                       .filter(e => {
                         if (e.type === "special_day" && e.startTime) {
                           const d = new Date(e.startTime);
@@ -587,6 +705,7 @@ export default function CalendarPage() {
 
                         <div className="flex flex-col gap-1 mt-1 overflow-hidden">
                           {dayEvents.slice(0, 3).map((event) => {
+                            if (event.gcalImported) return <GoogleChip key={event.id} title={dayTitle(event, day)} />;
                             const sdColors = event.type === "special_day" ? getSpecialDayColors() : null;
                             return (
                               <div
@@ -600,7 +719,7 @@ export default function CalendarPage() {
                                       : "bg-tm-orange-light/20 text-tm-orange-dark border-tm-orange-light"
                                 )}
                               >
-                                {event.title}
+                                {dayTitle(event, day)}
                               </div>
                             )
                           })}
@@ -695,9 +814,10 @@ export default function CalendarPage() {
                   const isToday = isSameDay(day, new Date());
                   const isCurrentMonth = isSameMonth(day, monthStart);
                   const isSelected = isSameDay(day, selectedDate);
-                  const dayEvents = events.filter(e => isSameDay(new Date(e.startTime || e.date), day));
+                  const dayEvents = events.filter(e => occursOn(e, day));
                   const hasTask = dayEvents.some(e => e.type === "task");
-                  const hasEvent = dayEvents.some(e => e.type === "event");
+                  const hasEvent = dayEvents.some(e => e.type === "event" && !e.gcalImported);
+                  const hasGoogle = dayEvents.some(e => e.gcalImported);
                   const specialDays = dayEvents.filter(e => e.type === "special_day");
                   const hasSpecialDay = specialDays.length > 0;
                   const sdColor = hasSpecialDay ? getSpecialDayColors() : null;
@@ -728,6 +848,7 @@ export default function CalendarPage() {
                       <div className="flex gap-0.5 mt-0.5 h-1">
                         {hasTask && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-on-accent" : "bg-tm-yellow")} />}
                         {hasEvent && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-on-accent/60" : "bg-tm-orange-light")} />}
+                        {hasGoogle && <GoogleDot />}
                         {hasSpecialDay && <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-tm-on-accent/40" : sdColor?.bg)} />}
                       </div>
                     </button>
@@ -796,7 +917,16 @@ export default function CalendarPage() {
                         exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
                         key={event.id}
                       >
-                        <GlassCard className={cn(
+                        {event.gcalImported ? (
+                          <GoogleEventCard
+                            event={event}
+                            title={dayTitle(event, selectedDate)}
+                            time={timeLabel(event)}
+                            onEdit={() => openEdit(event)}
+                            onDelete={() => handleDelete(event.id)}
+                            onAdd={(type, tier) => handleAddToTaskmaster(event.id, type, tier)}
+                          />
+                        ) : <GlassCard className={cn(
                           "p-4 space-y-3 group",
                           event.type === "special_day" ? `border-l-4 border-l-transparent ${sdColors?.shadow}` :
                             event.type === "task" ? "border-l-4 border-l-tm-blue-gray/30" :
@@ -827,13 +957,18 @@ export default function CalendarPage() {
                                   />
                                 </motion.button>
                               )}
-                              <h4 className={cn("font-bold text-sm transition-colors", event.completed && "text-tm-blue-gray")}><StrikeText done={event.completed}>{event.title}</StrikeText></h4>
+                              <h4 className={cn("font-bold text-sm transition-colors", event.completed && "text-tm-blue-gray")}><StrikeText done={event.completed}>{dayTitle(event, selectedDate)}</StrikeText></h4>
                             </div>
-                            <div className="flex gap-2 items-center">
-                              {!event.isApi && (
+                            <div className="flex items-center shrink-0">
+                              {event.gcalSync && isSyncable(event) && (
+                                <span title="Synced with Google Calendar" className="p-1 ml-2"><GoogleMark size={14} /></span>
+                              )}
+                              {/* Folded away on desktop so the G sits at the edge, and slides left as these open */}
+                              <div className="flex gap-2 items-center overflow-hidden transition-[max-width] duration-300 lg:max-w-0 lg:group-hover:max-w-16 lg:group-focus-within:max-w-16">
+                              {!event.isApi && !event.gcalReadOnly && (
                                 <button
                                   onClick={() => openEdit(event)}
-                                  className="opacity-100 lg:opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-tm-yellow transition-all"
+                                  className="opacity-100 lg:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 p-1 text-tm-blue-gray hover:text-tm-yellow transition-all"
                                 >
                                   <Edit2 size={14} />
                                 </button>
@@ -841,11 +976,12 @@ export default function CalendarPage() {
                               {(!event.isApi || event.type === "special_day") && (
                                 <button
                                   onClick={() => handleDelete(event.id)}
-                                  className="opacity-100 lg:opacity-0 group-hover:opacity-100 p-1 text-tm-blue-gray hover:text-red-500 transition-all"
+                                  className="opacity-100 lg:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 p-1 text-tm-blue-gray hover:text-red-500 transition-all"
                                 >
                                   <Trash2 size={14} />
                                 </button>
                               )}
+                              </div>
                             </div>
                           </div>
                           {event.description && (
@@ -854,7 +990,7 @@ export default function CalendarPage() {
                           <div className="flex items-center justify-between gap-4 text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">
                             <div className="flex items-center gap-4">
                               <div className="flex items-center gap-1.5">
-                                <Clock size={12} /> <span>{event.startTime ? format(new Date(event.startTime), "HH:mm") : "All Day"}</span>
+                                <Clock size={12} /> <span>{timeLabel(event)}</span>
                               </div>
                               <span className={cn(
                                 "px-2 py-0.5 rounded",
@@ -878,7 +1014,7 @@ export default function CalendarPage() {
                               </div>
                             )}
                           </div>
-                        </GlassCard>
+                        </GlassCard>}
                       </motion.div>
                     )
                   })

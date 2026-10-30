@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Open to everyone: the landing page and the login page
-const PUBLIC_PATHS = ["/", "/login"];
+// Open to everyone: the landing page, the login page and the privacy policy
+const PUBLIC_PATHS = ["/", "/login", "/privacy"];
 
 // A quick first gate: a visitor with no session cookie never reaches a planner page. This only
 // looks at whether the cookie is there. The real check (is the session valid, and whose is it)

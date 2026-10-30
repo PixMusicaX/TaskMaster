@@ -9,6 +9,7 @@ import SpecialChrome from "@/components/special/special-chrome";
 import { requireUserId } from "@/lib/current-user";
 import { isDemoUser } from "@/lib/data/demo";
 import DemoBanner from "@/components/demo-banner";
+import GoogleSync from "@/components/google-sync";
 
 // Everything behind the login: checks the session, then wraps the planner pages in their chrome
 export default async function AppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -29,7 +30,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
         </NormalOnly>
         <PersonaChrome />
         <SpecialChrome />
-        {demo && <DemoBanner />}
+        {demo ? <DemoBanner /> : <GoogleSync />}
         {/* Clip, not auto: a scroll container here would stop position: sticky from pinning to the viewport */}
         <main className="flex-1 overflow-x-clip relative pb-24 lg:pb-0">
           {children}

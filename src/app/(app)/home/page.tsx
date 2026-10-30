@@ -7,6 +7,7 @@ import { format, subDays, addDays } from "date-fns";
 import Clock from "@/components/clock";
 import { getHabits, toggleHabitLog } from "@/app/actions/habits";
 import { getEventsByDateRange, toggleEventCompletion, getDashboardTasks, syncMonthlyHolidays } from "@/app/actions/events";
+import { GCAL_SYNCED_EVENT } from "@/lib/gcal/events";
 import { getProfile, getSeasonPace, getSeasonXPBeforeToday } from "@/app/actions/gamification";
 import { DEV_XP_EVENT, withDevXp } from "@/lib/dev-xp";
 import { getOnThisDay, type HistoryDay } from "@/app/actions/history";
@@ -141,6 +142,16 @@ export default function Home() {
     window.dispatchEvent(new CustomEvent("profile-updated"));
   }, [todayStr]);
 
+  // Items that arrive from Google show up without a reload
+  useEffect(() => {
+    const onSynced = () => {
+      getDashboardTasks(todayStr).then(setTasks);
+      getEventsByDateRange(addDays(today, 1), addDays(today, 14)).then(data => setFutureEvents(data.filter(e => e.type !== "task")));
+    };
+    window.addEventListener(GCAL_SYNCED_EVENT, onSynced);
+    return () => window.removeEventListener(GCAL_SYNCED_EVENT, onSynced);
+  }, [today, todayStr]);
+
   useEffect(() => {
     async function fetchData() {
       // 1. Habits, Missing Info Check & 7-day Completion Stats
@@ -210,7 +221,7 @@ export default function Home() {
         habitsPromise
       ]).then(([recentEvents, allHabits]) => {
         // Task Completion
-        const eligibleTasks = recentEvents.filter(e => e.type === "task" || e.type === "event");
+        const eligibleTasks = recentEvents.filter(e => (e.type === "task" || e.type === "event") && !e.gcalImported);
         const completedTasks = eligibleTasks.filter(e => e.completed).length;
         const taskRatio = eligibleTasks.length > 0 ? (completedTasks / eligibleTasks.length) : 1;
 

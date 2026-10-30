@@ -40,6 +40,7 @@ async function tipFor(userId: string, clientDateStr?: string, persona?: string |
         db.select().from(event).where(
           and(
             eq(event.userId, userId),
+            eq(event.gcalImported, false),
             gte(event.date, todayStr),
             lte(event.date, horizonStr)
           )

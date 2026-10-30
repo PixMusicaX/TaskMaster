@@ -24,7 +24,7 @@ export async function getSeasonRecap(clientDateStr: string) {
       .where(and(eq(note.userId, userId), gte(note.date, from), lte(note.date, to))),
     db.select({ habitId: habitLog.habitId, habitName: habitLog.habitName, habitIcon: habitLog.habitIcon, date: habitLog.date })
       .from(habitLog).where(and(eq(habitLog.userId, userId), gte(habitLog.date, from), lte(habitLog.date, to), eq(habitLog.completed, true))),
-    db.select({ type: event.type, tier: event.tier, completed: event.completed, startTime: event.startTime, date: event.date, isApi: event.isApi })
+    db.select({ type: event.type, tier: event.tier, completed: event.completed, startTime: event.startTime, date: event.date, isApi: event.isApi, gcalImported: event.gcalImported })
       .from(event).where(and(eq(event.userId, userId), gte(event.date, from), lte(event.date, to))),
     db.select({ id: habit.id, frequency: habit.frequency, icon: habit.icon }).from(habit).where(eq(habit.userId, userId)),
     db.select({ date: smartMission.date }).from(smartMission)
@@ -55,7 +55,7 @@ export async function getSeasonRecap(clientDateStr: string) {
   }
 
   const tasksDone = events.filter(e => e.type === "task" && e.completed);
-  const questsDone = events.filter(e => e.type === "event" && !e.isApi && e.startTime && e.startTime <= monthEnd);
+  const questsDone = events.filter(e => e.type === "event" && !e.isApi && !e.gcalImported && e.startTime && e.startTime <= monthEnd);
   tasksDone.forEach(e => bump(e.date));
   questsDone.forEach(e => bump(e.date));
   logs.forEach(l => bump(l.date));

@@ -3,14 +3,16 @@
 import { db } from "@/db";
 import { event } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { eq, and, or, lte, asc, like, isNotNull, inArray } from "drizzle-orm";
+import { eq, and, or, gt, lt, lte, asc, like, isNotNull, inArray } from "drizzle-orm";
 import { format } from "date-fns";
 import { requireUserId } from "@/lib/current-user";
 import { invalidateSnapshots } from "@/lib/data/stats";
-import { eventsByDateRange, syncRecurringEventsFor } from "@/lib/data/events";
+import { calendarEventsByDateRange, eventsByDateRange, syncRecurringEventsFor } from "@/lib/data/events";
 import { preferencesFor, saveHolidayRegion } from "@/lib/data/preferences";
 import { isHolidayRegion } from "@/lib/personalization";
 import { isDemoUser } from "@/lib/data/demo";
+import { isSyncable, shiftedEnd } from "@/lib/gcal/map";
+import { connectionFor, pushSoon, queueRemoval, queueUpsert } from "@/lib/gcal/sync";
 
 // What a client may set on an event; ownership and system fields are never taken from it
 type EventInput = {
@@ -27,6 +29,9 @@ type EventInput = {
   repeatsYearly?: boolean;
 };
 
+// The form's "Sync to Google" toggle. Left out, a new item syncs and an existing one stays as it is.
+type SyncChoice = { gcalSync?: boolean };
+
 function pickEventInput(data: EventInput): EventInput {
   const { title, description, startTime, endTime, date, type, tier, stat, completed, notification, repeatsYearly } = data;
   const picked = { title, description, startTime, endTime, date, type, tier, stat, completed, notification, repeatsYearly };
@@ -42,6 +47,10 @@ export async function getEventsByDateRange(start: Date, end: Date) {
   return eventsByDateRange(await requireUserId(), start, end);
 }
 
+export async function getCalendarEvents(start: Date, end: Date) {
+  return calendarEventsByDateRange(await requireUserId(), start, end);
+}
+
 export async function getDashboardTasks(targetDateStr: string) {
   const userId = await requireUserId();
   return await db.select().from(event).where(
@@ -53,6 +62,12 @@ export async function getDashboardTasks(targetDateStr: string) {
           eq(event.type, "task"),
           eq(event.completed, false),
           lte(event.date, targetDateStr)
+        ),
+        // Candidates for a multi-day event still running; the client knows the player's real day
+        and(
+          eq(event.type, "event"),
+          lt(event.date, targetDateStr),
+          gt(event.endTime, new Date(`${targetDateStr}T00:00:00.000Z`))
         )
       )
     )
@@ -63,25 +78,49 @@ export async function syncRecurringEvents() {
   return syncRecurringEventsFor(await requireUserId());
 }
 
-export async function addEvent(data: EventInput & { title: string; date: string; type: string }) {
+export async function addEvent(data: EventInput & SyncChoice & { title: string; date: string; type: string }) {
   const userId = await requireUserId();
   const values = pickEventInput(data) as EventInput & { title: string; date: string; type: string };
-  const [newEvent] = await db.insert(event).values({ ...values, userId }).returning();
+  const gcalSync = data.gcalSync !== false
+    && isSyncable({ type: values.type, repeatsYearly: values.repeatsYearly ?? false })
+    && !!(await connectionFor(userId));
+  const [newEvent] = await db.insert(event).values({ ...values, userId, gcalSync }).returning();
   await invalidateSnapshots(userId, newEvent.date);
   if (data.repeatsYearly) {
     await syncRecurringEventsFor(userId);
+  }
+  if (gcalSync) {
+    await queueUpsert(userId, newEvent.id);
+    pushSoon(userId);
   }
   revalidateEventPages();
   return newEvent;
 }
 
-export async function updateEvent(id: string, data: EventInput) {
+export async function updateEvent(id: string, data: EventInput & SyncChoice) {
   const userId = await requireUserId();
   const mine = and(eq(event.id, id), eq(event.userId, userId));
   const [existing] = await db.select().from(event).where(mine);
-  if (!existing || existing.isApi) return;
+  if (!existing || existing.isApi || existing.gcalReadOnly) return;
+
+  const input = pickEventInput(data);
+  // Only addToTaskmaster turns an import into something that earns XP
+  if (existing.gcalImported) {
+    delete input.type;
+    delete input.tier;
+  }
+  // Moving an item takes its end along, or Google refuses an end before the start
+  if (input.endTime === undefined && (input.date !== undefined || input.startTime !== undefined)) {
+    input.endTime = shiftedEnd(existing, {
+      date: input.date ?? existing.date,
+      startTime: input.startTime === undefined ? existing.startTime : input.startTime,
+    });
+  }
+
+  const connected = !!(await connectionFor(userId));
+  const gcalSync = data.gcalSync === false || (data.gcalSync && connected) ? data.gcalSync : existing.gcalSync;
   const [updatedEvent] = await db.update(event)
-    .set(pickEventInput(data))
+    .set({ ...input, gcalSync })
     .where(mine)
     .returning();
   await invalidateSnapshots(userId, existing.date, updatedEvent?.date);
@@ -89,11 +128,32 @@ export async function updateEvent(id: string, data: EventInput) {
   if (data.repeatsYearly || existing.repeatsYearly) {
     await syncRecurringEventsFor(userId);
   }
+  if (gcalSync && connected) {
+    await queueUpsert(userId, id);
+    pushSoon(userId);
+  }
 
   revalidateEventPages();
   return updatedEvent;
 }
 
+// An imported Google event becomes a real task or quest, and from here on earns XP like one
+export async function addToTaskmaster(id: string, type: "task" | "event", tier: string = "side") {
+  const userId = await requireUserId();
+  if (type !== "task" && type !== "event") return null;
+  if (!["side", "main", "epic"].includes(tier)) return null;
+  const mine = and(eq(event.id, id), eq(event.userId, userId), eq(event.gcalImported, true));
+  const [updatedEvent] = await db.update(event)
+    .set({ type, tier: type === "task" ? "side" : tier, gcalImported: false })
+    .where(mine)
+    .returning();
+  if (!updatedEvent) return null;
+  await invalidateSnapshots(userId, updatedEvent.date);
+  revalidateEventPages();
+  return updatedEvent;
+}
+
+// Google isn't told: it keeps the planned date, while a completed task moves to the day it was done
 export async function toggleEventCompletion(id: string, completed: boolean) {
   const userId = await requireUserId();
   const mine = and(eq(event.id, id), eq(event.userId, userId));
@@ -141,8 +201,10 @@ export async function deleteEvent(id: string) {
     await invalidateSnapshots(userId, ...deleted.map(e => e.date));
   } else {
     // Otherwise just delete the single instance
+    const pushNeeded = await queueRemoval(existing);
     await db.delete(event).where(mine);
     await invalidateSnapshots(userId, existing.date);
+    if (pushNeeded) pushSoon(userId);
   }
 
   revalidateEventPages();

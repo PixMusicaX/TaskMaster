@@ -37,7 +37,9 @@ async function runInSandbox(userId: string, sql: string) {
       await tx`SET LOCAL statement_timeout = 5000`;
       for (const table of SANDBOX_TABLES) {
         await tx.unsafe(`CREATE TEMP TABLE "${table}" (LIKE public."${table}") ON COMMIT DROP`);
-        await tx.unsafe(`INSERT INTO pg_temp."${table}" SELECT * FROM public."${table}" WHERE "userId" = $1`, [userId]);
+        // Events imported from Google stay out until the player adds them to TaskMaster
+        const visible = table === "Event" ? ` AND "gcalImported" = false` : "";
+        await tx.unsafe(`INSERT INTO pg_temp."${table}" SELECT * FROM public."${table}" WHERE "userId" = $1${visible}`, [userId]);
         await tx.unsafe(`GRANT SELECT ON pg_temp."${table}" TO ${SANDBOX_ROLE}`);
       }
       await tx.unsafe(`SET TRANSACTION READ ONLY`);
