@@ -47,7 +47,7 @@ function fakeGoogle(lists: (object | number)[] = [], { tokenStatus = 200, writeS
   vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit = {}) => {
     const method = init.method ?? "GET";
     if (url.includes("oauth2.googleapis.com/token")) {
-      return reply({ access_token: "access", refresh_token: "new-refresh", scope: "https://www.googleapis.com/auth/calendar.events" }, tokenStatus);
+      return reply({ access_token: "access", refresh_token: "new-refresh", scope: "https://www.googleapis.com/auth/calendar.events.owned" }, tokenStatus);
     }
     if (url.includes("oauth2.googleapis.com/revoke")) {
       sent.push({ method, url });

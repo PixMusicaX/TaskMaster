@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { format, subDays } from "date-fns";
 import Link from "next/link";
-import { Database, Download, AlertTriangle, ExternalLink, Github, Heart, Trash2, UserRound } from "lucide-react";
+import { Database, Download, AlertTriangle, ExternalLink, Github, Heart, Trash2, UserRound, Zap } from "lucide-react";
 import GlassCard from "@/components/glass-card";
 import TabularViewModal from "@/components/TabularViewModal";
 import VaultHero from "@/components/vault/vault-hero";
@@ -24,7 +24,7 @@ import { getReliefHistory, toggleReliefRecommendation } from "@/app/actions/reli
 import { getPreparationTipHistory, togglePreparationTip } from "@/app/actions/preparation";
 import { generatePruneArchive, deletePrunedData } from "@/app/actions/prune";
 import { cn } from "@/lib/utils";
-import { APP_VERSION, CREATOR_URL, CREATOR_URL2, REPO_URL } from "@/lib/version";
+import { ALBDO_URL, APP_VERSION, CREATOR_URL, CREATOR_URL2, REPO_URL } from "@/lib/version";
 import type { PrepTipRow, ReliefRow, SmartMissionRow, TimelineSeason } from "@/lib/types";
 
 const flip = <T extends { id: string; completed: boolean }>(list: T[], id: string) =>
@@ -34,6 +34,7 @@ const CREDITS: { href?: string; icon: typeof UserRound; title: string; descripti
   { href: CREATOR_URL2, icon: UserRound, title: "kk36", description: "Creator of TaskMaster." },
   { href: CREATOR_URL, icon: UserRound, title: "PiX", description: "Creator of TaskMaster." },
   { href: REPO_URL, icon: Github, title: "GitHub", description: "Browse the TaskMaster source code." },
+  { href: ALBDO_URL, icon: Zap, title: "What is AlBDO?", description: "A Rust-first JavaScript and TypeScript framework for blazing fast web development. Still a work in progress." },
 ];
 
 const noopSubscribe = () => () => {};
