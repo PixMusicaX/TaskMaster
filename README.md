@@ -77,7 +77,7 @@ as an authorised redirect URI.
 **Google Calendar sync (optional):** it uses the same OAuth client. In the Google Cloud console,
 enable the Google Calendar API, add `http://localhost:3000/api/gcal/callback` (plus the same path
 on your deployed domain) as another authorised redirect URI, and add the
-`https://www.googleapis.com/auth/calendar.events` scope to the consent screen. Sign-in doesn't ask
+`https://www.googleapis.com/auth/calendar.events.owned` scope to the consent screen. Sign-in doesn't ask
 for this scope; each player connects from Account → Google Calendar. While the app is in testing
 mode, only listed test users can connect and their access lasts seven days, so they'll need to
 reconnect. Public use needs Google's app verification, and your Branding page should point to

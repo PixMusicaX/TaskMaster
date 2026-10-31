@@ -6,7 +6,7 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 
-export const GCAL_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+export const GCAL_SCOPE = "https://www.googleapis.com/auth/calendar.events.owned";
 
 // The player's grant is gone (revoked, expired): only connecting again fixes it
 export class GoogleAuthError extends Error {

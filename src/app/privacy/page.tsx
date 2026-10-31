@@ -36,7 +36,7 @@ export default function PrivacyPage() {
         <Section title="Google Calendar data">
           <p>
             Connecting Google Calendar is optional and separate from signing in. If you connect it, TaskMaster uses the{" "}
-            <code className="text-sm">calendar.events</code> permission on your primary calendar to:
+            <code className="text-sm">calendar.events.owned</code> permission on your primary calendar to:
           </p>
           <List>
             <li>Read events from the day of your first sync onward, including titles, descriptions, times and whether you own or declined them.</li>
