@@ -186,7 +186,9 @@ function TiltRing({ group, arc, r, progress, color, track = 0.07, front }: { gro
         style={{ perspective: 900 }}
       >
         <div data-saga={group} className="absolute inset-0">
-          <svg data-saga={`${group}-spin`} viewBox="0 0 400 400" className="absolute inset-0 w-full h-full overflow-visible" style={{ color }}>
+          {/* The spin is on a div, not the svg: mobile Safari turns a tipped svg about the wrong point */}
+          <div data-saga={`${group}-spin`} className="absolute inset-0">
+          <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full overflow-visible" style={{ color }}>
             <circle cx={C} cy={C} r={r} fill="none" stroke="currentColor" strokeWidth="5" opacity={track} />
             <circle
               data-saga={arc}
@@ -197,6 +199,7 @@ function TiltRing({ group, arc, r, progress, color, track = 0.07, front }: { gro
               style={{ strokeDashoffset: 1 - progress }}
             />
           </svg>
+          </div>
         </div>
       </div>
     </div>
@@ -671,8 +674,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     const dial = dialRef.current;
     if (!el || !dial || prefersReducedMotion()) return;
     // In document order: race and time behind the centre text, then race and time in front of it
-    const spins = Array.from(el.querySelectorAll<SVGSVGElement>("[data-saga=pace-spin]"));
-    const levelSpins = Array.from(el.querySelectorAll<SVGSVGElement>("[data-saga=saturn-spin]"));
+    const spins = Array.from(el.querySelectorAll<HTMLElement>("[data-saga=pace-spin]"));
+    const levelSpins = Array.from(el.querySelectorAll<HTMLElement>("[data-saga=saturn-spin]"));
 
     let raf = 0;
     let last = 0;
