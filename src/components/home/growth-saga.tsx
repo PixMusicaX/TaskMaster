@@ -186,9 +186,7 @@ function TiltRing({ group, arc, r, progress, color, track = 0.07, front }: { gro
         style={{ perspective: 900 }}
       >
         <div data-saga={group} className="absolute inset-0">
-          {/* The spin is on a div, not the svg: mobile Safari turns a tipped svg about the wrong point */}
-          <div data-saga={`${group}-spin`} className="absolute inset-0">
-          <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full overflow-visible" style={{ color }}>
+          <svg data-saga={`${group}-spin`} viewBox="0 0 400 400" className="absolute inset-0 w-full h-full overflow-visible" style={{ color }}>
             <circle cx={C} cy={C} r={r} fill="none" stroke="currentColor" strokeWidth="5" opacity={track} />
             <circle
               data-saga={arc}
@@ -199,7 +197,6 @@ function TiltRing({ group, arc, r, progress, color, track = 0.07, front }: { gro
               style={{ strokeDashoffset: 1 - progress }}
             />
           </svg>
-          </div>
         </div>
       </div>
     </div>
@@ -674,8 +671,12 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     const dial = dialRef.current;
     if (!el || !dial || prefersReducedMotion()) return;
     // In document order: race and time behind the centre text, then race and time in front of it
-    const spins = Array.from(el.querySelectorAll<HTMLElement>("[data-saga=pace-spin]"));
-    const levelSpins = Array.from(el.querySelectorAll<HTMLElement>("[data-saga=saturn-spin]"));
+    const spins = Array.from(el.querySelectorAll<SVGSVGElement>("[data-saga=pace-spin]"));
+    // The level ring turns by its arc's own rotation rather than a CSS transform: under the tip
+    // over, mobile Safari stops showing a transform changed from script once the tip has finished,
+    // and the ring sits at a stale angle (an attribute is repainted like any other drawing)
+    const levelArcs = Array.from(el.querySelectorAll<SVGCircleElement>("[data-saga=level]"));
+    const turnLevel = (deg: number) => levelArcs.forEach(arc => arc.setAttribute("transform", `rotate(${(deg - 90).toFixed(2)} ${C} ${C})`));
 
     let raf = 0;
     let last = 0;
@@ -697,7 +698,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       spins.forEach((spin, i) => { spin.style.transform = `rotate(${(angle * (i % 2 ? -RING_TURN : RING_TURN)).toFixed(2)}deg)`; });
       if (levelRingTurns.current) levelAngle += Math.abs(speed) * RING_TURN * dt;
       else levelAngle += (Math.round(levelAngle / 360) * 360 - levelAngle) * Math.min(1, dt * 12);
-      levelSpins.forEach(spin => { spin.style.transform = `rotate(${levelAngle.toFixed(2)}deg)`; });
+      turnLevel(levelAngle);
     };
     const start = () => { if (!raf) { last = performance.now(); lastY = window.scrollY; raf = requestAnimationFrame(frame); } };
     const stop = () => { cancelAnimationFrame(raf); raf = 0; };
@@ -712,7 +713,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       observer.disconnect();
       document.removeEventListener("visibilitychange", sync);
       dial.style.transform = "";
-      [...spins, ...levelSpins].forEach(spin => { spin.style.transform = ""; });
+      spins.forEach(spin => { spin.style.transform = ""; });
+      turnLevel(0);
     };
   }, []);
 

@@ -4,6 +4,8 @@
 
 Built with a stunning glass-morphism aesthetic and powered by AI, TaskMaster helps you visualize your growth and maintain consistency through a sophisticated gamification engine.
 
+![The TaskMaster home page](docs/screenshots/home.jpg)
+
 ---
 
 ## ✨ Key Features
@@ -17,6 +19,40 @@ Built with a stunning glass-morphism aesthetic and powered by AI, TaskMaster hel
 - **🪐 Growth Orbit**: The home page's analytics play as one pinned scroll sequence inside a single orbit: standing, era, season pace, character stats, stress metrics, the tavern, future sight, chronicle, the map and the Taskmaster.
 - **🎭 Persona Days**: Six random days a month, the whole app turns into Persona 3, 4 or 5: its own look, pause menu, map, music, AI voice and Growth Orbit animations.
 - **📁 Archive System**: Robust tabular archives for notes and calendar events with a 7-year storage reach.
+
+---
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/landing.jpg" alt="Landing page"></td>
+    <td><img src="docs/screenshots/calendar.jpg" alt="Calendar"></td>
+  </tr>
+  <tr>
+    <td align="center">Landing page</td>
+    <td align="center">Calendar</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/habits.jpg" alt="Habit tracker"></td>
+    <td><img src="docs/screenshots/notes.jpg" alt="Daily notes"></td>
+  </tr>
+  <tr>
+    <td align="center">Habit tracker</td>
+    <td align="center">Daily notes</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/history.jpg" alt="History"></td>
+    <td>
+      <img src="docs/screenshots/mobile-home.jpg" alt="Home on a phone" width="49%">
+      <img src="docs/screenshots/mobile-era.jpg" alt="The Growth Orbit's Era scene on a phone" width="49%">
+    </td>
+  </tr>
+  <tr>
+    <td align="center">History</td>
+    <td align="center">On a phone: home and the orbit's Era scene</td>
+  </tr>
+</table>
 
 ---
 
@@ -121,6 +157,29 @@ npm test
 
 Below today's cards, the home page pins a single orbit and plays the analytics through it, one scene per scroll.
 
+<p align="center">
+  <img src="docs/screenshots/orbit.gif" alt="The Growth Orbit moving from Standing through Era, Pace, Stats and Aura to Time" width="420">
+</p>
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/orbit-standing.jpg" alt="Standing"></td>
+    <td><img src="docs/screenshots/orbit-pace.jpg" alt="Pace"></td>
+  </tr>
+  <tr>
+    <td align="center">Standing</td>
+    <td align="center">Pace</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/orbit-time.jpg" alt="Time"></td>
+    <td><img src="docs/screenshots/orbit-precognition.jpg" alt="Precognition"></td>
+  </tr>
+  <tr>
+    <td align="center">Time</td>
+    <td align="center">Precognition</td>
+  </tr>
+</table>
+
 - **Moving through it**: one wheel gesture, swipe or arrow key moves one scene. The legend under the orbit has previous and next buttons and a dot per scene, and a button at the right edge returns to the top.
 - **Autoplay**: left idle for 8 seconds it moves on by itself, and from the last scene it rolls back to the first. Left idle for 20 seconds higher up the home page, the page scrolls down to the orbit and autoplay starts.
 - **Light and dark**: the app opens in dark mode from 6pm to 6am and light mode otherwise, and switches at those hours while open.
@@ -133,6 +192,41 @@ The scroll script lives in `src/components/home/growth-saga.tsx`, with each late
 ## 🎭 Persona Days
 
 Each month, six calendar days are picked at random (two each for Persona 3, 4 and 5). On those days the app takes that game's look, whatever your rank or era; every other day the normal design is untouched. The days are marked on the calendar, are the same on every device, and never fall next to each other.
+
+**The pause menu** (press `M` or the Menu button):
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/p3-menu.gif" alt="Persona 3 pause menu"></td>
+    <td><img src="docs/screenshots/p4-menu.gif" alt="Persona 4 pause menu"></td>
+    <td><img src="docs/screenshots/p5-menu.gif" alt="Persona 5 pause menu"></td>
+  </tr>
+  <tr>
+    <td align="center">Persona 3</td>
+    <td align="center">Persona 4</td>
+    <td align="center">Persona 5</td>
+  </tr>
+</table>
+
+**The home page and the Growth Orbit** inside each game's device:
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/p3-home.jpg" alt="Persona 3 home page"></td>
+    <td><img src="docs/screenshots/p4-home.jpg" alt="Persona 4 home page"></td>
+    <td><img src="docs/screenshots/p5-home.jpg" alt="Persona 5 home page"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/p3-orbit.jpg" alt="Persona 3: the orbit as a disc in a music player"></td>
+    <td><img src="docs/screenshots/p4-orbit.jpg" alt="Persona 4: the orbit on a TV"></td>
+    <td><img src="docs/screenshots/p5-orbit.jpg" alt="Persona 5: the orbit on a smartphone"></td>
+  </tr>
+  <tr>
+    <td align="center">Persona 3</td>
+    <td align="center">Persona 4</td>
+    <td align="center">Persona 5</td>
+  </tr>
+</table>
 
 - **Look**: Persona 3 follows the clock (blue by day, the green Dark Hour at night), Persona 4 is always light and Persona 5 always dark.
 - **Navigation**: the navbars give way to a floating Menu button (or the `M` key) and the in-game date. The menu is that game's pause screen, with every page on it.
