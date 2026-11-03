@@ -1,4 +1,4 @@
-import { Coins, Users, Home as HomeIcon, PenTool, Palette, Code, Laptop, Music, Gamepad2, Book, Dumbbell, HeartPulse, Plane, Map as MapIcon, Lightbulb, Moon, Phone, MessageSquare, Target, Film, Coffee, Mic, MapPin, Newspaper } from "lucide-react";
+import { Coins, Users, Home as HomeIcon, PenTool, Palette, Code, Laptop, Music, Gamepad2, Book, Dumbbell, HeartPulse, Plane, Map as MapIcon, Lightbulb, Moon, Phone, MessageSquare, Target, Film, Coffee, Mic, MapPin, Newspaper, Swords } from "lucide-react";
 
 export function TaskIcon({ title, className, size = 14 }: { title: string, className?: string, size?: number }) {
   const t = title.toLowerCase();
@@ -58,6 +58,8 @@ const RELIEF_ICONS: Record<string, typeof Film> = {
   podcast: Mic,
   place: MapPin,
   article: Newspaper,
+  // A Monday raid's objectives (lib/raid.ts)
+  raid: Swords,
 };
 
 // Icon for an AI relief suggestion type; unknown types render Coffee only when `fallback` is set

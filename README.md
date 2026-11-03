@@ -13,6 +13,7 @@ Built with a stunning glass-morphism aesthetic and powered by AI, TaskMaster hel
 - **🛡️ Character Progression**: Level up your RPG attributes based on your real-life actions.
 - **📅 Smart Calendar**: Manage "Main" and "Epic" quests with integrated browser notifications.
 - **🧠 AI Intelligence**: Receive daily "Strategic Preparation Tips" and "Smart Missions" generated specifically for you by Google's Gemini AI.
+- **⚔️ Weekly Raid**: Every Monday the Tavern turns into a raid on your weakest stats: three objectives, two for the lowest stat and one for the second lowest, each worth its own XP to the stat it targets, with a recap of last week.
 - **📔 Daily Vault**: A bullet-style note-taking system with integrated mood tracking.
 - **🏆 Hall of Fame**: Visualize your monthly progress with a seasonal ranking system.
 - **📊 Detailed Analytics**: Character radars and stress metrics to visualize your journey.
@@ -120,7 +121,11 @@ reconnect. Public use needs Google's app verification, and your Branding page sh
 `/privacy` and `/terms` on your domain.
 
 **AI keys are per player, not in `.env`:** each account adds its own Gemini, Claude or Groq key
-under Account → AI Guide. Without one the AI cards fall back to their offline versions.
+under Account → AI Guide. Without one the AI cards fall back to their offline versions. Every
+request goes through `src/lib/ai-guard.ts`: identical requests in flight share one answer, each
+player has a daily budget (`AI_DAILY_BUDGET`, 60 requests), and no request may run past its
+deadline, so a slow provider never holds up the home page; the cards fall back to their offline
+versions instead.
 
 ### 4. Database Setup
 Push the schema to your database using Drizzle, then run the setup script once with the Google
@@ -137,6 +142,10 @@ address. Try it with `--dry-run` first; it prints what it would do and changes n
 
 **Upgrading for Google Calendar sync:** run `npx drizzle-kit push` once. It adds the sync columns
 to `Event` and three new tables, and existing rows aren't changed.
+
+**Upgrading to v8:** run `npx drizzle-kit push` once before deploying. It adds the `AiUsage` table
+(the daily AI budget); nothing else in the database changes. Until it exists the budget isn't
+enforced, and the server logs an error for each AI request.
 
 ### 5. Run Locally
 ```bash
@@ -185,7 +194,7 @@ Below today's cards, the home page pins a single orbit and plays the analytics t
 - **Light and dark**: the app opens in dark mode from 6pm to 6am and light mode otherwise, and switches at those hours while open.
 - **Reduced motion**: with the system's reduced-motion setting on, nothing pins or animates and the analytics appear as plain cards instead.
 
-The scroll script lives in `src/components/home/growth-saga.tsx`, with each later scene in its own `saga-*.tsx` file beside it. Everything in it animates by transform or opacity only. Avoid animating anything screen-sized there: each animated element gets its own GPU layer, and large ones can make mobile Safari kill the page.
+The scroll script lives in `src/components/home/growth-saga.tsx`, with each later scene in its own `saga-*.tsx` file beside it. The orbit isn't part of the home page's first paint: `lazy-saga.tsx` loads it once the browser is idle or the page is scrolled near it, and the Persona dressings (`saga-p3/p4/p5.tsx`) only download on their own days. Everything in it animates by transform or opacity only. Avoid animating anything screen-sized there: each animated element gets its own GPU layer, and large ones can make mobile Safari kill the page.
 
 ---
 
@@ -235,7 +244,7 @@ Each month, six calendar days are picked at random (two each for Persona 3, 4 an
 - **Growth Orbit**: the orbit plays inside that game's device. Persona 3 is a disc in a music player, with earphones, a track number and an equalizer. Persona 4 is the picture on a TV: each scene is a channel, changed with the remote through static, a white screen and colour bars. Persona 5 is a smartphone that is shaken, spun or tossed while the scene is swiped away in an app switcher.
 - **Turning it off**: Account → Settings → "Persona days".
 
-The schedule and helpers are in `src/lib/persona.ts`, the styles in `src/app/persona.css`, the menu and chrome in `src/components/persona/`, and the orbit animations in `src/components/home/saga-p3.tsx`, `saga-p4.tsx` and `saga-p5.tsx`. In development, the dev tools have a "Persona day" row that forces a style on any day.
+The schedule and helpers are in `src/lib/persona.ts`, the styles in `public/persona/persona-day.css` (loaded on Persona days only; the few rules every day needs stay in `src/app/persona.css`), the menu and chrome in `src/components/persona/`, and the orbit animations in `src/components/home/saga-p3.tsx`, `saga-p4.tsx` and `saga-p5.tsx`. In development, the dev tools have a "Persona day" row that forces a style on any day.
 
 Fonts, images and video borrowed from the games and from fan recreations are listed in [CREDITS.md](CREDITS.md). They are there for a personal, non-commercial showcase; the MIT license below covers this project's own code only.
 
@@ -253,6 +262,7 @@ export const XP_VALUES = {
   QUEST_EPIC: 80,
   NOTE_ENTRY: 10,
   TASK: 30,
+  RAID: 35, // each Monday raid objective, to the stat it targets
 };
 ```
 

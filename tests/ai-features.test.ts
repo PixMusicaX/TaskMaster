@@ -61,11 +61,12 @@ describe("getReliefRecommendation", () => {
     expect(ai).not.toHaveBeenCalled();
   });
 
+  // Tuesdays: Mondays are raid day (tests/raid.test.ts)
   it("stores the AI suggestion with weather and location from the APIs", async () => {
     mockNetwork({
       "api.open-meteo.com": {
         daily: {
-          time: ["2026-09-28"], weathercode: [95], temperature_2m_max: [32.4], temperature_2m_min: [24],
+          time: ["2026-09-29"], weathercode: [95], temperature_2m_max: [32.4], temperature_2m_min: [24],
           apparent_temperature_max: [35], precipitation_probability_max: [80], wind_speed_10m_max: [20],
         },
       },
@@ -76,7 +77,7 @@ describe("getReliefRecommendation", () => {
       alternatives: [{ title: "Tea", type: "food" }],
     }));
 
-    const rec = await getReliefRecommendation(12.9, 77.6, "2026-09-28");
+    const rec = await getReliefRecommendation(12.9, 77.6, "2026-09-29");
     expect(rec).toMatchObject({
       title: "Watch a film", type: "movie", location: "Koramangala", weather: "Stormy", temp: "32",
       alternatives: [{ title: "Tea", type: "food" }],
@@ -84,7 +85,7 @@ describe("getReliefRecommendation", () => {
   });
 
   it("falls back to a default suggestion when the AI fails, keeping the cached location", async () => {
-    const rec = await getReliefRecommendation(undefined, undefined, "2026-09-28", "Pune", "Rainy", "26");
+    const rec = await getReliefRecommendation(undefined, undefined, "2026-09-29", "Pune", "Rainy", "26");
     expect(rec).toMatchObject({ location: "Pune", weather: "Rainy", temp: "26" });
     expect(rec?.title).toContain("[OFF]");
     expect(await db.select().from(reliefRecommendation)).toHaveLength(1);

@@ -9,7 +9,7 @@ import { personalizationFor } from "@/lib/data/preferences";
 import { requireUserId } from "@/lib/current-user";
 import { profileFor } from "@/lib/data/stats";
 import { safeGenerateContent } from "@/lib/ai-utils";
-import { AiNotConfiguredError } from "@/lib/ai-config";
+import { AiBudgetError, AiNotConfiguredError, AiTimeoutError } from "@/lib/ai-errors";
 import { resolvePersonaStyle } from "@/lib/persona";
 
 // The tables the Taskmaster may read, and the database role its query runs as. That role has no
@@ -71,9 +71,12 @@ export async function askTaskmaster(question: string, clientDateStr?: string, pe
     }
 
     // Step 1: Query Builder
+    // The same question on the same day reads the archive the same way, so asking it again (after
+    // a failed answer, say) needn't spend another request on the query
     const firstSql = cleanSql(await safeGenerateContent(getTaskmasterQueryBuilderPrompt(question, today), {
       userId,
       model: "gemini-flash-latest",
+      cacheMs: 10 * 60_000,
     }));
 
     if (!firstSql) {
@@ -149,6 +152,12 @@ export async function askTaskmaster(question: string, clientDateStr?: string, pe
   } catch (error) {
     if (error instanceof AiNotConfiguredError) {
       return { success: false, message: "The Taskmaster has no voice yet. Add your AI key on the Account page to wake him." };
+    }
+    if (error instanceof AiBudgetError) {
+      return { success: false, message: "The Taskmaster has spoken enough for one day. Your AI budget renews tomorrow." };
+    }
+    if (error instanceof AiTimeoutError) {
+      return { success: false, message: "The Taskmaster took too long to answer. Ask again in a moment; this one did not use up a query." };
     }
     console.error("Error in askTaskmaster:", error);
     return { success: false, message: "The Taskmaster's connection was disrupted." };

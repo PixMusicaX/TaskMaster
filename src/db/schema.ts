@@ -272,6 +272,15 @@ export const habitLogRelations = relations(habitLog, ({ one }) => ({
   }),
 }));
 
+// How many AI requests each player has made on a (UTC) day, for the daily budget in lib/ai-guard.ts
+export const aiUsage = pgTable("AiUsage", {
+  userId: text("userId").notNull().references(() => user.id, { onDelete: 'cascade' }),
+  date: text("date").notNull(), // Format: YYYY-MM-DD
+  calls: integer("calls").default(0).notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.date] })
+]);
+
 export const taskmasterQueryCount = pgTable("TaskmasterQueryCount", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
   userId: text("userId").notNull().references(() => user.id, { onDelete: 'cascade' }),

@@ -3,19 +3,21 @@
 import { db } from "@/db";
 import { reliefRecommendation, note } from "@/db/schema";
 import { revalidatePath } from "next/cache";
-import { format, subDays } from "date-fns";
-import { getReliefRecommendationPrompt } from "@/lib/prompts";
+import { endOfDay, format, parseISO, subDays } from "date-fns";
+import { getRaidPrompt, getReliefRecommendationPrompt } from "@/lib/prompts";
 import { isRepeat, rollReliefBrief } from "@/lib/relief-dice";
 import { resolvePersonaStyle } from "@/lib/persona";
 import { requireUserId } from "@/lib/current-user";
-import { invalidateSnapshots } from "@/lib/data/stats";
+import { invalidateSnapshots, profileFor, statsForPeriod } from "@/lib/data/stats";
+import { habitsFor } from "@/lib/data/habits";
 import { plannerEventsByDateRange } from "@/lib/data/events";
 import { reliefsWithCarriedLocation } from "@/lib/data/relief";
 import { safeGenerateContent } from "@/lib/ai-utils";
-import { AiNotConfiguredError } from "@/lib/ai-config";
-import { OFFLINE_TAG, pickOfflineRelief } from "@/lib/offline-missions";
+import { AiUnavailableError } from "@/lib/ai-errors";
+import { OFFLINE_TAG, pickOfflineRaid, pickOfflineRelief } from "@/lib/offline-missions";
 import { personalizationFor } from "@/lib/data/preferences";
-import { parseNoteLines, type ReliefAlternative } from "@/lib/types";
+import { RAID_STAT_MEANING, RAID_TYPE, RAID_XP, isRaid, isRaidDay, raidTargets, type RaidRecap } from "@/lib/raid";
+import { noteTextLines, parseNoteLines, type Relief, type ReliefAlternative, type ReliefRow, type StatName } from "@/lib/types";
 import { eq, desc, gte, ne, and } from "drizzle-orm";
 
 // How far back the Tavern remembers what it has already suggested
@@ -49,13 +51,18 @@ async function reliefFor(
   cachedTemp?: string,
   persona?: string | null,
   exclude: string[] = []
-) {
+): Promise<Relief | null> {
   const today = clientDateStr || format(new Date(), "yyyy-MM-dd");
 
   try {
     let recommendation = await db.query.reliefRecommendation.findFirst({
       where: and(eq(reliefRecommendation.userId, userId), eq(reliefRecommendation.date, today))
     });
+
+    // Mondays are raid day: the Tavern's row holds the week's raid instead
+    if (!recommendation && isRaidDay(today)) {
+      recommendation = await createRaid(userId, today, persona, exclude, cachedLocation);
+    }
 
     if (!recommendation) {
       const weatherInfo: { weather: string; temp: string; location: string; precipitation?: number; windSpeed?: number } = { 
@@ -79,9 +86,13 @@ async function reliefFor(
       if (lat && lon) {
         try {
           const [weatherRes, geoRes] = await Promise.all([
-            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,precipitation_probability_max,wind_speed_10m_max&timezone=auto&forecast_days=3`),
+            // A slow weather or map service must not hold the Tavern up: past this it goes without
+            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,precipitation_probability_max,wind_speed_10m_max&timezone=auto&forecast_days=3`, {
+              signal: AbortSignal.timeout(CONTEXT_TIMEOUT_MS)
+            }),
             fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`, {
-              headers: { "User-Agent": "TaskMaster/1.0" }
+              headers: { "User-Agent": "TaskMaster/1.0" },
+              signal: AbortSignal.timeout(CONTEXT_TIMEOUT_MS)
             })
           ]);
 
@@ -130,16 +141,18 @@ async function reliefFor(
             personalizationFor(userId)
           ]);
 
+          // Raids are a different game: they stay out of the Tavern's memory and its dice
+          const reliefs = history.filter(r => !isRaid(r));
           const past = [
             ...exclude.map(title => ({ title, type: "just replaced" as string | null })),
-            ...history.flatMap((r) => [
+            ...reliefs.flatMap((r) => [
               { title: r.title, type: r.type },
               ...((r.alternatives as ReliefAlternative[] | null) || []).map((alt) => ({ title: alt.title, type: alt.type }))
             ]),
           ].filter(h => !h.title.includes(OFFLINE_TAG));
           const pastTitles = past.map(h => h.title);
           // The model is bad at dice, so today's types and angles are rolled here
-          const brief = rollReliefBrief(history.map(r => r.type));
+          const brief = rollReliefBrief(reliefs.map(r => r.type));
 
           const ask = async (rejected: string[]) => {
             const content = await safeGenerateContent(getReliefRecommendationPrompt({
@@ -160,6 +173,8 @@ async function reliefFor(
               model: "gemini-3.1-flash-lite",
               responseMimeType: "application/json",
               temperature: 1.15,
+              // The second ask (for repeats) gets less time: the first answer is already in hand
+              deadlineMs: rejected.length ? 8_000 : 12_000,
             });
             const data = JSON.parse(content) as { recommendations: ReliefPick[]; alternatives?: ReliefAlternative[] };
             return { main: data.recommendations[0], alternatives: data.alternatives || [] };
@@ -196,8 +211,8 @@ async function reliefFor(
             recommendation = newRec;
           }
         } catch (error) {
-          // No key on this account is expected; anything else is worth a log line
-          if (!(error instanceof AiNotConfiguredError)) console.error("Relief AI Error:", error);
+          // No key, a spent budget or a slow provider is expected; anything else is worth a log line
+          if (!(error instanceof AiUnavailableError)) console.error("Relief AI Error:", error);
         }
       }
 
@@ -221,11 +236,91 @@ async function reliefFor(
       }
     }
 
-    return recommendation;
+    return isRaid(recommendation) ? { ...recommendation, raidRecap: await raidRecapFor(userId, today) } : recommendation;
   } catch (e) {
     console.error("Error in getReliefRecommendation:", e);
     return null;
   }
+}
+
+// How long the Tavern waits for the weather and the place name
+const CONTEXT_TIMEOUT_MS = 4_000;
+
+type RaidObjective = { title: string; description?: string; stat: StatName };
+
+// The week's raid (see lib/raid.ts): written by the AI when it can, picked offline when it can't
+async function createRaid(userId: string, today: string, persona: string | null | undefined, exclude: string[], location?: string): Promise<ReliefRow> {
+  const twoWeeksAgo = subDays(parseISO(today), 14);
+  const [profile, habitData, taskData, notesData, history, personal] = await Promise.all([
+    profileFor(userId, today),
+    habitsFor(userId, today),
+    plannerEventsByDateRange(userId, twoWeeksAgo, parseISO(today)),
+    db.select().from(note).where(and(eq(note.userId, userId), gte(note.date, format(twoWeeksAgo, "yyyy-MM-dd")))),
+    reliefHistoryFor(userId, format(subDays(parseISO(today), RELIEF_MEMORY_DAYS), "yyyy-MM-dd")),
+    personalizationFor(userId),
+  ]);
+  const targets = raidTargets(profile.stats);
+  const pastTitles = [
+    ...exclude,
+    ...history.filter(r => isRaid(r)).flatMap(r => [r.title, ...((r.alternatives as ReliefAlternative[] | null) || []).map(a => a.title)]),
+  ];
+
+  let objectives: RaidObjective[] | null = null;
+  try {
+    const content = await safeGenerateContent(getRaidPrompt({
+      stats: profile.stats,
+      targets: targets.map(stat => ({ stat, meaning: RAID_STAT_MEANING[stat] })),
+      habits: habitData.map(h => h.name),
+      recentTasks: taskData.filter(t => !t.isApi).map(t => ({ title: t.title, completed: t.completed })),
+      recentNotes: notesData.sort((a, b) => b.date.localeCompare(a.date)).map(n => noteTextLines(n.content).join("; ")).filter(Boolean),
+      history: pastTitles.filter(t => !t.includes(OFFLINE_TAG)),
+      today,
+      persona: resolvePersonaStyle(persona, today),
+      personal,
+    }), { userId, model: "gemini-flash-latest", responseMimeType: "application/json", deadlineMs: 12_000 });
+    const data = JSON.parse(content) as { objectives?: { title?: string; description?: string }[] };
+    const written = (data.objectives ?? []).filter(o => o.title?.trim());
+    // The stats are ours, whatever the model wrote back
+    if (written.length >= targets.length) {
+      objectives = targets.map((stat, i) => ({ title: written[i].title!.trim(), description: written[i].description, stat }));
+    }
+  } catch (error) {
+    if (!(error instanceof AiUnavailableError)) console.error("Raid AI Error:", error);
+  }
+  objectives ??= pickOfflineRaid(targets, pastTitles);
+
+  const [main, ...rest] = objectives;
+  // Two requests at once (a second tab, say) both end up with the one raid
+  const [row] = await db.insert(reliefRecommendation).values({
+    userId,
+    date: today,
+    title: main.title,
+    description: main.description ?? null,
+    type: RAID_TYPE,
+    location: location || null,
+    alternatives: rest.map(o => ({ title: o.title, type: RAID_TYPE, description: o.description, stat: o.stat })),
+    xpReward: RAID_XP,
+    stat: main.stat,
+  }).onConflictDoNothing({ target: [reliefRecommendation.userId, reliefRecommendation.date] }).returning();
+  return row ?? (await db.query.reliefRecommendation.findFirst({
+    where: and(eq(reliefRecommendation.userId, userId), eq(reliefRecommendation.date, today))
+  }))!;
+}
+
+// Last week (Monday to Sunday) against the week before, and how last Monday's raid went
+async function raidRecapFor(userId: string, today: string): Promise<RaidRecap> {
+  const day = (n: number) => subDays(parseISO(today), n);
+  const [lastWeek, weekBefore, lastRaid] = await Promise.all([
+    statsForPeriod(userId, day(7), endOfDay(day(1))),
+    statsForPeriod(userId, day(14), endOfDay(day(8))),
+    db.query.reliefRecommendation.findFirst({
+      where: and(eq(reliefRecommendation.userId, userId), eq(reliefRecommendation.date, format(day(7), "yyyy-MM-dd")))
+    }),
+  ]);
+  const cleared = lastRaid && isRaid(lastRaid)
+    ? [lastRaid.completed, lastRaid.alt1Completed, lastRaid.alt2Completed].filter(Boolean).length
+    : null;
+  return { xp: lastWeek?.xp ?? 0, previousXp: weekBefore?.xp ?? 0, cleared };
 }
 
 export async function toggleReliefRecommendation(id: string, completed: boolean, index: number = 0) {

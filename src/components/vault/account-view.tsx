@@ -1,0 +1,478 @@
+"use client";
+
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { format, subDays } from "date-fns";
+import Link from "next/link";
+import { Database, Download, AlertTriangle, ExternalLink, Github, Heart, Trash2, UserRound, Zap } from "lucide-react";
+import GlassCard from "@/components/glass-card";
+import TabularViewModal from "@/components/TabularViewModal";
+import VaultHero from "@/components/vault/vault-hero";
+import HallOfFame from "@/components/vault/hall-of-fame";
+import Chronicle, { type ChronicleKind } from "@/components/vault/chronicle";
+import SettingsPanel from "@/components/vault/settings-panel";
+import GoogleCalendarPanel from "@/components/vault/google-calendar-panel";
+import AccountPanel, { AiGuidePanel, PersonalizePanel, useAccount } from "@/components/vault/account-panel";
+import { changeHolidayRegion } from "@/app/actions/events";
+import { deleteAccount } from "@/app/actions/account";
+import { clearAccountStorage } from "@/components/account-scope";
+import { HOLIDAY_REGIONS } from "@/lib/personalization";
+import VaultSection from "@/components/vault/vault-section";
+import { getSeasonTimeline } from "@/app/actions/gamification";
+import { seasonEraLabel } from "@/lib/eras";
+import { getSmartMissionHistory, toggleSmartMission } from "@/app/actions/smart-missions";
+import { getReliefHistory, toggleReliefRecommendation } from "@/app/actions/relief";
+import { getPreparationTipHistory, togglePreparationTip } from "@/app/actions/preparation";
+import { generatePruneArchive, deletePrunedData } from "@/app/actions/prune";
+import { cn } from "@/lib/utils";
+import { ALBDO_URL, APP_VERSION, CREATOR_URL, CREATOR_URL2, REPO_URL } from "@/lib/version";
+import type { PrepTipRow, ReliefRow, SmartMissionRow, TimelineSeason } from "@/lib/types";
+
+const flip = <T extends { id: string; completed: boolean }>(list: T[], id: string) =>
+  list.map(item => item.id === id ? { ...item, completed: !item.completed } : item);
+
+const CREDITS: { href?: string; icon: typeof UserRound; title: string; description: string }[] = [
+  { href: CREATOR_URL2, icon: UserRound, title: "kk36", description: "Creator of TaskMaster." },
+  { href: CREATOR_URL, icon: UserRound, title: "PiX", description: "Creator of TaskMaster." },
+  { href: REPO_URL, icon: Github, title: "GitHub", description: "Browse the TaskMaster source code." },
+  { href: ALBDO_URL, icon: Zap, title: "What is AlBDO?", description: "A Rust-first JavaScript and TypeScript framework for blazing fast web development. Still a work in progress." },
+];
+
+const noopSubscribe = () => () => {};
+const readNotificationPermission = () => ("Notification" in window ? Notification.permission : "default");
+
+function renderDate(val: string) {
+  const d = new Date(val);
+  return (
+    <span className="font-mono text-tm-blue-gray whitespace-nowrap">
+      <span className="sm:hidden flex flex-col leading-tight">
+        <span className="text-caption opacity-50">{d.getFullYear()}</span>
+        <span>{format(d, "MMM d")}</span>
+      </span>
+      <span className="hidden sm:inline">{format(d, "yyyy-MM-dd")}</span>
+    </span>
+  );
+}
+
+// What the page's server half (app/(app)/account/page.tsx) loads before the browser asks: the
+// season timeline and a year of AI picks
+export type AccountInitial = {
+  todayStr: string;
+  timeline: Awaited<ReturnType<typeof getSeasonTimeline>>;
+  missions: Awaited<ReturnType<typeof getSmartMissionHistory>>;
+  reliefs: Awaited<ReturnType<typeof getReliefHistory>>;
+  preps: Awaited<ReturnType<typeof getPreparationTipHistory>>;
+};
+
+// `initial` is the server's head start; for another day than the browser's, the page loads its own
+export default function AccountView({ initial }: { initial: Promise<AccountInitial | null> | null }) {
+  const [seasonHistory, setSeasonHistory] = useState<TimelineSeason[]>([]);
+  const [missionHistory, setMissionHistory] = useState<SmartMissionRow[]>([]);
+  const [reliefHistory, setReliefHistory] = useState<ReliefRow[]>([]);
+  const [preparationHistory, setPreparationHistory] = useState<PrepTipRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [account, reloadAccount] = useAccount();
+  const [holidayBusy, setHolidayBusy] = useState(false);
+  const [holidayStatus, setHolidayStatus] = useState<string | undefined>();
+
+  // Swaps the calendar's holidays to another country's (it talks to the holiday service, so it takes a moment)
+  async function handleHolidayRegion(region: string) {
+    setHolidayBusy(true);
+    setHolidayStatus(undefined);
+    try {
+      const result = await changeHolidayRegion(region, format(new Date(), "yyyy-MM-dd"));
+      if (result.success) {
+        const name = HOLIDAY_REGIONS.find(r => r.code === result.region)?.name ?? "";
+        setHolidayStatus(result.region ? `${name}: ${result.added} holidays added` : "Holidays switched off");
+      } else {
+        setHolidayStatus(result.message);
+      }
+      await reloadAccount();
+    } catch (err) {
+      console.error(err);
+      setHolidayStatus("Could not change the region");
+    }
+    setHolidayBusy(false);
+  }
+
+  const [openTable, setOpenTable] = useState<"seasons" | ChronicleKind | null>(null);
+  const [pruneLoading, setPruneLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  // The browser's current permission, overridden by the answer to our own request
+  const browserNotificationPermission = useSyncExternalStore(noopSubscribe, readNotificationPermission, () => "default");
+  const [requestedPermission, setRequestedPermission] = useState<string | null>(null);
+  const notificationPermission = requestedPermission ?? browserNotificationPermission;
+  const [locationPermission, setLocationPermission] = useState<string>("default");
+
+  async function handlePrune() {
+    // Two separate warnings before anything is deleted
+    if (!confirm("Warning 1 of 2: this will download your data older than 5 years as a CSV and then permanently delete it from the cloud database. Continue?")) return;
+    if (!confirm("Warning 2 of 2: the deleted records cannot be restored from the app. Your only copy will be the CSV that downloads now. Prune for good?")) return;
+
+    setPruneLoading(true);
+    try {
+      const csvData = await generatePruneArchive();
+      if (csvData) {
+        const blob = new Blob([csvData], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `archive_${format(new Date(), "yyyy-MM-dd")}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+
+        await deletePrunedData();
+        alert("Old data has been archived and successfully pruned from the cloud database.");
+      } else {
+        alert("No data older than 5 years was found to prune.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to prune database.");
+    }
+    setPruneLoading(false);
+  }
+
+  async function handleDeleteAccount() {
+    // Two warnings, then the word itself typed out, as nothing here can be brought back
+    if (!confirm("Warning 1 of 2: this permanently deletes your account: tasks, events, habits, notes, progress, seasons and saved AI keys. Continue?")) return;
+    if (!confirm("Warning 2 of 2: this cannot be undone, and there is no backup. Events already in Google Calendar stay there. Delete your account for good?")) return;
+    const typed = prompt("Type DELETE to permanently delete your account.");
+    if (typed !== "DELETE") return;
+
+    setDeleting(true);
+    try {
+      const result = await deleteAccount(typed);
+      if (result && !result.success) {
+        alert(result.message);
+        setDeleting(false);
+        return;
+      }
+      clearAccountStorage();
+      try { localStorage.removeItem("tm_user"); } catch { /* storage blocked */ }
+    } catch (err) {
+      console.error(err);
+      alert("Could not delete your account.");
+      setDeleting(false);
+    }
+  }
+
+  async function handleToggle(kind: ChronicleKind, id: string) {
+    if (kind === "quests") {
+      const item = missionHistory.find(m => m.id === id);
+      if (!item) return;
+      setMissionHistory(prev => flip(prev, id));
+      await toggleSmartMission(id, !item.completed);
+    } else if (kind === "prep") {
+      const item = preparationHistory.find(p => p.id === id);
+      if (!item) return;
+      setPreparationHistory(prev => flip(prev, id));
+      await togglePreparationTip(id, !item.completed);
+    } else {
+      // Relief rows toggle their main suggestion
+      const item = reliefHistory.find(r => r.id === id);
+      if (!item) return;
+      setReliefHistory(prev => flip(prev, id));
+      await toggleReliefRecommendation(id, !item.completed, 0);
+    }
+    window.dispatchEvent(new Event("profile-updated"));
+  }
+
+  useEffect(() => {
+    let live = true;
+    const show = (data: Omit<AccountInitial, "todayStr">) => {
+      setSeasonHistory(data.timeline.seasons.filter(s => s.xp > 0));
+      setMissionHistory(data.missions);
+      setReliefHistory(data.reliefs);
+      setPreparationHistory(data.preps);
+      setLoading(false);
+    };
+    async function loadData() {
+      const oneYearAgo = format(subDays(new Date(), 365), "yyyy-MM-dd");
+      const [timeline, missions, reliefs, preps] = await Promise.all([
+        getSeasonTimeline(format(new Date(), "yyyy-MM-dd")),
+        getSmartMissionHistory(oneYearAgo),
+        getReliefHistory(oneYearAgo),
+        getPreparationTipHistory(oneYearAgo)
+      ]);
+      if (live) show({ timeline, missions, reliefs, preps });
+    }
+    (initial ?? Promise.resolve(null)).catch(() => null).then(data => {
+      if (!live) return;
+      if (data && data.todayStr === format(new Date(), "yyyy-MM-dd")) show(data);
+      else loadData();
+    });
+
+    if ("permissions" in navigator) {
+      navigator.permissions.query({ name: 'geolocation' as PermissionName }).then((result) => {
+        setLocationPermission(result.state);
+        result.onchange = () => {
+          setLocationPermission(result.state);
+        };
+      }).catch(() => {
+        // Fallback for browsers that don't support geolocation permission querying
+      });
+    }
+    return () => { live = false; };
+  }, [initial]);
+
+  async function handleEnableNotifications() {
+    if (!("Notification" in window)) {
+      alert("This browser does not support desktop notifications.");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setRequestedPermission(permission);
+    if (permission === "granted") {
+      new Notification("Notifications Enabled!", {
+        body: "You'll now receive updates from TaskMaster.",
+        icon: "/favicon.ico"
+      });
+    }
+  }
+
+  function handleEnableLocation() {
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        () => {
+          if ("permissions" in navigator) {
+            navigator.permissions.query({ name: 'geolocation' as PermissionName }).then(res => setLocationPermission(res.state)).catch(() => setLocationPermission("granted"));
+          } else {
+            setLocationPermission("granted");
+          }
+        },
+        (err) => {
+          console.error(err);
+          if (err.code === err.PERMISSION_DENIED) {
+            alert("Location permission is blocked in your browser settings. Please enable it manually by clicking the lock icon next to the URL.");
+            setLocationPermission("denied");
+          } else {
+            alert("Failed to access location. Please check your browser or device settings.");
+          }
+        },
+        { timeout: 5000 }
+      );
+    } else {
+      alert("Geolocation is not supported by this browser.");
+    }
+  }
+
+  const closeTable = () => setOpenTable(null);
+
+  return (
+    <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-5xl mx-auto space-y-16 pb-24">
+      <VaultHero />
+
+      <AccountPanel account={account} onReload={reloadAccount} />
+
+      <HallOfFame seasons={seasonHistory} loading={loading} onViewAll={() => setOpenTable("seasons")} />
+
+      <Chronicle
+        missions={missionHistory}
+        preps={preparationHistory}
+        reliefs={reliefHistory}
+        loading={loading}
+        onToggle={handleToggle}
+        onViewAll={setOpenTable}
+      />
+
+      <SettingsPanel
+        notificationPermission={notificationPermission}
+        locationPermission={locationPermission}
+        onEnableNotifications={handleEnableNotifications}
+        onEnableLocation={handleEnableLocation}
+        holidayRegion={account ? account.holidayRegion : null}
+        holidayBusy={holidayBusy}
+        holidayStatus={holidayStatus}
+        onHolidayRegionChange={handleHolidayRegion}
+      />
+
+      <GoogleCalendarPanel demo={!!account?.demo} />
+
+      <AiGuidePanel account={account} />
+
+      <PersonalizePanel account={account} />
+
+      <VaultSection icon={Database} iconClassName="text-tm-blue-gray" title="Cloud Storage">
+        <GlassCard className="p-5 md:p-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+            <Database size={120} />
+          </div>
+          <div className="relative z-10 space-y-5">
+            <div>
+              <h3 className="text-xl font-bold text-foreground leading-tight">Database Archiving</h3>
+              <p className="text-sm text-tm-blue-gray mt-2 max-w-2xl font-medium">
+                Keep your cloud database fast and storage-efficient. This tool will ask you to confirm twice, then bundle all your records (Habits, Notes, Quests) older than 5 years into a CSV file, download it to your local device, and safely delete the old rows from the cloud.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <button
+                onClick={handlePrune}
+                disabled={pruneLoading}
+                className={cn(
+                  "flex items-center gap-3 px-6 py-4 rounded-xl font-mono font-semibold uppercase tracking-[0.12em] text-caption transition-all active:scale-95",
+                  pruneLoading
+                    ? "bg-tm-blue-gray/20 text-tm-blue-gray cursor-not-allowed"
+                    : "bg-tm-yellow/10 hover:bg-tm-yellow/20 text-tm-yellow border border-tm-yellow/20 hover:border-tm-yellow/40"
+                )}
+              >
+                {pruneLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-tm-blue-gray border-t-transparent rounded-full animate-spin" />
+                    Processing Archive...
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    Download Archive & Prune DB
+                  </>
+                )}
+              </button>
+
+              <div className="flex items-center gap-2 text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] px-4 py-2 bg-tm-blue-gray/10 rounded-lg">
+                <AlertTriangle size={12} className="text-tm-orange-light" />
+                <span>Cannot be undone. Do not prune unless necessary!</span>
+              </div>
+            </div>
+
+            {account && !account.demo && (
+              <div className="pt-5 border-t border-tm-blue-gray/10 space-y-4">
+                <div>
+                  <h3 className="text-xl font-bold text-foreground leading-tight">Delete Account</h3>
+                  <p className="text-sm text-tm-blue-gray mt-2 max-w-2xl font-medium">
+                    Permanently delete your account and everything in it. Events already in Google Calendar stay there, but TaskMaster loses access to them.
+                  </p>
+                </div>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                  className="flex items-center gap-3 px-6 py-4 rounded-xl font-mono font-semibold uppercase tracking-[0.12em] text-caption transition-all active:scale-95 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 hover:border-red-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Trash2 size={16} />
+                  {deleting ? "Deleting…" : "Delete Account"}
+                </button>
+              </div>
+            )}
+          </div>
+        </GlassCard>
+      </VaultSection>
+
+      <VaultSection icon={Heart} iconClassName="text-tm-red" title="Credits">
+        <div className="space-y-4">
+          {CREDITS.map(({ href, icon: Icon, title, description }) => {
+            const card = (
+              <GlassCard className={cn("p-5 md:p-6", href && "hover:border-tm-orange-light/40 transition-colors")}>
+                <div className="flex items-center gap-5">
+                  <div className={cn("w-12 h-12 rounded-2xl bg-tm-orange-light/20 text-tm-orange-light flex items-center justify-center shrink-0", href && "group-hover:scale-110 transition-transform")}>
+                    <Icon size={24} />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-lg font-bold text-foreground leading-tight">{title}</h4>
+                    <p className="text-sm text-tm-blue-gray font-medium mt-1">{description}</p>
+                  </div>
+                  {href && <ExternalLink size={20} className="text-tm-blue-gray group-hover:text-tm-orange-light group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />}
+                </div>
+              </GlassCard>
+            );
+            return href
+              ? <a key={title} href={href} target="_blank" rel="noopener noreferrer" className="block group">{card}</a>
+              : <div key={title}>{card}</div>;
+          })}
+        </div>
+      </VaultSection>
+
+      {/* Footer */}
+      <div className="pt-12 text-center border-t border-tm-blue-gray/10">
+        <p className="text-xs font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">
+          Version {APP_VERSION} • TaskMaster • By kk36 and PiX •{" "}
+          <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link> •{" "}
+          <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+        </p>
+      </div>
+
+      {/* Tabular Modals */}
+      <TabularViewModal
+        title="Hall of Fame"
+        isOpen={openTable === "seasons"}
+        onClose={closeTable}
+        data={seasonHistory.map(s => ({ ...s, era: seasonEraLabel(s) }))}
+        columns={[
+          { header: "Year", key: "year" },
+          { header: "Month", key: "monthName" },
+          { header: "XP", key: "xp" },
+          { header: "Level", key: "level" },
+          { header: "Title", key: "title" },
+          { header: "Era", key: "era" }
+        ]}
+      />
+
+      <TabularViewModal
+        title="Smart Quest Log"
+        isOpen={openTable === "quests"}
+        onClose={closeTable}
+        data={missionHistory}
+        columns={[
+          { header: "Date", key: "date", render: renderDate },
+          { header: "Title", key: "title", wrap: true, className: "w-[25%]" },
+          { header: "Description", key: "description", wrap: true, className: "w-[50%]" },
+          {
+            header: "Status", key: "completed", render: (val) => (
+              <span className="flex items-center gap-2">
+                <span>{val ? "✅" : "❌"}</span>
+                <span className="hidden sm:inline">{val ? "Completed" : "Incomplete"}</span>
+              </span>
+            )
+          }
+        ]}
+      />
+
+      <TabularViewModal
+        title="Strategic Prep Log"
+        isOpen={openTable === "prep"}
+        onClose={closeTable}
+        data={preparationHistory}
+        columns={[
+          { header: "Date", key: "date", render: renderDate },
+          { header: "Strategy", key: "title", wrap: true, className: "w-[25%]" },
+          { header: "Directive", key: "description", wrap: true, className: "w-[50%]" },
+          {
+            header: "Status", key: "completed", render: (val) => (
+              <span className="flex items-center gap-2">
+                <span>{val ? "⚔️" : "🛡️"}</span>
+                <span className="hidden sm:inline">{val ? "Victorious" : "Planned"}</span>
+              </span>
+            )
+          }
+        ]}
+      />
+
+      <TabularViewModal
+        title="Relief Log"
+        isOpen={openTable === "relief"}
+        onClose={closeTable}
+        data={reliefHistory}
+        columns={[
+          { header: "Date", key: "date", render: renderDate },
+          { header: "Title", key: "title", wrap: true, className: "w-[30%]" },
+          { header: "Type", key: "type", render: (val) => val?.toUpperCase() },
+          { header: "Location", key: "location" },
+          {
+            header: "Status",
+            key: "completed",
+            render: (_, r) => {
+              const done = [r.completed, r.alt1Completed, r.alt2Completed].filter(Boolean).length;
+              return (
+                <span className="flex items-center gap-2">
+                  <span>{done === 3 ? "🏆" : done > 0 ? "🏃" : "🛌"}</span>
+                  <span className="hidden sm:inline">{done}/3 Done</span>
+                </span>
+              );
+            }
+          }
+        ]}
+      />
+    </div>
+  );
+}

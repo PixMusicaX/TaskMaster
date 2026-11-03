@@ -15,5 +15,5 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // Everything except the API (it answers for itself), Next's own files and static assets
-  matcher: ["/((?!api|_next/static|_next/image|.*\\.(?:ico|png|svg|webp|json|txt|mp3|wav|mp4|webm|ttf|otf)$).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|.*\\.(?:ico|png|svg|webp|json|txt|mp3|wav|mp4|webm|ttf|otf|woff2|css)$).*)"],
 };

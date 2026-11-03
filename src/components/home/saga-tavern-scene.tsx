@@ -1,8 +1,9 @@
-import { CloudSun, MapPin, RotateCw, Sparkles } from "lucide-react";
+import { CloudSun, MapPin, RotateCw, Sparkles, Swords, TrendingDown, TrendingUp } from "lucide-react";
 import CompletionCheck from "@/components/ui/completion-check";
 import StrikeText from "@/components/ui/strike-text";
 import { formatReliefTemp } from "@/lib/weather";
 import { cn } from "@/lib/utils";
+import { seatStats, statShort, type RaidRecap } from "@/lib/raid";
 import type { Relief, ReliefAlternative } from "@/lib/types";
 import { ReliefTypeIcon } from "./icons";
 import { C, CAPTION, TITLE, polar } from "./saga-kit";
@@ -11,6 +12,8 @@ import { C, CAPTION, TITLE, polar } from "./saga-kit";
 // arrive well after the page (and again on "new suggestions"). The scroll script therefore only
 // moves a fixed set of wrappers (its data-saga names) and everything that depends on the data
 // changes inside them with plain CSS transitions, so a late answer never rebuilds the script.
+// On Mondays the same scene is the Weekly Raid (lib/raid.ts): the seats are its three objectives,
+// each tagged with the stat it feeds, and the caption recaps last week.
 
 export const RING = 166;
 // The ring is three arcs, one per suggestion, each lit once that suggestion is done
@@ -59,24 +62,48 @@ export interface TavernProps {
   updating: Set<string>;
   onToggle: (index: number) => void;
   onRegenerate: () => void;
+  // Today is raid day: the scene is the Weekly Raid instead
+  raid?: boolean;
 }
 
-// The suggestions as three seats: the primary one, then the two alternatives
-function seats(relief: Relief | null) {
+// The suggestions as three seats: the primary one, then the two alternatives (with the stat each
+// feeds, which only a raid shows)
+export function seats(relief: Relief | null) {
   if (!relief) return [];
   const alternatives = Array.isArray(relief.alternatives) ? (relief.alternatives as ReliefAlternative[]) : [];
+  const stats = seatStats(relief);
   return [
-    { title: relief.title, type: relief.type, done: relief.completed },
-    ...alternatives.slice(0, SEATS - 1).map((alt, i) => ({ title: alt.title, type: alt.type ?? null, done: i === 0 ? relief.alt1Completed : relief.alt2Completed })),
+    { title: relief.title, type: relief.type, done: relief.completed, stat: stats[0] },
+    ...alternatives.slice(0, SEATS - 1).map((alt, i) => ({ title: alt.title, type: alt.type ?? null, done: i === 0 ? relief.alt1Completed : relief.alt2Completed, stat: stats[i + 1] })),
   ];
 }
 
-export function TavernTitle({ relief }: Pick<TavernProps, "relief">) {
+// Last week's XP against the week before, and how last Monday's raid went
+export function RaidRecapLine({ recap }: { recap: RaidRecap | undefined }) {
+  if (!recap) return <>Your two weakest stats, this week</>;
+  const change = recap.xp - recap.previousXp;
+  const Trend = change >= 0 ? TrendingUp : TrendingDown;
+  return (
+    <>
+      <span className="flex items-center gap-1.5">
+        <Trend size={12} className={change >= 0 ? "text-tm-yellow" : "text-tm-orange-dark"} />
+        Last week {recap.xp} XP ({change >= 0 ? "+" : ""}{change})
+      </span>
+      {recap.cleared !== null && (
+        <span className="flex items-center gap-1.5"><Swords size={12} /> Last raid {recap.cleared}/{SEATS}</span>
+      )}
+    </>
+  );
+}
+
+export function TavernTitle({ relief, raid }: Pick<TavernProps, "relief" | "raid">) {
   return (
     <div data-saga="tavern-title" className="col-start-1 row-start-1 self-end flex flex-col items-center gap-1 motion-reduce:hidden">
-      <p className={cn(TITLE, "text-3xl sm:text-4xl")}>Tavern</p>
+      <p className={cn(TITLE, "text-3xl sm:text-4xl")}>{raid ? "Raid" : "Tavern"}</p>
       <p className={cn(CAPTION, "flex flex-wrap items-center justify-center gap-x-3 gap-y-1 min-h-4")}>
-        {relief ? (
+        {raid ? (
+          <RaidRecapLine recap={relief?.raidRecap} />
+        ) : relief ? (
           <>
             <span className={cn("flex items-center gap-1.5", relief.isCached && "text-tm-orange-light")}><MapPin size={12} /> {relief.location}</span>
             <span className="flex items-center gap-1.5"><CloudSun size={12} /> {formatReliefTemp(relief.temp)}°C {relief.weather}</span>
@@ -90,7 +117,7 @@ export function TavernTitle({ relief }: Pick<TavernProps, "relief">) {
 // The ring's three arcs light as the suggestions are done; the centre counts them and holds the
 // "new suggestions" button. While the AI is working the ring pulses and the centre says so, and if
 // it comes back with nothing the centre says that too, with a way to ask again.
-export function TavernEmblem({ relief, loading, failed, onRegenerate, onRetry, active }: Pick<TavernProps, "relief" | "loading" | "failed" | "onRegenerate" | "onRetry"> & { active: boolean }) {
+export function TavernEmblem({ relief, loading, failed, onRegenerate, onRetry, raid, active }: Pick<TavernProps, "relief" | "loading" | "failed" | "onRegenerate" | "onRetry" | "raid"> & { active: boolean }) {
   const list = seats(relief);
   const done = list.filter(s => s.done).length;
   const shut = failed && !relief && !loading;
@@ -120,9 +147,9 @@ export function TavernEmblem({ relief, loading, failed, onRegenerate, onRetry, a
       <div data-saga="tavern-core" className="absolute inset-0 flex flex-col items-center justify-center text-center px-10">
         {shut ? (
           <>
-            <span className={CAPTION}>The Tavern is</span>
+            <span className={CAPTION}>{raid ? "The gates are" : "The Tavern is"}</span>
             <span className={cn(TITLE, "text-3xl sm:text-4xl leading-none my-1")}>Shut</span>
-            <span className={CAPTION}>The fire went out</span>
+            <span className={CAPTION}>{raid ? "No raid could be called" : "The fire went out"}</span>
             <button
               type="button"
               onClick={onRetry}
@@ -138,13 +165,13 @@ export function TavernEmblem({ relief, loading, failed, onRegenerate, onRetry, a
           </>
         ) : waiting ? (
           <>
-            <span className={CAPTION}>{loading ? "Finding new" : "Scanning for"}</span>
-            <span className={cn(TITLE, "text-3xl sm:text-4xl leading-none my-1 animate-pulse")}>{loading ? "Paths" : "Relief"}</span>
-            <span className={CAPTION}>The Taskmaster is thinking</span>
+            <span className={CAPTION}>{raid ? (loading ? "Calling a new" : "Mustering the") : loading ? "Finding new" : "Scanning for"}</span>
+            <span className={cn(TITLE, "text-3xl sm:text-4xl leading-none my-1 animate-pulse")}>{raid ? "Raid" : loading ? "Paths" : "Relief"}</span>
+            <span className={CAPTION}>{raid ? "The Taskmaster is plotting" : "The Taskmaster is thinking"}</span>
           </>
         ) : (
           <>
-            <span className={CAPTION}>Relief taken</span>
+            <span className={CAPTION}>{raid ? "Raid cleared" : "Relief taken"}</span>
             <span className="text-6xl sm:text-7xl font-display font-bold leading-none tabular-nums text-tm-purple-dark dark:text-tm-yellow">
               {done}<span className="text-3xl sm:text-4xl text-tm-blue-gray">/{list.length}</span>
             </span>
@@ -159,7 +186,7 @@ export function TavernEmblem({ relief, loading, failed, onRegenerate, onRetry, a
                   active && "pointer-events-auto"
                 )}
               >
-                <RotateCw size={12} /> New paths
+                <RotateCw size={12} /> {raid ? "New raid" : "New paths"}
               </button>
             )}
           </>
@@ -171,7 +198,7 @@ export function TavernEmblem({ relief, loading, failed, onRegenerate, onRetry, a
 
 // The three suggestions as tappable rows. There are always three rows, placeholders until the
 // suggestions arrive, and they can only be tapped while the scene is on stage.
-export function TavernDetails({ relief, loading, failed, updating, onToggle, active }: Omit<TavernProps, "onRegenerate" | "onRetry"> & { active: boolean }) {
+export function TavernDetails({ relief, loading, failed, updating, onToggle, raid, active }: Omit<TavernProps, "onRegenerate" | "onRetry"> & { active: boolean }) {
   const list = seats(relief);
   const reward = relief?.xpReward === 5 ? 10 : relief?.xpReward;
   const shut = failed && !relief && !loading;
@@ -187,7 +214,7 @@ export function TavernDetails({ relief, loading, failed, updating, onToggle, act
           <div key={i} data-saga="tavern-row" className="w-full max-w-sm">
             {shut ? (
               <p className="h-8 [@media(max-height:720px)]:h-7 flex items-center justify-center text-sm font-medium text-tm-blue-gray">
-                {i === 0 && "No relief could be found. Your day is still safe."}
+                {i === 0 && (raid ? "No raid this week. Your day is still safe." : "No relief could be found. Your day is still safe.")}
               </p>
             ) : waiting || !seat ? (
               <div className="tm-skeleton h-8 [@media(max-height:720px)]:h-7" />
@@ -212,13 +239,13 @@ export function TavernDetails({ relief, loading, failed, updating, onToggle, act
                   checkSize={14}
                   checkClassName="text-tm-on-accent"
                   idle={i === 0
-                    ? <Sparkles size={12} className="text-tm-yellow" />
+                    ? (raid ? <Swords size={12} className="text-tm-yellow" /> : <Sparkles size={12} className="text-tm-yellow" />)
                     : <ReliefTypeIcon type={seat.type} size={12} className="text-tm-blue-gray" />}
                 />
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground/90" title={seat.title}>
                   <StrikeText done={seat.done}>{seat.title}</StrikeText>
                 </span>
-                <span className={cn(CAPTION, "shrink-0", i === 0 && "text-tm-yellow")}>+{reward} XP</span>
+                <span className={cn(CAPTION, "shrink-0", i === 0 && "text-tm-yellow")}>+{reward} {raid ? statShort(seat.stat) : "XP"}</span>
               </button>
             )}
           </div>

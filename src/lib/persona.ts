@@ -11,6 +11,7 @@
 // P4 is always light and P5 always dark for now.
 import { DEV_TOOLS_ENABLED } from "./dev-xp";
 import { getDevSpecialOverride, pickSpecialDay } from "./special-days";
+import { APP_VERSION } from "./version";
 
 export type PersonaStyle = "p3" | "p4" | "p5";
 export const PERSONA_STYLES: PersonaStyle[] = ["p3", "p4", "p5"];
@@ -32,6 +33,21 @@ export const PERSONA_FORCED_THEME: Record<PersonaStyle, "light" | "dark" | null>
 // (see app/persona.css), and win when present
 export const PERSONA_FONTS_URL =
   "https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;700&family=Jost:ital,wght@0,300;0,400;0,500;0,700;1,500&family=M+PLUS+Rounded+1c:wght@500;800;900&family=Archivo+Black&family=Permanent+Marker&family=M+PLUS+1p:wght@800;900&family=Playfair+Display:wght@800;900&display=swap";
+
+// The takeover's own styles (public/persona/persona-day.css), also loaded on Persona days only.
+// The version in the query makes a new release fetch it afresh.
+export const PERSONA_CSS_URL = `/persona/persona-day.css?v=${APP_VERSION}`;
+
+// Adds the Persona day's styles and fonts to the page, once (client only)
+export function loadPersonaStyles() {
+  for (const href of [PERSONA_CSS_URL, PERSONA_FONTS_URL]) {
+    if (document.querySelector(`link[href="${href}"]`)) continue;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    document.head.appendChild(link);
+  }
+}
 
 // Day of month → style for the given month (0-based), leaving out `avoid` (the month's special
 // day). Self-contained, with no outside references: lib/theme-init.ts embeds its source in the

@@ -1,10 +1,12 @@
-import { CloudSun, Coffee, MapPin, RotateCw, Sparkles } from "lucide-react";
+import { CloudSun, Coffee, MapPin, RotateCw, Sparkles, Swords } from "lucide-react";
 import CompletionCheck from "@/components/ui/completion-check";
 import StrikeText from "@/components/ui/strike-text";
 import { SkeletonRows } from "@/components/loader";
 import { formatReliefTemp } from "@/lib/weather";
 import { cn } from "@/lib/utils";
+import { seatStats, statLabel } from "@/lib/raid";
 import type { Relief, ReliefAlternative } from "@/lib/types";
+import { RaidRecapLine } from "./saga-tavern-scene";
 import InsightCard from "./insight-card";
 import { ReliefTypeIcon } from "./icons";
 
@@ -16,18 +18,25 @@ interface TavernCardProps {
   onToggle: (index: number) => void;
   onRegenerate: () => void;
   onRetry: () => void;
+  // Monday: the card is the Weekly Raid (lib/raid.ts)
+  raid?: boolean;
 }
 
-export default function TavernCard({ relief, loading, failed, updating, onToggle, onRegenerate, onRetry }: TavernCardProps) {
+export default function TavernCard({ relief, loading, failed, updating, onToggle, onRegenerate, onRetry, raid }: TavernCardProps) {
   const reward = relief?.xpReward === 5 ? 10 : relief?.xpReward;
   const canRegenerate = !!relief && !relief.completed;
+  const stats = relief ? seatStats(relief) : [];
 
   return (
     <InsightCard
-      icon={Coffee}
+      icon={raid ? Swords : Coffee}
       iconClassName="text-tm-blue-gray"
-      title="Tavern"
-      subtitle={relief && (
+      title={raid ? "Raid" : "Tavern"}
+      subtitle={raid ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption font-mono font-semibold uppercase text-tm-blue-gray/60 tracking-[0.12em]">
+          <RaidRecapLine recap={relief?.raidRecap} />
+        </div>
+      ) : relief && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption font-mono font-semibold uppercase text-tm-blue-gray/60 tracking-[0.12em]">
           <span className={cn("flex items-center gap-1.5", relief.isCached ? "text-tm-orange-light/80" : "")}><MapPin size={12} className={relief.isCached ? "text-tm-orange-light" : "text-tm-yellow/40"} /> {relief.location}</span>
           <span className="w-1 h-1 rounded-full bg-white/10" />
@@ -55,7 +64,7 @@ export default function TavernCard({ relief, loading, failed, updating, onToggle
             {/* Primary Suggestion */}
             <div className="relative">
               <div className="absolute -top-3 left-4 px-2 bg-tm-purple-dark border border-tm-yellow/20 rounded text-micro font-mono font-semibold uppercase text-tm-on-ink tracking-[0.12em] z-20">
-                Primary Path
+                {raid ? "Main Objective" : "Primary Path"}
               </div>
               <button
                 onClick={updating.has(`${relief.id}-0`) ? undefined : () => onToggle(0)}
@@ -83,7 +92,7 @@ export default function TavernCard({ relief, loading, failed, updating, onToggle
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-caption font-mono font-semibold uppercase text-tm-yellow tracking-[0.12em] flex items-center gap-2">
                         <ReliefTypeIcon type={relief.type} size={12} />
-                        {relief.type || 'Suggestion'}
+                        {raid ? statLabel(stats[0]) : relief.type || 'Suggestion'}
                       </span>
                       <span className="text-xs font-black text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/20">+{reward} XP</span>
                     </div>
@@ -99,7 +108,7 @@ export default function TavernCard({ relief, loading, failed, updating, onToggle
             {Array.isArray(relief.alternatives) && relief.alternatives.length > 0 && (
               <div className="flex flex-col gap-5">
                 <div className="flex items-center gap-4">
-                  <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray/60 tracking-[0.12em] shrink-0">Alternative Channels</p>
+                  <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray/60 tracking-[0.12em] shrink-0">{raid ? "Side Objectives" : "Alternative Channels"}</p>
                   <div className="h-px flex-1 bg-white/[0.03]" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -132,7 +141,7 @@ export default function TavernCard({ relief, loading, failed, updating, onToggle
                           <span className="text-tiny font-mono font-semibold text-tm-yellow bg-tm-yellow/10 px-2 py-0.5 rounded-lg border border-tm-yellow/10">+{reward} XP</span>
                         </div>
                         <div className="relative z-10">
-                          <span className="text-micro font-mono font-semibold uppercase text-tm-blue-gray/70 tracking-[0.12em] block mb-0.5">{alt.type}</span>
+                          <span className="text-micro font-mono font-semibold uppercase text-tm-blue-gray/70 tracking-[0.12em] block mb-0.5">{raid ? statLabel(stats[i + 1]) : alt.type}</span>
                           <h5 className="text-sm font-semibold leading-snug line-clamp-2"><StrikeText done={isAltCompleted}>{alt.title}</StrikeText></h5>
                         </div>
                       </button>
@@ -144,8 +153,8 @@ export default function TavernCard({ relief, loading, failed, updating, onToggle
           </div>
         ) : failed ? (
           <div className="flex flex-col items-center gap-3 text-center py-12">
-            <p className="text-sm font-semibold text-foreground">The Tavern is shut. The fire went out.</p>
-            <p className="text-sm text-tm-blue-gray">No relief could be found. Your day is still safe.</p>
+            <p className="text-sm font-semibold text-foreground">{raid ? "The raid gates are shut. No raid could be called." : "The Tavern is shut. The fire went out."}</p>
+            <p className="text-sm text-tm-blue-gray">{raid ? "Your day is still safe." : "No relief could be found. Your day is still safe."}</p>
             <button
               onClick={onRetry}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-tm-blue-gray/25 text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray hover:text-tm-yellow hover:border-tm-yellow/50 active:scale-95 transition"

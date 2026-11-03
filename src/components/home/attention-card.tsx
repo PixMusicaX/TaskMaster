@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { PrepTipRow, Relief, SmartMissionRow } from "@/lib/types";
 import WidgetCard from "./widget-card";
 import { ReliefTypeIcon } from "./icons";
+import { isRaid, seatStats, statLabel } from "@/lib/raid";
 
 interface AttentionCardProps {
   charisma?: number;
@@ -232,7 +233,9 @@ export default function AttentionCard(props: AttentionCardProps) {
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-micro font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">Relief Recommendation</span>
+                <span className="text-micro font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">
+                  {isRaid(relief) ? `Raid Objective · ${statLabel(seatStats(relief)[0])}` : "Relief Recommendation"}
+                </span>
                 <span className="px-1.5 py-0.5 bg-tm-yellow/10 rounded-lg text-micro font-mono font-semibold text-tm-yellow border border-tm-yellow/20 whitespace-nowrap">
                   +{relief.xpReward} XP
                 </span>
