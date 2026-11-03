@@ -65,8 +65,13 @@ const GAUGE_END = polar(GAUGE_FROM + GAUGE_SWEEP, GAUGE);
 const GAUGE_PATH = `M ${GAUGE_START.x} ${GAUGE_START.y} A ${GAUGE} ${GAUGE} 0 1 1 ${GAUGE_END.x} ${GAUGE_END.y}`;
 // The level ring's arc becomes the gauge's fill: the gauge is three quarters of a circle
 const GAUGE_OF_RING = GAUGE_SWEEP / 360;
-// How far the pace rings tip over and slant, in degrees
-const PACE_TIP = 58;
+// A ring tipped over by `deg` seen face on is the ring squashed to this height. The rings tip by
+// scaleY rather than a 3D rotateX: inside a 3D layer mobile Safari stops repainting the spin once
+// the tip has finished, and the ring sits frozen at one angle
+const tip = (deg: number) => Math.cos((deg * Math.PI) / 180);
+// How far the level ring tips over to circle the era, and the pace rings tip and slant, in degrees
+const SATURN_TIP = tip(74);
+const PACE_TIP = tip(58);
 const PACE_SLANT = -14;
 // The two tipped rings of the pace scene, in two shades of one accent: today's XP against the
 // daily target, and the days of the season still to run
@@ -181,10 +186,7 @@ function ringProgress(profile: Profile | null, rankIndex: number) {
 function TiltRing({ group, arc, r, progress, color, track = 0.07, front }: { group: string; arc: string; r: number; progress: number; color: string; track?: number; front?: boolean }) {
   return (
     <div data-saga={`${group}-tilt`} aria-hidden className={cn("absolute inset-0", front && "motion-reduce:hidden")}>
-      <div
-        className={cn("absolute inset-0", front ? "[clip-path:inset(50%_-25%_-25%_-25%)]" : "[clip-path:inset(-25%_-25%_49.8%_-25%)] motion-reduce:[clip-path:none]")}
-        style={{ perspective: 900 }}
-      >
+      <div className={cn("absolute inset-0", front ? "[clip-path:inset(50%_-25%_-25%_-25%)]" : "[clip-path:inset(-25%_-25%_49.8%_-25%)] motion-reduce:[clip-path:none]")}>
         <div data-saga={group} className="absolute inset-0">
           <svg data-saga={`${group}-spin`} viewBox="0 0 400 400" className="absolute inset-0 w-full h-full overflow-visible" style={{ color }}>
             <circle cx={C} cy={C} r={r} fill="none" stroke="currentColor" strokeWidth="5" opacity={track} />
@@ -426,14 +428,14 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         .add("[data-saga=rings]", { rotate: [0, 360], duration: 44, ease: "inOut(3)" }, ERA_AT - 6)
         .add("[data-saga=era-core]", { opacity: [0, 1], scale: [1.6, 1], rotate: [90, 0], duration: 20 }, ERA_AT + 6)
         // The level ring tips over to circle the era like Saturn's (the loop below turns it in its own plane)
-        .add("[data-saga=saturn]", { rotateX: [0, 74], duration: 30, ease: "inOut(2)" }, ERA_AT - 6)
+        .add("[data-saga=saturn]", { scaleY: [1, SATURN_TIP], duration: 30, ease: "inOut(2)" }, ERA_AT - 6)
         .add("[data-saga=saturn-tilt]", { rotate: [0, -16], duration: 30, ease: "inOut(2)" }, ERA_AT - 6)
         .add("[data-saga=era-text]", { opacity: [0, 1], translateY: [20, 0], duration: 16, delay: stagger(4) }, ERA_AT + 8)
         // The era clears the centre, and the tipped level ring lies flat. Its arc swings round to where
         // the gauge starts and stretches to the season's XP, and there it simply is the gauge's fill
         .add("[data-saga=era-core]", { opacity: 0, scale: 0.2, duration: 12, ease: "in(3)" }, PACE_AT - 14)
         .add("[data-saga=era]", { opacity: 0, translateY: -20, duration: 12, ease: "in(2)" }, PACE_AT - 12)
-        .add("[data-saga=saturn]", { rotateX: [74, 0], duration: 14, ease: "inOut(3)" }, PACE_AT - 12)
+        .add("[data-saga=saturn]", { scaleY: [SATURN_TIP, 1], duration: 14, ease: "inOut(3)" }, PACE_AT - 12)
         .add("[data-saga=saturn-tilt]", { rotate: [-16, GAUGE_FROM], duration: 20, ease: "inOut(3)" }, PACE_AT - 12)
         .add("[data-saga=level]", { strokeDashoffset: [1 - levelProgress, 1 - meterFill * GAUGE_OF_RING], duration: 16, ease: "inOut(2)" }, PACE_AT - 6)
         .add("[data-saga=rings]", { opacity: 0.3, duration: 18 }, PACE_AT - 4)
@@ -452,7 +454,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
         .add("[data-saga=dial-wrap]", { opacity: [1, 0], duration: 18 }, PACE_AT)
         // Two rings appear flat, then tip over to circle the XP: today's XP and the days of the season
         .add("[data-saga=pace-tilt]", { opacity: [0, 1], scale: [0.6, 1], duration: 18 }, PACE_AT + 6)
-        .add("[data-saga=pace]", { rotateX: [0, PACE_TIP], duration: 22, ease: "inOut(2)" }, PACE_AT + 14)
+        .add("[data-saga=pace]", { scaleY: [1, PACE_TIP], duration: 22, ease: "inOut(2)" }, PACE_AT + 14)
         .add("[data-saga=pace-tilt]", { rotate: [0, PACE_SLANT], duration: 22, ease: "inOut(2)" }, PACE_AT + 14)
         // The rings have filled by the time their labels arrive, so a label never sits beside a half-drawn ring
         .add("[data-saga=race-arc]", { strokeDashoffset: [1, 1 - raceProgress], duration: 20, ease: "inOut(2)" }, PACE_AT + 8)
@@ -672,9 +674,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     if (!el || !dial || prefersReducedMotion()) return;
     // In document order: race and time behind the centre text, then race and time in front of it
     const spins = Array.from(el.querySelectorAll<SVGSVGElement>("[data-saga=pace-spin]"));
-    // The level ring turns by its arc's own rotation rather than a CSS transform: under the tip
-    // over, mobile Safari stops showing a transform changed from script once the tip has finished,
-    // and the ring sits at a stale angle (an attribute is repainted like any other drawing)
+    // The level ring turns by its arc's own rotation rather than a CSS transform (an attribute is
+    // repainted like any other drawing); see `tip` for the other half of keeping it turning on iOS
     const levelArcs = Array.from(el.querySelectorAll<SVGCircleElement>("[data-saga=level]"));
     const turnLevel = (deg: number) => levelArcs.forEach(arc => arc.setAttribute("transform", `rotate(${(deg - 90).toFixed(2)} ${C} ${C})`));
 
