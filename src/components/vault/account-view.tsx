@@ -1,5 +1,6 @@
 "use client";
 
+import { headStart } from "@/lib/head-start";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { format, subDays } from "date-fns";
 import Link from "next/link";
@@ -198,7 +199,7 @@ export default function AccountView({ initial }: { initial: Promise<AccountIniti
       ]);
       if (live) show({ timeline, missions, reliefs, preps });
     }
-    (initial ?? Promise.resolve(null)).catch(() => null).then(data => {
+    headStart(initial).then(data => {
       if (!live) return;
       if (data && data.todayStr === format(new Date(), "yyyy-MM-dd")) show(data);
       else loadData();

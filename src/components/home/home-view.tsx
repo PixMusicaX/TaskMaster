@@ -1,5 +1,6 @@
 "use client";
 
+import { headStart } from "@/lib/head-start";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 
@@ -257,13 +258,11 @@ export default function HomeView({ initial }: { initial: Promise<HomeInitial | n
         .then(([recentEvents, allHabits]) => setCompletionScore(completionScoreFor(recentEvents, allHabits, today)));
     }
 
-    (initial ?? Promise.resolve(null))
-      .catch(() => null)
-      .then(data => {
-        if (!live) return;
-        if (data && data.todayStr === todayStr) fromServer(data);
-        else fromBrowser();
-      });
+    headStart(initial).then(data => {
+      if (!live) return;
+      if (data && data.todayStr === todayStr) fromServer(data);
+      else fromBrowser();
+    });
     return () => { live = false; };
   }, [initial, today, todayStr, habitLogsSince]);
 

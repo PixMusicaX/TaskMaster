@@ -1,5 +1,6 @@
 "use client";
 
+import { headStart } from "@/lib/head-start";
 import { useState, useEffect, useCallback, useRef } from "react";
 import GlassCard from "@/components/glass-card";
 import { History, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Brain, Search, CheckCircle2 } from "lucide-react";
@@ -128,7 +129,7 @@ export default function NotesView({ initial }: { initial: Promise<NotesInitial |
   }, [showNote]);
 
   // The server's head start serves the first day shown, if it is the same day
-  const headStart = useRef(initial);
+  const firstLoad = useRef(initial);
 
   // Merge a freshly saved note into the lists we already hold instead of refetching them
   const mergeSavedNote = useCallback((saved: Awaited<ReturnType<typeof saveNote>>) => {
@@ -173,14 +174,14 @@ export default function NotesView({ initial }: { initial: Promise<NotesInitial |
   }, [lines, mood, selectedDate, isDirty, autoSave]);
 
   useEffect(() => {
-    const pending = headStart.current;
-    headStart.current = null;
+    const pending = firstLoad.current;
+    firstLoad.current = null;
     if (!pending) {
       fetchNote(selectedDate);
       return;
     }
     let live = true;
-    pending.catch(() => null).then(data => {
+    headStart(pending).then(data => {
       if (!live) return;
       if (data && data.todayStr === format(selectedDate, "yyyy-MM-dd")) showNote(data.note, data.profile);
       else fetchNote(selectedDate);
@@ -189,7 +190,7 @@ export default function NotesView({ initial }: { initial: Promise<NotesInitial |
   }, [selectedDate, fetchNote, showNote]);
 
   useEffect(() => {
-    (initial ?? Promise.resolve(null)).catch(() => null).then(data => {
+    headStart(initial).then(data => {
       if (data) setRecentNotes(data.recent);
       else getRecentNotes(10).then(setRecentNotes);
     });

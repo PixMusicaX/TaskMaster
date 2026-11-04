@@ -1,5 +1,6 @@
 "use client";
 
+import { headStart } from "@/lib/head-start";
 import { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import GlassCard from "@/components/glass-card";
 import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, X, Trash2, Check, Bell, BellOff, Edit2, Swords, Coins, RotateCw, RefreshCw, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
@@ -133,18 +134,18 @@ export default function CalendarView({ initial }: { initial: Promise<CalendarIni
 
   const initialLoad = useRef(true);
   // The server's head start serves the first month shown, if the browser agrees on the day
-  const headStart = useRef(initial);
+  const firstLoad = useRef(initial);
 
   useEffect(() => {
-    const pending = headStart.current;
-    headStart.current = null;
+    const pending = firstLoad.current;
+    firstLoad.current = null;
     if (!pending) {
       fetchEvents(initialLoad.current);
       initialLoad.current = false;
       return;
     }
     let live = true;
-    pending.catch(() => null).then(data => {
+    headStart(pending).then(data => {
       if (!live) return;
       if (data && data.todayStr === format(currentDate, "yyyy-MM-dd")) {
         showMonth(data);
