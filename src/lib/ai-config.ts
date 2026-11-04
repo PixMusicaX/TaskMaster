@@ -5,15 +5,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { userAiSettings } from "@/db/schema";
 import { AI_PROVIDERS, isAiProvider, type AiProvider, type AiSettingsView } from "./ai-providers";
+import { AiNotConfiguredError } from "./ai-errors";
 
 // Thrown when a player has not added a key for the provider they picked; callers fall back to
-// their offline behaviour
-export class AiNotConfiguredError extends Error {
-  constructor() {
-    super("No AI key set for this account");
-    this.name = "AiNotConfiguredError";
-  }
-}
+// their offline behaviour (see lib/ai-errors.ts for the other reasons)
+export { AiNotConfiguredError };
 
 const KEY_COLUMN = { gemini: "geminiKey", claude: "claudeKey", groq: "groqKey" } as const;
 

@@ -12,7 +12,7 @@ import { habitsFor } from "@/lib/data/habits";
 import { plannerEventsByDateRange } from "@/lib/data/events";
 import { dailyQuoteFor } from "@/lib/data/daily-quote";
 import { safeGenerateContent } from "@/lib/ai-utils";
-import { AiNotConfiguredError } from "@/lib/ai-config";
+import { AiUnavailableError } from "@/lib/ai-errors";
 import { rollMissionBrief } from "@/lib/mission-dice";
 import { pickOfflineMission } from "@/lib/offline-missions";
 import { noteTextLines } from "@/lib/types";
@@ -79,7 +79,9 @@ async function missionFor(userId: string, clientDateStr?: string, persona?: stri
           const content = await safeGenerateContent(prompt, {
             userId,
             model: "gemini-flash-latest",
-            responseMimeType: "application/json"
+            responseMimeType: "application/json",
+            // The home page waits on this before the Tavern; past this the offline pick stands in
+            deadlineMs: 12_000,
           });
 
           if (content) {
@@ -97,8 +99,8 @@ async function missionFor(userId: string, clientDateStr?: string, persona?: stri
             mission = newMission;
           }
         } catch (error) {
-          // No key on this account is expected; anything else is worth a log line
-          if (!(error instanceof AiNotConfiguredError)) console.error("Smart mission AI error:", error);
+          // No key, a spent budget or a slow provider is expected; anything else is worth a log line
+          if (!(error instanceof AiUnavailableError)) console.error("Smart mission AI error:", error);
         }
       }
 

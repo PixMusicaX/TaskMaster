@@ -11,7 +11,7 @@ import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { subDays } from "date-fns";
 import { requireUserId } from "@/lib/current-user";
 import { profileFor, invalidateSnapshots } from "@/lib/data/stats";
-import { AiNotConfiguredError } from "@/lib/ai-config";
+import { AiBudgetError, AiNotConfiguredError } from "@/lib/ai-errors";
 import { pickOfflinePrepTip } from "@/lib/offline-missions";
 import { personalizationFor } from "@/lib/data/preferences";
 
@@ -80,13 +80,15 @@ async function tipFor(userId: string, clientDateStr?: string, persona?: string |
         const content = await safeGenerateContent(prompt, {
           userId,
           model: "gemini-1.5-flash",
-          responseMimeType: "application/json"
+          responseMimeType: "application/json",
+          deadlineMs: 12_000,
         });
         if (content) data = JSON.parse(content);
       } catch (aiError) {
-        // An account with no AI key gets a tip built from its calendar. A provider that failed
-        // is different: nothing is saved, so the card can offer "Try Again".
-        if (!(aiError instanceof AiNotConfiguredError)) throw aiError;
+        // An account with no AI key (or none left today) gets a tip built from its calendar. A
+        // provider that failed or ran out of time is different: nothing is saved, so the card can
+        // offer "Try Again".
+        if (!(aiError instanceof AiNotConfiguredError || aiError instanceof AiBudgetError)) throw aiError;
         data = pickOfflinePrepTip(upcoming, today, history.map(h => h.title));
       }
 

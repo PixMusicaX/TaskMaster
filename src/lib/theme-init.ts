@@ -1,12 +1,15 @@
 import { AUTO_DARK_OFF_KEY, THEME_PICK_KEY } from "./auto-dark";
 import { ERAS } from "./eras";
 import { DEV_TOOLS_ENABLED } from "./dev-xp";
-import { DEV_PERSONA_KEY, PERSONA_ON_KEY, PERSONA_FONTS_URL, PERSONA_FORCED_THEME, pickPersonaDays } from "./persona";
+import { DEV_PERSONA_KEY, PERSONA_ON_KEY, PERSONA_CSS_URL, PERSONA_FONTS_URL, PERSONA_FORCED_THEME, pickPersonaDays } from "./persona";
+import { TZ_COOKIE } from "./time-zone";
 import { DEV_SPECIAL_KEY, SPECIAL_FONTS_URL, SPECIAL_FORCED_THEME, SPECIAL_IDS, SPECIAL_OFF_KEY, SPECIAL_SWAPS_THEME, pickSpecialDay } from "./special-days";
 
 const ERA_LABELS = Object.fromEntries(ERAS.map(e => [e.id, [e.numeral, e.name]]));
 
-// Runs in <head> before first paint so the page never flashes the wrong theme, rank or era.
+// Runs in <head> before first paint so the page never flashes the wrong theme, rank or era. It
+// also leaves the browser's time zone in a cookie, so the server can work out the player's date
+// and load a page's data before the browser asks (lib/time-zone.ts).
 // Theme follows the clock on every load (or the player's pick, with auto dark mode off; see
 // lib/auto-dark.ts), except on the signed-out pages (/ and /login), which follow the browser's
 // light/dark setting (see useBrowserTheme). A stored rank or era only applies
@@ -16,10 +19,12 @@ const ERA_LABELS = Object.fromEntries(ERAS.map(e => [e.id, [e.numeral, e.name]])
 // The rank name, era numeral and era name are also published as CSS variables, so their labels
 // (.tm-rank-label / .tm-era-label / .tm-era-name) are right before the app hydrates.
 // On a Persona day (lib/persona.ts), if the player turned them on, it also sets data-persona,
-// pins that style's theme and starts loading its fonts. The month's special day
+// pins that style's theme and loads the day's stylesheet (render-blocking where the browser
+// supports it, so the normal look doesn't flash first) and its fonts. The month's special day
 // (lib/special-days.ts) does the same with data-special. The Persona days are picked around it.
 export const themeInitScript = `(function(){try{
 var d=document.documentElement,n=new Date(),h=n.getHours();
+try{document.cookie=${JSON.stringify(TZ_COOKIE + "=")}+Intl.DateTimeFormat().resolvedOptions().timeZone+';path=/;max-age=31536000;samesite=lax';}catch(e){}
 var spick=${pickSpecialDay.toString()};
 var sd=spick(n.getFullYear(),n.getMonth());
 var pick=${pickPersonaDays.toString()};
@@ -39,7 +44,7 @@ var ad=localStorage.getItem(${JSON.stringify(AUTO_DARK_OFF_KEY)})==='1';
 var dk=sys!==null?sys:ad?localStorage.getItem(${JSON.stringify(THEME_PICK_KEY)})==='dark':(h<6||h>=18);
 if(ss===${JSON.stringify(SPECIAL_SWAPS_THEME)})dk=!dk;
 d.classList.toggle('dark',pt?pt==='dark':dk);
-if(ps){d.setAttribute('data-persona',ps);var f=document.createElement('link');f.rel='stylesheet';f.href=${JSON.stringify(PERSONA_FONTS_URL)};document.head.appendChild(f);}else d.removeAttribute('data-persona');
+if(ps){d.setAttribute('data-persona',ps);var pc=document.createElement('link');pc.rel='stylesheet';pc.href=${JSON.stringify(PERSONA_CSS_URL)};pc.setAttribute('blocking','render');document.head.appendChild(pc);var f=document.createElement('link');f.rel='stylesheet';f.href=${JSON.stringify(PERSONA_FONTS_URL)};document.head.appendChild(f);}else d.removeAttribute('data-persona');
 if(ss){d.setAttribute('data-special',ss);var sf=document.createElement('link');sf.rel='stylesheet';sf.href=${JSON.stringify(SPECIAL_FONTS_URL)};document.head.appendChild(sf);}else d.removeAttribute('data-special');
 var p=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
 var r=localStorage.getItem('rank');

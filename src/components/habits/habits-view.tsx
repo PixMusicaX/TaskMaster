@@ -1,0 +1,672 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import GlassCard from "@/components/glass-card";
+import { Plus, Trash2, Check, X, Edit2, Archive, RotateCcw, Search, HeartPulse, Flame } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { format, isSameDay } from "date-fns";
+import { getHabits, addHabit, updateHabit, archiveHabit, restoreHabit, deleteHabitPermanently, toggleHabitLog, getArchivedHabits, getHabitLogs } from "@/app/actions/habits";
+import { getProfile } from "@/app/actions/gamification";
+import { cn } from "@/lib/utils";
+import { PageSkeleton } from "@/components/loader";
+import CompletionCheck from "@/components/ui/completion-check";
+import AnimatedNumber from "@/components/progress/animated-number";
+import { currentStreak } from "@/lib/progress";
+import TabularViewModal from "@/components/TabularViewModal";
+import type { HabitLog, HabitWithLogs, Profile } from "@/lib/types";
+import HabitIconRender, { LUCIDE_ICONS } from "@/components/HabitIconRender";
+
+
+
+// What the page's server half (app/(app)/habits/page.tsx) loads before the browser asks
+export type HabitsInitial = {
+  todayStr: string;
+  habits: Awaited<ReturnType<typeof getHabits>>;
+  archived: Awaited<ReturnType<typeof getArchivedHabits>>;
+  profile: Awaited<ReturnType<typeof getProfile>>;
+  logs: Awaited<ReturnType<typeof getHabitLogs>>;
+};
+
+// `initial` is the server's head start; for another day than the browser's, the page loads its own
+export default function HabitsView({ initial }: { initial: Promise<HabitsInitial | null> | null }) {
+  const [habits, setHabits] = useState<HabitWithLogs[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [archivedHabits, setArchivedHabits] = useState<HabitWithLogs[]>([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<HabitWithLogs | null>(null);
+  const [showArchive, setShowArchive] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isTabularOpen, setIsTabularOpen] = useState(false);
+  const [allLogs, setAllLogs] = useState<HabitLog[]>([]);
+
+  const [newName, setNewName] = useState("");
+  const [newIcon, setNewIcon] = useState("Sparkles");
+  const [newStat, setNewStat] = useState("intelligence");
+  const [newFrequency, setNewFrequency] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+
+  const today = new Date();
+  const [visibleCount, setVisibleCount] = useState(7);
+  const [nameWidth, setNameWidth] = useState("240px");
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640) {
+        setVisibleCount(4);
+        setNameWidth("150px");
+      } else if (window.innerWidth < 1024) {
+        setVisibleCount(5);
+        setNameWidth("180px");
+      } else {
+        setVisibleCount(7);
+        setNameWidth("240px");
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const weekDays = Array.from({ length: visibleCount }, (_, i) => subDays(today, (visibleCount - 1) - i));
+
+  const DAYS = [
+    { label: "M", value: 1 },
+    { label: "T", value: 2 },
+    { label: "W", value: 3 },
+    { label: "T", value: 4 },
+    { label: "F", value: 5 },
+    { label: "S", value: 6 },
+    { label: "S", value: 0 },
+  ];
+
+  useEffect(() => {
+    let live = true;
+    (initial ?? Promise.resolve(null)).catch(() => null).then(data => {
+      if (!live) return;
+      if (data && data.todayStr === format(new Date(), "yyyy-MM-dd")) {
+        applyHabits(data);
+        setIsLoading(false);
+      } else {
+        fetchHabits();
+      }
+    });
+    return () => { live = false; };
+    // Once, with the data the page arrived with; later changes go through fetchHabits
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
+
+  function applyHabits(data: Omit<HabitsInitial, "todayStr">) {
+    setHabits(data.habits);
+    setArchivedHabits(data.archived);
+    setProfile(data.profile);
+    setAllLogs(data.logs);
+    window.dispatchEvent(new CustomEvent("profile-updated"));
+  }
+
+  async function fetchHabits() {
+    try {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const [habits, archived, profile, logs] = await Promise.all([
+        getHabits(),
+        getArchivedHabits(),
+        getProfile(todayStr),
+        getHabitLogs()
+      ]);
+      applyHabits({ habits, archived, profile, logs });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleAddHabit() {
+    if (!newName) return;
+    await addHabit(newName, newIcon, undefined, newFrequency, newStat);
+    resetForm();
+    fetchHabits();
+  }
+
+  async function handleUpdateHabit() {
+    if (!newName || !editingHabit) return;
+    await updateHabit(editingHabit.id, {
+      name: newName,
+      icon: newIcon,
+      frequency: newFrequency,
+      stat: newStat
+    });
+    resetForm();
+    fetchHabits();
+  }
+
+  function resetForm() {
+    setNewName("");
+    setNewIcon("Sparkles");
+    setNewStat("intelligence");
+    setNewFrequency([0, 1, 2, 3, 4, 5, 6]);
+    setShowAdd(false);
+    setEditingHabit(null);
+  }
+
+  function openEdit(habit: HabitWithLogs) {
+    setEditingHabit(habit);
+    setNewName(habit.name);
+    setNewIcon(habit.icon ?? "Sparkles");
+    setNewStat(habit.stat || "intelligence");
+    setNewFrequency(habit.frequency || [0, 1, 2, 3, 4, 5, 6]);
+    setShowAdd(true);
+  }
+
+  async function handleArchive(id: string) {
+    await archiveHabit(id);
+    fetchHabits();
+  }
+
+  async function handleRestore(id: string) {
+    await restoreHabit(id);
+    fetchHabits();
+  }
+
+  async function handleDeletePermanent(id: string) {
+    if (confirm("Permanently delete this habit and all its logs?")) {
+      await deleteHabitPermanently(id);
+      fetchHabits();
+    }
+  }
+
+  const [pendingToggles, setPendingToggles] = useState<string[]>([]);
+
+  async function handleToggle(habitId: string, date: Date, currentStatus: boolean, habitFrequency: number[]) {
+    if (!habitFrequency.includes(date.getDay())) return;
+    const dateStr = format(date, "yyyy-MM-dd");
+    const toggleKey = `${habitId}-${dateStr}`;
+
+    // 1. Optimistic Update
+    const newStatus = !currentStatus;
+    setHabits(prevHabits => prevHabits.map(h => {
+      if (h.id === habitId) {
+        const newLogs = h.logs ? [...h.logs] : [];
+        const existingLogIdx = newLogs.findIndex((l) => l.date === dateStr);
+        if (existingLogIdx >= 0) {
+          newLogs[existingLogIdx] = { ...newLogs[existingLogIdx], completed: newStatus };
+        } else {
+          newLogs.push({ id: `optimistic-${toggleKey}`, userId: h.userId, habitId, habitName: h.name, habitIcon: h.icon, date: dateStr, completed: newStatus });
+        }
+        return { ...h, logs: newLogs };
+      }
+      return h;
+    }));
+
+    setPendingToggles(prev => [...prev, toggleKey]);
+
+    try {
+      // 2. Background Sync
+      await toggleHabitLog(habitId, dateStr, newStatus);
+
+      // 3. Refresh profile stats in parallel with habits
+      const [data, prof] = await Promise.all([getHabits(), getProfile(format(new Date(), "yyyy-MM-dd"))]);
+      setHabits(data);
+      setProfile(prof);
+      window.dispatchEvent(new CustomEvent("profile-updated"));
+    } catch (e) {
+      // 4. Rollback on error
+      console.error("Failed to toggle habit:", e);
+      fetchHabits();
+    } finally {
+      setPendingToggles(prev => prev.filter(k => k !== toggleKey));
+    }
+  }
+
+  function getFrequencyLabel(freq: number[] | null) {
+    if (!freq || freq.length === 0) return "Daily";
+    if (freq.length === 7) return "Daily";
+    if (freq.length === 6 && !freq.includes(0)) return "Weekdays + Sat";
+    if (freq.length === 5 && !freq.includes(0) && !freq.includes(6)) return "Weekdays";
+    if (freq.length === 2 && freq.includes(0) && freq.includes(6)) return "Weekends";
+    const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return freq.map(f => labels[f]).join(", ");
+  }
+
+  return (
+    <div className="p-4 pt-12 md:p-12 md:pt-16 max-w-7xl mx-auto space-y-8">
+      {isLoading ? (
+        <PageSkeleton />
+      ) : (
+        <>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <h1 className="text-4xl font-display font-bold text-tm-purple-dark dark:text-tm-yellow">Habit Tracker</h1>
+              <p className="text-tm-blue-gray font-medium">Consistency is the key to mastery.</p>
+
+              {profile && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <div className="flex items-center gap-2 bg-tm-orange-light/10 px-3 py-1.5 rounded-xl border border-tm-orange-light/20">
+                    <HeartPulse size={14} className="text-tm-orange-light" />
+                    <span className="text-caption font-mono font-semibold uppercase tracking-[0.12em] whitespace-nowrap text-tm-orange-light">Vitality: {profile.vitality} XP</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 relative z-10">
+              <button
+                onClick={() => setShowArchive(!showArchive)}
+                className={cn(
+                  "flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-black transition-all backdrop-blur-xl border shadow-2xl w-full sm:w-auto",
+                  showArchive
+                    ? "bg-tm-purple-dark text-tm-on-ink border-tm-purple-dark"
+                    : "bg-white/20 dark:bg-white/5 border-white/20 text-tm-purple-dark dark:text-tm-yellow saturate-150"
+                )}
+              >
+                <Archive size={20} /> {showArchive ? "Hide Archive" : "View Archive"}
+              </button>
+              <button
+                onClick={() => setShowAdd(true)}
+                className="flex items-center gap-2 bg-tm-yellow backdrop-blur-xl text-tm-on-accent px-6 py-3 rounded-2xl font-black hover:scale-105 transition-transform shadow-xl w-full sm:w-auto"
+              >
+                <Plus size={20} /> Add Habit
+              </button>
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {showAdd && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[200] w-full h-full flex items-center justify-center p-6 bg-black/40 backdrop-blur-md"
+                onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}
+              >
+                <GlassCard className="w-full max-w-md space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold">{editingHabit ? "Edit Habit" : "New Habit"}</h2>
+                    <button onClick={resetForm}><X /></button>
+                  </div>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] pl-1">Name</p>
+                      <input
+                        autoFocus
+                        placeholder="E.g. Morning Yoga"
+                        className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-tm-yellow font-bold"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] pl-1">Icon</p>
+                      <div className="flex flex-col gap-3 p-1 bg-white/5 rounded-2xl border border-white/10">
+                        <div className="flex items-center justify-center p-4 bg-white/5 rounded-xl border border-white/5">
+                          <HabitIconRender icon={newIcon} size={40} className="text-tm-yellow" />
+                        </div>
+                        <div className="flex flex-wrap items-center justify-center gap-1 p-2 bg-white/5 rounded-xl border border-white/5">
+                          {Object.keys(LUCIDE_ICONS).map(iconName => (
+                            <button
+                              key={iconName}
+                              onClick={() => setNewIcon(iconName)}
+                              className={cn(
+                                "p-2 rounded-lg transition-all",
+                                newIcon === iconName ? "bg-tm-yellow/20 text-tm-yellow" : "hover:bg-white/10 text-tm-blue-gray"
+                              )}
+                              title={iconName}
+                            >
+                              <HabitIconRender icon={iconName} size={20} />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em] pl-1">Repeat on</p>
+                      <div className="flex justify-between gap-1">
+                        {DAYS.map((day) => {
+                          const isSelected = newFrequency.includes(day.value);
+                          return (
+                            <button
+                              key={day.value}
+                              onClick={() => {
+                                setNewFrequency(prev =>
+                                  prev.includes(day.value)
+                                    ? prev.filter(v => v !== day.value)
+                                    : [...prev, day.value]
+                                );
+                              }}
+                              className={cn(
+                                "w-10 h-10 rounded-xl border font-bold text-xs transition-all",
+                                isSelected ? "bg-tm-yellow text-tm-on-accent border-tm-yellow shadow-md" : "bg-white/5 border-white/10 text-tm-blue-gray"
+                              )}
+                            >
+                              {day.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={editingHabit ? handleUpdateHabit : handleAddHabit}
+                      className="w-full bg-tm-yellow text-tm-on-accent font-black py-4 rounded-2xl shadow-xl hover:bg-tm-yellow/80 transition-colors"
+                    >
+                      {editingHabit ? "UPDATE HABIT" : "CREATE HABIT"}
+                    </button>
+                  </div>
+                </GlassCard>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showArchive && archivedHabits.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center gap-3 pl-2">
+                  <Archive size={24} className="text-tm-purple-dark dark:text-tm-yellow" />
+                  <h2 className="text-2xl font-display font-bold">Habit Archive</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {archivedHabits.map((habit) => (
+                    <GlassCard key={habit.id} className="p-4 border-l-4 border-l-tm-blue-gray/30 opacity-70 hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <HabitIconRender icon={habit.icon} size={24} className="text-tm-blue-gray" />
+                          <div>
+                            <h3 className="font-bold text-sm truncate max-w-[150px]">{habit.name}</h3>
+                            <p className="text-caption text-tm-blue-gray font-mono font-semibold uppercase tracking-[0.12em]">{getFrequencyLabel(habit.frequency)}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleRestore(habit.id)}
+                            className="p-2 text-tm-yellow hover:bg-tm-yellow/10 rounded-lg transition-all"
+                            title="Restore"
+                          >
+                            <RotateCcw size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeletePermanent(habit.id)}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                            title="Delete Permanently"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </GlassCard>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <GlassCard className="overflow-x-auto thin-scrollbar px-4 py-6 sm:p-6">
+            <div className="min-w-full">
+              <div
+                className="grid mb-8"
+                style={{ gridTemplateColumns: `${nameWidth} repeat(${visibleCount}, 1fr)` }}
+              >
+                <div className="font-mono font-semibold text-tm-blue-gray text-caption sm:text-xs uppercase tracking-[0.12em] pl-1 sm:pl-4">Habit</div>
+                {weekDays.map((day) => (
+                  <div key={day.toISOString()} className="text-center space-y-1">
+                    <p className="text-caption font-mono font-semibold uppercase tracking-[0.12em] text-tm-blue-gray">
+                      {format(day, "EEE")}
+                    </p>
+                    <div className={cn(
+                      "w-9 h-9 mx-auto rounded-full flex items-center justify-center font-bold text-sm transition-all",
+                      isSameDay(day, today) ? "bg-tm-orange-dark text-white shadow-lg shadow-tm-orange-dark/20" : "text-tm-blue-gray bg-tm-blue-gray/5"
+                    )}>
+                      {format(day, "d")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-6">
+                <AnimatePresence initial={false}>
+                {habits.map((habit) => {
+                  const streak = currentStreak(habit, today);
+                  return (
+                  <motion.div
+                    key={habit.id}
+                    layout
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -40, transition: { duration: 0.25 } }}
+                    className="grid items-center group"
+                    style={{ gridTemplateColumns: `${nameWidth} repeat(${visibleCount}, 1fr)` }}
+                  >
+                    <div className="flex items-center gap-2 sm:gap-4 pl-1 sm:pl-4 relative">
+                      <div className="w-10 h-10 bg-tm-yellow/10 rounded-xl hidden sm:flex items-center justify-center">
+                        <HabitIconRender icon={habit.icon} size={20} className="text-tm-yellow" />
+                      </div>
+                      <div className="flex-1 overflow-hidden sm:pr-12">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <p className="font-bold text-xs sm:text-sm truncate leading-tight">{habit.name}</p>
+                          <AnimatePresence>
+                            {streak >= 2 && (
+                              <motion.span
+                                initial={{ opacity: 0, scale: 0.4 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.4 }}
+                                className="flex items-center gap-0.5 shrink-0 text-tm-orange-dark"
+                                title={`${streak} in a row`}
+                              >
+                                <Flame size={12} className="tm-flame fill-current" />
+                                <AnimatedNumber value={streak} className="text-tiny font-mono font-semibold" />
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                        <p className="text-micro sm:text-caption text-tm-blue-gray uppercase font-mono font-semibold tracking-[0.12em] truncate mt-0.5">
+                          {getFrequencyLabel(habit.frequency)}
+                        </p>
+                        {/* Mobile Actions */}
+                        <div className="flex sm:hidden gap-1.5 mt-1.5">
+                          <button onClick={() => openEdit(habit)} className="flex items-center gap-1 px-2 py-1 text-tm-blue-gray hover:text-tm-yellow bg-tm-blue-gray/10 rounded-md transition-colors text-micro font-mono font-semibold uppercase tracking-[0.12em]">
+                            <Edit2 size={10} /> Edit
+                          </button>
+                          <button onClick={() => handleArchive(habit.id)} className="flex items-center gap-1 px-2 py-1 text-tm-blue-gray hover:text-tm-orange-dark bg-tm-blue-gray/10 rounded-md transition-colors text-micro font-mono font-semibold uppercase tracking-[0.12em]">
+                            <Archive size={10} /> Hide
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Desktop Actions */}
+                      <div className="hidden sm:flex absolute right-0 opacity-100 lg:opacity-0 group-hover:opacity-100 gap-0.5 transition-all">
+                        <button
+                          onClick={() => openEdit(habit)}
+                          className="p-2 text-tm-blue-gray hover:text-tm-yellow transition-all hover:bg-tm-yellow/5 rounded-lg"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleArchive(habit.id)}
+                          className="p-2 text-tm-blue-gray hover:text-tm-orange-dark transition-all hover:bg-tm-orange-dark/5 rounded-lg"
+                        >
+                          <Archive size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    {weekDays.map((day) => {
+                      const dateStr = format(day, "yyyy-MM-dd");
+                      const isDone = habit.logs?.some((l) => l.date === dateStr && l.completed);
+                      const isActive = !habit.frequency || habit.frequency.includes(day.getDay());
+                      const toggleKey = `${habit.id}-${dateStr}`;
+                      const isPending = pendingToggles.includes(toggleKey);
+
+                      return (
+                        <div key={day.toISOString()} className="flex justify-center">
+                          <motion.button
+                            onClick={() => handleToggle(habit.id, day, isDone, habit.frequency || [0, 1, 2, 3, 4, 5, 6])}
+                            disabled={!isActive || isPending}
+                            whileTap={isActive ? { scale: 0.88 } : undefined}
+                            className={cn(
+                              "relative w-10 h-10 rounded-2xl group/check",
+                              !isActive && "opacity-20 cursor-not-allowed",
+                              isPending && "pointer-events-none"
+                            )}
+                            aria-label={`${habit.name}, ${format(day, "EEEE MMM d")}: ${isDone ? "done" : "not done"}`}
+                            aria-pressed={isDone}
+                          >
+                            <CompletionCheck
+                              done={isActive && isDone}
+                              className={cn(
+                                "w-10 h-10 rounded-2xl border-2 transition-colors duration-300",
+                                !isActive ? "border-transparent bg-tm-blue-gray/5" : (
+                                  isDone
+                                    ? "bg-tm-yellow border-tm-yellow shadow-lg shadow-tm-yellow/20"
+                                    : "border-tm-blue-gray/10 group-hover/check:border-tm-yellow/40 bg-white/5"
+                                )
+                              )}
+                              checkSize={20}
+                              checkClassName="text-tm-on-accent"
+                              idle={isActive ? <Check size={20} className="text-tm-yellow opacity-0 group-hover/check:opacity-40 transition-opacity" /> : null}
+                            />
+                          </motion.button>
+                        </div>
+                      );
+                    })}
+                  </motion.div>
+                  );
+                })}
+                </AnimatePresence>
+                {habits.length === 0 && (
+                  <div className="py-12 text-center text-tm-blue-gray italic opacity-50">
+                    No active habits. Click &ldquo;Add Habit&rdquo; to start!
+                  </div>
+                )}
+              </div>
+            </div>
+          </GlassCard>
+
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-tm-purple-dark dark:text-tm-yellow flex items-center gap-3">
+              Consistency Map <span className="text-xs font-medium bg-tm-yellow/10 px-2 py-1 rounded-lg text-tm-yellow">Last 4 Weeks</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {habits.map((habit) => {
+                const freq = habit.frequency || [0, 1, 2, 3, 4, 5, 6];
+                const last28Days = Array.from({ length: 28 }, (_, i) => subDays(today, i));
+                const dateStrings = last28Days.map(d => format(d, "yyyy-MM-dd"));
+                const scheduledDays = last28Days.filter(day => freq.includes(day.getDay()));
+                const completedInLast28 = habit.logs?.filter((l) =>
+                  l.completed && dateStrings.includes(l.date)
+                ).length || 0;
+
+                const percentage = scheduledDays.length > 0
+                  ? Math.round((completedInLast28 / scheduledDays.length) * 100)
+                  : 0;
+
+                return (
+                  <GlassCard key={habit.id} className="p-4 border-l-4 border-l-tm-yellow">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <HabitIconRender icon={habit.icon} size={20} className="text-tm-yellow" />
+                        <h3 className="font-bold text-sm truncate max-w-[150px]">{habit.name}</h3>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-caption font-black text-tm-yellow">
+                          <AnimatedNumber value={percentage} />%
+                        </span>
+                        <span className="text-micro text-tm-blue-gray font-mono font-semibold uppercase tracking-[0.12em]">Consistency</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1.5">
+                      {last28Days.map((day, i) => {
+                        const dateStr = format(day, "yyyy-MM-dd");
+                        const isDone = habit.logs?.some((l) => l.date === dateStr && l.completed);
+                        const isScheduled = freq.includes(day.getDay());
+                        return (
+                          <div
+                            key={i}
+                            style={{ animationDelay: `${(27 - i) * 14}ms` }}
+                            className={cn(
+                              "tm-pop-in aspect-square rounded-md border transition-transform hover:scale-125",
+                              isDone
+                                ? "bg-tm-yellow border-tm-yellow/30 shadow-[0_0_8px_rgba(242,194,48,0.2)]"
+                                : isScheduled
+                                  ? "bg-tm-blue-gray/10 border-tm-blue-gray/5"
+                                  : "bg-tm-blue-gray/[0.03] border-transparent opacity-40"
+                            )}
+                            title={isScheduled ? `${format(day, "MMM d")}: ${isDone ? "Completed" : "Missing"}` : `${format(day, "MMM d")}: Not Scheduled`}
+                          />
+                        );
+                      }).reverse()}
+                    </div>
+                  </GlassCard>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex justify-center pt-8 border-t border-white/5">
+            <button
+              onClick={() => setIsTabularOpen(true)}
+              className="flex items-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-tm-blue-gray hover:text-tm-yellow font-mono font-semibold uppercase tracking-[0.12em] text-xs transition-all group"
+            >
+              <Search size={16} className="group-hover:scale-110 transition-transform" />
+              View All Habits in Tabular Format
+            </button>
+          </div>
+
+          <TabularViewModal
+            title="Habit Logs"
+            isOpen={isTabularOpen}
+            onClose={() => setIsTabularOpen(false)}
+            data={(() => {
+              const completedLogs = allLogs.filter(l => l.completed);
+              const grouped = completedLogs.reduce((acc, l) => {
+                if (!acc[l.date]) acc[l.date] = [];
+                const h = [...habits, ...archivedHabits].find(habit => habit.id === l.habitId);
+                acc[l.date].push({
+                  name: l.habitName || h?.name || "Deleted Habit",
+                  icon: l.habitIcon || h?.icon || "Sparkles"
+                });
+                return acc;
+              }, {} as Record<string, { name: string; icon: string }[]>);
+
+              return Object.entries(grouped)
+                .sort((a, b) => b[0].localeCompare(a[0]))
+                .map(([date, habits]) => ({ date, habits }));
+            })()}
+            columns={[
+              { header: "Date", key: "date", render: (val) => {
+                const parsed = new Date(val + "T00:00:00");
+                const year = parsed.getFullYear().toString();
+                const shortDate = parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                return (
+                  <span className="font-mono text-tm-blue-gray whitespace-nowrap">
+                    <span className="sm:hidden flex flex-col leading-tight">
+                      <span className="text-caption opacity-50">{year}</span>
+                      <span>{shortDate}</span>
+                    </span>
+                    <span className="hidden sm:inline">{val}</span>
+                  </span>
+                );
+              }},
+              {
+                header: "Habits Completed", key: "habits", wrap: true, render: (habits: { name: string; icon: string }[]) => (
+                  <div className="flex flex-wrap gap-2 md:gap-3">
+                    {habits.map((h, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 shadow-sm">
+                        <HabitIconRender icon={h.icon} size={20} className="text-tm-yellow" />
+                        <span className="font-bold text-white/90 text-xs md:text-sm">{h.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+            ]}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function subDays(date: Date, days: number) {
+  const result = new Date(date);
+  result.setDate(result.getDate() - days);
+  return result;
+}

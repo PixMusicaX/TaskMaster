@@ -4,7 +4,7 @@ import * as React from "react";
 import { MotionConfig } from "framer-motion";
 import { ERAS, eraById, type Era, type EraId } from "@/lib/eras";
 import { AUTO_DARK_EVENT, isAutoDarkOff, pickedTheme, rememberTheme } from "@/lib/auto-dark";
-import { DEV_PERSONA_EVENT, PERSONA_SETTING_EVENT, PERSONA_FONTS_URL, PERSONA_FORCED_THEME, personaForToday, type PersonaStyle } from "@/lib/persona";
+import { DEV_PERSONA_EVENT, PERSONA_SETTING_EVENT, PERSONA_FORCED_THEME, loadPersonaStyles, personaForToday, type PersonaStyle } from "@/lib/persona";
 import { DEV_SPECIAL_EVENT, SPECIAL_FONTS_URL, SPECIAL_FORCED_THEME, SPECIAL_SETTING_EVENT, SPECIAL_SWAPS_THEME, specialForToday, type SpecialId } from "@/lib/special-days";
 
 export type Rank = "Novice" | "Squire" | "Vanguard" | "Veteran" | "Knight" | "Champion" | "Sentinel" | "Paladin" | "Grandmaster" | "Hero";
@@ -68,12 +68,7 @@ function syncPersona(): boolean {
   if (readPersona() === next) return false;
   if (next) {
     root.setAttribute("data-persona", next);
-    if (!document.querySelector(`link[href="${PERSONA_FONTS_URL}"]`)) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = PERSONA_FONTS_URL;
-      document.head.appendChild(link);
-    }
+    loadPersonaStyles();
   } else {
     root.removeAttribute("data-persona");
   }

@@ -8,6 +8,7 @@ import { startOfMonth, endOfMonth, endOfDay, format, subMonths, addDays, min, ge
 import { and, or, gt, gte, lt, lte, eq, inArray, min as minOf, sql } from "drizzle-orm";
 import { MAX_ERA, liveEraIndex, seasonEras } from "@/lib/eras";
 import { earnedDays } from "@/lib/multi-day";
+import { seatStats } from "@/lib/raid";
 
 export async function statsForPeriod(userId: string, startDate: Date, endDate: Date, referenceDate: Date = new Date()) {
   try {
@@ -124,10 +125,11 @@ export async function statsForPeriod(userId: string, startDate: Date, endDate: D
     // Add Preparation Tip XP
     preparationTips.forEach((pt) => award(pt.stat, pt.xpReward));
 
-    // Add Relief Recommendation XP (3 separate tasks)
+    // Add Relief Recommendation XP (3 separate tasks). A Monday raid's seats each feed their own stat.
     reliefRecommendations.forEach((rr) => {
-      [rr.completed, rr.alt1Completed, rr.alt2Completed].forEach(done => {
-        if (done) award(rr.stat, rr.xpReward);
+      const stats = seatStats(rr);
+      [rr.completed, rr.alt1Completed, rr.alt2Completed].forEach((done, i) => {
+        if (done) award(stats[i], rr.xpReward);
       });
     });
 

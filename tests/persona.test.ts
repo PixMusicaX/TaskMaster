@@ -2,6 +2,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   DEV_PERSONA_KEY,
+  PERSONA_CSS_URL,
+  PERSONA_FONTS_URL,
   PERSONA_ON_KEY,
   nextPersonaDay,
   daysToFullMoon,
@@ -93,13 +95,16 @@ describe("persona in the init script", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it("sets the day's style, pins its theme and loads its fonts", () => {
+  it("sets the day's style, pins its theme and loads its styles and fonts", () => {
     vi.setSystemTime(new Date(2026, 9, personaDay[0], 21)); // 9pm would normally be dark
     localStorage.setItem(PERSONA_ON_KEY, "1");
     run();
     expect(root().getAttribute("data-persona")).toBe("p4");
     expect(root().classList.contains("dark")).toBe(false);
-    expect(document.head.querySelector("link[rel=stylesheet]")).not.toBeNull();
+    // The takeover's stylesheet holds up first paint where the browser allows, so the normal look never flashes
+    const styles = document.head.querySelector(`link[href="${PERSONA_CSS_URL}"]`);
+    expect(styles?.getAttribute("blocking")).toBe("render");
+    expect(document.head.querySelector(`link[href="${PERSONA_FONTS_URL}"]`)).not.toBeNull();
   });
 
   it("stays off until the player turns Persona days on", () => {

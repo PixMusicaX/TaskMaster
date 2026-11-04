@@ -1,7 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Anthropic from "@anthropic-ai/sdk";
 import { getAiConfig } from "./ai-config";
-import { AI_PROVIDER_INFO } from "./ai-providers";
+import { AI_PROVIDER_INFO, type AiProvider } from "./ai-providers";
+import { aiRequestKey, guardAiRequest } from "./ai-guard";
+
+// The one way the app talks to an AI: whichever provider the player picked, behind the same call,
+// through lib/ai-guard.ts (shared in-flight requests, optional caching, a daily budget and a
+// deadline). Every failure that means "no AI right now" is an AiUnavailableError (lib/ai-errors.ts).
 
 const GEMINI_MODELS = [
   "gemini-2.0-flash",
@@ -21,11 +26,22 @@ type GenerateOptions = {
   // A Gemini model to try first (ignored by the other providers)
   model?: string,
   // Higher values make the picks less predictable (the Tavern uses this for variety)
-  temperature?: number
+  temperature?: number,
+  // Give up (AiTimeoutError) after this long, retries included; see AI_DEFAULT_DEADLINE_MS
+  deadlineMs?: number,
+  // Hand the same answer to the same request for this long (see lib/ai-guard.ts)
+  cacheMs?: number,
 };
 
-async function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+type ProviderOptions = Omit<GenerateOptions, "userId" | "deadlineMs" | "cacheMs">;
+type Config = { provider: AiProvider; model: string | null; apiKey: string };
+
+async function delay(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason);
+    const timer = setTimeout(resolve, ms);
+    signal.addEventListener("abort", () => { clearTimeout(timer); reject(signal.reason); }, { once: true });
+  });
 }
 
 // Models asked for JSON still wrap it in a code fence now and then
@@ -36,13 +52,20 @@ function stripFence(text: string) {
 const JSON_ONLY = "Respond with a single JSON object only: no prose, no markdown code fences.";
 
 export async function safeGenerateContent(prompt: string, options: GenerateOptions) {
-  const { provider, model, apiKey } = await getAiConfig(options.userId);
-  if (provider === "claude") return generateWithClaude(prompt, options, apiKey, model);
-  if (provider === "groq") return generateWithGroq(prompt, options, apiKey, model);
-  return generateWithGemini(prompt, options, apiKey, model);
+  const { userId, deadlineMs, cacheMs, ...rest } = options;
+  // A player with no key never reaches the budget
+  const config = await getAiConfig(userId);
+  const key = aiRequestKey(userId, config.provider, config.model, prompt, rest);
+  return guardAiRequest({ userId, key, deadlineMs, cacheMs }, signal => generate(config, prompt, rest, signal));
 }
 
-async function generateWithGemini(prompt: string, options: GenerateOptions, apiKey: string, chosenModel: string | null) {
+function generate(config: Config, prompt: string, options: ProviderOptions, signal: AbortSignal) {
+  if (config.provider === "claude") return generateWithClaude(prompt, options, config.apiKey, config.model, signal);
+  if (config.provider === "groq") return generateWithGroq(prompt, options, config.apiKey, config.model, signal);
+  return generateWithGemini(prompt, options, config.apiKey, config.model, signal);
+}
+
+async function generateWithGemini(prompt: string, options: ProviderOptions, apiKey: string, chosenModel: string | null, signal: AbortSignal) {
   const genAI = new GoogleGenerativeAI(apiKey);
 
   // Try the player's model (or the caller's suggestion) first, then fall back to our list
@@ -56,6 +79,7 @@ async function generateWithGemini(prompt: string, options: GenerateOptions, apiK
     let waitTime = 1000;
 
     while (retries > 0) {
+      if (signal.aborted) throw signal.reason;
       try {
         const model = genAI.getGenerativeModel({
           model: modelName,
@@ -65,12 +89,13 @@ async function generateWithGemini(prompt: string, options: GenerateOptions, apiK
           systemInstruction: options.systemInstruction
         });
 
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent(prompt, { signal });
         const text = result.response.text();
         if (text) return text;
 
         throw new Error("Empty response from AI");
       } catch (error: unknown) {
+        if (signal.aborted) throw signal.reason;
         lastError = error;
 
         // Check for 503 (Service Unavailable) or 429 (Rate Limit)
@@ -79,7 +104,7 @@ async function generateWithGemini(prompt: string, options: GenerateOptions, apiK
 
         if (isTransient && retries > 1) {
           console.log(`AI Model ${modelName} busy/limited. Retrying in ${waitTime}ms... (${retries-1} left)`);
-          await delay(waitTime);
+          await delay(waitTime, signal);
           waitTime *= 2;
           retries--;
           continue;
@@ -95,7 +120,7 @@ async function generateWithGemini(prompt: string, options: GenerateOptions, apiK
   throw lastError || new Error("All AI models failed");
 }
 
-async function generateWithClaude(prompt: string, options: GenerateOptions, apiKey: string, chosenModel: string | null) {
+async function generateWithClaude(prompt: string, options: ProviderOptions, apiKey: string, chosenModel: string | null, signal: AbortSignal) {
   // The SDK retries rate limits and server errors itself
   const client = new Anthropic({ apiKey });
   const model = chosenModel || AI_PROVIDER_INFO.claude.defaultModel;
@@ -113,13 +138,14 @@ async function generateWithClaude(prompt: string, options: GenerateOptions, apiK
       messages: [{ role: "user", content: prompt }],
       // If the model declines, the API re-runs the request on its default fallback model
       ...(withFallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
-    });
+    }, { signal });
 
     if (response.stop_reason === "refusal") throw new Error("Claude declined this request");
     const text = response.content.flatMap(block => (block.type === "text" ? [block.text] : [])).join("").trim();
     if (!text) throw new Error("Empty response from AI");
     return wantsJson ? stripFence(text) : text;
   } catch (error) {
+    if (signal.aborted) throw signal.reason;
     if (error instanceof Anthropic.AuthenticationError) throw new Error("Claude rejected the API key");
     if (error instanceof Anthropic.NotFoundError) throw new Error(`Claude model "${model}" was not found`);
     if (error instanceof Anthropic.RateLimitError) throw new Error("Claude rate limit reached");
@@ -129,7 +155,7 @@ async function generateWithClaude(prompt: string, options: GenerateOptions, apiK
 }
 
 // Groq speaks the OpenAI chat-completions format
-async function generateWithGroq(prompt: string, options: GenerateOptions, apiKey: string, chosenModel: string | null) {
+async function generateWithGroq(prompt: string, options: ProviderOptions, apiKey: string, chosenModel: string | null, signal: AbortSignal) {
   const model = chosenModel || AI_PROVIDER_INFO.groq.defaultModel;
   const wantsJson = options.responseMimeType === "application/json";
   const system = [options.systemInstruction, wantsJson ? JSON_ONLY : null].filter(Boolean).join("\n\n");
@@ -138,6 +164,7 @@ async function generateWithGroq(prompt: string, options: GenerateOptions, apiKey
   for (let attempt = 0, waitTime = 1000; attempt < 3; attempt++, waitTime *= 2) {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
+      signal,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
@@ -156,7 +183,7 @@ async function generateWithGroq(prompt: string, options: GenerateOptions, apiKey
 
     lastError = new Error(`Groq API error ${response.status}: ${(await response.text()).slice(0, 200)}`);
     if (response.status !== 429 && response.status < 500) break;
-    await delay(waitTime);
+    await delay(waitTime, signal);
   }
 
   throw lastError || new Error("Groq request failed");

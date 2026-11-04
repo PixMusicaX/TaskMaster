@@ -24,9 +24,7 @@ import { RING, SEAT_EDGES, TavernDetails, TavernEmblem, TavernTitle, type Tavern
 import { METER_MAX_XP, meterScale, raceGoal } from "./season-pace-card";
 import ClockAura, { type AuraState } from "./saga-clock-aura";
 import { ClockDetails, ClockEmblem, ClockTitle, DIAL } from "./saga-clock-scene";
-import { P3DiscBack, P3Stage, addP3Script } from "./saga-p3";
-import { P4Stage, P4TvBack, P4TvFront, addP4Script } from "./saga-p4";
-import { P5AppCard, P5PhoneBack, P5PhoneFront, P5Stage, addP5Script } from "./saga-p5";
+import { usePersonaKit } from "./saga-persona-kit";
 
 const RANKS = RPG_TITLES.length;
 
@@ -295,12 +293,17 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   const aura = useRef<AuraState>({ presence: 0, density: AURA_REST, hole: DIAL });
   const levelRingTurns = useRef(false);
   const { rank: savedRank, era, persona } = useTheme();
+  // The Persona day's dressing, fetched only on that day (see saga-persona-kit.ts)
+  const kit = usePersonaKit(reduced ? null : persona);
   // Persona 3 days: the saga plays on the music player (see saga-p3.tsx)
-  const p3 = persona === "p3" && !reduced;
+  const P3 = kit?.style === "p3" ? kit : null;
   // Persona 4 days: it plays on the TV, and the scenes are channels (see saga-p4.tsx)
-  const p4 = persona === "p4" && !reduced;
+  const P4 = kit?.style === "p4" ? kit : null;
   // Persona 5 days: it plays on the smartphone, and the scenes are apps (see saga-p5.tsx)
-  const p5 = persona === "p5" && !reduced;
+  const P5 = kit?.style === "p5" ? kit : null;
+  const p3 = !!P3;
+  const p4 = !!P4;
+  const p5 = !!P5;
   const standing = useEraStanding();
   // Index into the scenes
   const [scene, setScene] = useState(0);
@@ -359,7 +362,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
 
   const times = sceneTimes(yearCount);
   const { length } = times;
-  const scenes = times.drawn;
+  // On a Monday the Tavern is the Weekly Raid, and its stop is named for it
+  const scenes = tavern.raid ? times.drawn.map(d => (d.id === "tavern" ? { ...d, label: "Raid" } : d)) : times.drawn;
   const onTavern = scenes[scene]?.id === "tavern";
   const onAskScene = scenes[scene]?.id === "ask";
   const onClock = scenes[scene]?.id === "clock";
@@ -584,11 +588,11 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       }
 
       // Persona 3 days: the music player's own moves, on the same script
-      if (p3) addP3Script(timeline, froms);
+      if (P3) P3.addP3Script(timeline, froms);
       // Persona 4 days: the TV's channel changes
-      if (p4) addP4Script(timeline, froms);
+      if (P4) P4.addP4Script(timeline, froms);
       // Persona 5 days: the smartphone's app switches
-      if (p5) addP5Script(timeline, froms);
+      if (P5) P5.addP5Script(timeline, froms);
 
       all("grid").forEach((grid, i) => {
         timeline.add(grid, { points: [STAT_GRID[i], MOOD_GRID[i]], duration: 30, ease: "inOut(3)" }, MOOD_AT);
@@ -654,7 +658,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
       timeline.seek(Math.min(length, Math.max(0, (-from / (el.offsetHeight - window.innerHeight / 2)) * length)));
     });
     return () => { scope.revert(); };
-  }, [progress, levelProgress, rank, xp, totalXP, statShape, moodShape, length, yearCount, markDays, era.id, meterFill, raceProgress, timeProgress, tickCount, p3, p4, p5]);
+  }, [progress, levelProgress, rank, xp, totalXP, statShape, moodShape, length, yearCount, markDays, era.id, meterFill, raceProgress, timeProgress, tickCount, P3, P4, P5]);
 
   // While the Clock is on stage its aura is the gas on screen, so the navbar's divider clears away
   useEffect(() => {
@@ -965,9 +969,9 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
             p5 && "[--z:0.75] [@media(max-height:720px)]:[--z:0.68]"
           )}
         >
-          {p3 && <P3Stage scene={scene} label={scenes[scene]?.label ?? ""} />}
-          {p4 && <P4Stage />}
-          {p5 && <P5Stage />}
+          {P3 && <P3.P3Stage scene={scene} label={scenes[scene]?.label ?? ""} />}
+          {P4 && <P4.P4Stage />}
+          {P5 && <P5.P5Stage />}
           {/* Each scene's title sits above the orbit and its details below; every scene shares the two cells */}
           <div className={cn("row-start-1 self-end grid grid-cols-1 text-center w-full motion-reduce:pb-6 relative z-10", p4 ? "pb-[calc(min(62vw,40svh,400px)*var(--z)*0.47)]" : p5 ? "pb-[calc(min(62vw,40svh,400px)*var(--z)*0.53)]" : "pb-12")}>
             <p data-saga="standing" aria-label={rank} className={cn(TITLE, "col-start-1 row-start-1 self-end text-4xl sm:text-5xl")}>
@@ -1008,7 +1012,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
             {yearCount > 0 && <ChronicleTitle todayStr={todayStr} />}
             <FutureTitle count={marks.length} />
             <ClockTitle />
-            <TavernTitle relief={tavern.relief} />
+            <TavernTitle relief={tavern.relief} raid={tavern.raid} />
             <MapTitle info={mapInfo} />
             <AskTitle />
           </div>
@@ -1022,13 +1026,13 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
           {/* On a Persona 5 day it is the screen of the smartphone: `rig` is the whole handset, which the
               script shakes, spins and tosses, and `device` is the app that is swiped away */}
           <div data-saga="rig" className={cn("row-start-2 relative", p4 && "-translate-x-[12.5%]")} style={p3 ? { perspective: 1100 } : undefined}>
-          {p4 && <P4TvBack scene={scene} count={scenes.length} />}
-          {p5 && <P5PhoneBack scene={scene} />}
+          {P4 && <P4.P4TvBack scene={scene} count={scenes.length} />}
+          {P5 && <P5.P5PhoneBack scene={scene} />}
           {/* The picture stays inside the screen, whatever the channel change does to it */}
           <div style={p4 ? { clipPath: "inset(-16% -21% round 9% / 10%)" } : p5 ? { clipPath: "inset(-32% -22% round 5% / 3.5%)" } : undefined}>
           <div data-saga="device" className={cn("relative", p3 && "[transform-style:preserve-3d]")}>
-          {p3 && <P3DiscBack />}
-          {p5 && <P5AppCard />}
+          {P3 && <P3.P3DiscBack />}
+          {P5 && <P5.P5AppCard />}
           {/* On Persona days the orbit is drawn smaller to leave room for the device round it. It is zoomed
               rather than resized, so everything in it (which is sized for the full orbit) shrinks with it */}
           <div data-saga="emblem" className={cn("relative max-w-[400px] aspect-square", "w-[min(62vw,40svh)]", p3 && "[zoom:0.8] sm:[zoom:1] [backface-visibility:hidden]", (p4 || p5) && "[zoom:var(--z)]")}>
@@ -1123,7 +1127,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
             <ClockEmblem />
             <FutureEmblem marks={marks} active={onFuture} />
             <ClockAura state={aura} dial={DIAL} />
-            <TavernEmblem relief={tavern.relief} loading={tavern.loading} failed={tavern.failed} onRegenerate={tavern.onRegenerate} onRetry={tavern.onRetry} active={onTavern} />
+            <TavernEmblem relief={tavern.relief} loading={tavern.loading} failed={tavern.failed} onRegenerate={tavern.onRegenerate} onRetry={tavern.onRetry} raid={tavern.raid} active={onTavern} />
             <AskEmblem onAsk={onAsk} active={onAskScene} />
             {!reduced && (
               <MapEmblem profile={profile} moodData={moodData} completionScore={completionScore} onInfo={setMapInfo} active={scenes[scene]?.id === "map"} />
@@ -1230,8 +1234,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
           </div>
           </div>
           </div>
-          {p4 && <P4TvFront scene={scene} />}
-          {p5 && <P5PhoneFront />}
+          {P4 && <P4.P4TvFront scene={scene} />}
+          {P5 && <P5.P5PhoneFront />}
           </div>
 
           <div className={cn("row-start-3 self-start grid grid-cols-1 text-center w-full motion-reduce:pt-6 relative z-10", p3 && "max-sm:px-11", p4 ? "pt-[calc(min(62vw,40svh,400px)*var(--z)*0.46)]" : p5 ? "pt-[calc(min(62vw,40svh,400px)*var(--z)*0.6)]" : "pt-8 [@media(max-height:720px)]:pt-3")}>
@@ -1261,7 +1265,7 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
             <FutureDetails marks={marks} active={onFuture} />
             <MapDetails info={mapInfo} />
             <AskDetails onAsk={onAsk} active={onAskScene} />
-            <TavernDetails relief={tavern.relief} loading={tavern.loading} failed={tavern.failed} updating={tavern.updating} onToggle={tavern.onToggle} active={onTavern} />
+            <TavernDetails relief={tavern.relief} loading={tavern.loading} failed={tavern.failed} updating={tavern.updating} onToggle={tavern.onToggle} raid={tavern.raid} active={onTavern} />
             <ClockDetails />
 
             {/* One label for each of the two rings */}

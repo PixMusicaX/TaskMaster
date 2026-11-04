@@ -3,6 +3,7 @@
 // given recently instead of cycling through the same handful.
 import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { normalizeTitle } from "./relief-dice";
+import type { StatName } from "./types";
 
 type Rng = () => number;
 const pick = <T,>(list: readonly T[], rng: Rng): T => list[Math.floor(rng() * list.length)];
@@ -223,4 +224,59 @@ export function pickOfflineRelief(weather: string | undefined, recentTitles: str
   }
 
   return { title: tagged(main.title), type: main.type, description: main.description, alternatives };
+}
+
+// ─── Monday raids ─────────────────────────────────────────────────────────────
+
+type OfflineObjective = { title: string; description: string };
+
+const OFFLINE_RAID: Record<StatName, OfflineObjective[]> = {
+  strength: [
+    { title: "Clear the Oldest Task", description: "Finish the task that has waited longest on your list, start to end." },
+    { title: "Three Sets, Three Days", description: "Do push-ups, squats or a plank on three days this week." },
+    { title: "Close One Loose End", description: "Finish one half-done thing at home: a repair, a return, a drawer." },
+    { title: "Hardest Thing First", description: "On two mornings, do the task you most want to avoid before anything else." },
+    { title: "Carry the Load", description: "Take the stairs and walk errands on foot for three days." },
+  ],
+  intelligence: [
+    { title: "Fifty Pages", description: "Read fifty pages of a book this week, in sittings of any size." },
+    { title: "Write the Week Down", description: "Write at least three lines in your notes on four days." },
+    { title: "Learn One Thing Properly", description: "Spend 30 minutes learning a skill you keep meaning to try." },
+    { title: "Explain It Back", description: "Pick an idea you read about and write a five-line summary of it." },
+    { title: "A Documentary Night", description: "Watch one documentary and note the three facts that surprised you." },
+  ],
+  wealth: [
+    { title: "Audit the Subscriptions", description: "List every subscription you pay for and cancel one you don't use." },
+    { title: "Plan the Week's Spending", description: "Set a spending limit for the week and check it on Friday." },
+    { title: "One Career Move", description: "Update your CV, a portfolio piece or a profile, for 30 minutes." },
+    { title: "Put a Date on It", description: "Add one real event or deadline you've been putting off to the calendar." },
+    { title: "Save the Small Change", description: "Move a small fixed amount into savings, today and again on Friday." },
+  ],
+  vitality: [
+    { title: "Lights Out by Eleven", description: "Be in bed before 11pm on three nights this week." },
+    { title: "Two Litres a Day", description: "Drink two litres of water on three days, and log them." },
+    { title: "A Long Walk", description: "Take one walk of at least 45 minutes this week." },
+    { title: "Cook One Real Meal", description: "Cook a proper meal from fresh ingredients at least once." },
+    { title: "Screens Down at Night", description: "No phone for the last 30 minutes before bed on three nights." },
+  ],
+  charisma: [
+    { title: "Call, Don't Text", description: "Call two people this week instead of messaging them." },
+    { title: "Name the Good Work", description: "Tell three people exactly what they did well." },
+    { title: "Make the Plan", description: "Invite someone to coffee, a walk or a meal, and set the day." },
+    { title: "Reconnect Once", description: "Message someone you haven't spoken to in months, with a real question." },
+    { title: "Speak Up", description: "In one meeting or group chat, share an idea you'd normally keep back." },
+  ],
+};
+
+// Three objectives for the given targets (lib/raid.ts), none repeated within the raid, avoiding
+// what earlier raids handed out where the pool allows
+export function pickOfflineRaid(targets: StatName[], recentTitles: string[], rng: Rng = Math.random) {
+  const used: string[] = [];
+  return targets.map(stat => {
+    const pool = OFFLINE_RAID[stat].filter(o => !used.includes(o.title));
+    const fresh = pool.filter(o => !seen(o.title, recentTitles));
+    const objective = pick(fresh.length ? fresh : pool, rng);
+    used.push(objective.title);
+    return { title: tagged(objective.title), description: objective.description, stat };
+  });
 }

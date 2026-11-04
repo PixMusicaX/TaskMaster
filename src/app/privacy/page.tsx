@@ -78,7 +78,8 @@ export default function PrivacyPage() {
 
         <Section title="Cookies and browser storage">
           <p>
-            TaskMaster uses a sign-in cookie to keep you logged in, and a short-lived cookie to protect the Google Calendar connection step.
+            TaskMaster uses a sign-in cookie to keep you logged in, a short-lived cookie to protect the Google Calendar connection step,
+            and a cookie holding your device&apos;s time zone, so pages can load your day before they reach your screen.
             Your browser also stores your settings, display progress and last known place and weather. None of this is used for tracking.
           </p>
         </Section>

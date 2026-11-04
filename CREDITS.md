@@ -33,6 +33,16 @@ The menus are recreated in HTML and CSS (`src/components/persona/persona-pause-m
 
 None of these repos state a licence.
 
+## Fonts (`src/app/fonts/`)
+
+The app's own faces are bundled as variable fonts and served by `next/font/local`, so the build
+never has to reach Google Fonts.
+
+| File | Font | Author / source | Licence |
+|---|---|---|---|
+| `Geist-Variable.woff2`, `GeistMono-Variable.woff2` | Geist, Geist Mono | Vercel with basement.studio, via the [`geist`](https://www.npmjs.com/package/geist) package | SIL Open Font License 1.1 (`OFL-Geist.txt`) |
+| `SpaceGrotesk-Variable.woff2` | Space Grotesk (Latin subset) | Florian Karsten, via [Fontsource](https://fontsource.org/fonts/space-grotesk) | SIL Open Font License 1.1 (`OFL-SpaceGrotesk.txt`) |
+
 ## Fonts (`public/fonts/persona/`)
 
 | File | Font | Author / source | Licence |

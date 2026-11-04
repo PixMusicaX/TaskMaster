@@ -4,6 +4,7 @@ import type { getHabits } from "@/app/actions/habits";
 import type { getProfile, getSeasonHistory, getSeasonPace, getSeasonTimeline } from "@/app/actions/gamification";
 import type { getMoodsByDateRange } from "@/app/actions/notes";
 import type { getSeasonRecap } from "@/app/actions/recap";
+import type { RaidRecap } from "./raid";
 
 export type EventRow = typeof event.$inferSelect;
 export type NoteRow = typeof note.$inferSelect;
@@ -29,8 +30,9 @@ export type NoteLine = { id: string; bullet: string; text: string };
 // Extra suggestions stored in ReliefRecommendation.alternatives
 export type ReliefAlternative = { title: string; type?: string; description?: string };
 
-// A relief row as held by the dashboard, flagged when it used a cached location
-export type Relief = ReliefRow & { isCached?: boolean };
+// A relief row as held by the dashboard, flagged when it used a cached location. On a Monday it is
+// the week's raid (lib/raid.ts), with last week's recap.
+export type Relief = ReliefRow & { isCached?: boolean; raidRecap?: RaidRecap };
 
 // Parse a note's content into bullet lines; legacy plain-text notes return null
 export function parseNoteLines(content: string): NoteLine[] | null {
