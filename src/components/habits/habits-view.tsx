@@ -1,5 +1,6 @@
 "use client";
 
+import { headStart } from "@/lib/head-start";
 import { useState, useEffect } from "react";
 import GlassCard from "@/components/glass-card";
 import { Plus, Trash2, Check, X, Edit2, Archive, RotateCcw, Search, HeartPulse, Flame } from "lucide-react";
@@ -80,7 +81,7 @@ export default function HabitsView({ initial }: { initial: Promise<HabitsInitial
 
   useEffect(() => {
     let live = true;
-    (initial ?? Promise.resolve(null)).catch(() => null).then(data => {
+    headStart(initial).then(data => {
       if (!live) return;
       if (data && data.todayStr === format(new Date(), "yyyy-MM-dd")) {
         applyHabits(data);
