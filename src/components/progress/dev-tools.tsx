@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Wrench, X } from "lucide-react";
 import { LEVEL_UP_XP, RPG_TITLES } from "@/lib/constants";
-import { DEV_ERA_EVENT, DEV_XP_EVENT, getDevEraOverride, getDevXpOffset, setDevEraOverride, setDevXpOffset } from "@/lib/dev-xp";
+import { DEV_ERA_EVENT, DEV_WEATHERS, DEV_WEATHER_EVENT, DEV_XP_EVENT, getDevEraOverride, getDevWeatherOverride, getDevXpOffset, setDevEraOverride, setDevWeatherOverride, setDevXpOffset, type DevWeatherOverride } from "@/lib/dev-xp";
 import { ERAS } from "@/lib/eras";
 import { DEV_PERSONA_EVENT, getDevPersonaOverride, setDevPersonaOverride, type DevPersonaOverride } from "@/lib/persona";
 import { getDevMapStatus, rerollDevMap, setDevMapStatus, subscribeDevMap, type MapStatus } from "@/lib/dev-map";
@@ -35,6 +35,17 @@ const subscribeSpecial = (cb: () => void) => {
   return () => window.removeEventListener(DEV_SPECIAL_EVENT, cb);
 };
 
+const subscribeWeather = (cb: () => void) => {
+  window.addEventListener(DEV_WEATHER_EVENT, cb);
+  return () => window.removeEventListener(DEV_WEATHER_EVENT, cb);
+};
+
+const WEATHER_OPTIONS: { value: DevWeatherOverride; label: string }[] = [
+  { value: null, label: "Auto" },
+  { value: "off", label: "None" },
+  ...DEV_WEATHERS.map(w => ({ value: w.id, label: w.label })),
+];
+
 const PERSONA_OPTIONS: { value: DevPersonaOverride; label: string; title: string }[] = [
   { value: null, label: "Auto", title: "Follow the calendar" },
   { value: "off", label: "Off", title: "Normal design today" },
@@ -54,6 +65,18 @@ export default function DevTools() {
   const eraOverride = useSyncExternalStore(subscribeEra, getDevEraOverride, () => null);
   const personaOverride = useSyncExternalStore(subscribePersona, getDevPersonaOverride, () => null);
   const specialOverride = useSyncExternalStore(subscribeSpecial, getDevSpecialOverride, () => null);
+  const weatherOverride = useSyncExternalStore(subscribeWeather, getDevWeatherOverride, () => null);
+  const panel = useRef<HTMLDivElement>(null);
+
+  // A press anywhere outside the open panel closes it
+  useEffect(() => {
+    if (!open) return;
+    const onPress = (e: PointerEvent) => {
+      if (panel.current && e.target instanceof Node && !panel.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPress);
+    return () => document.removeEventListener("pointerdown", onPress);
+  }, [open]);
 
   if (!profile) return null;
 
@@ -74,7 +97,7 @@ export default function DevTools() {
   return (
     <div className="fixed bottom-24 lg:bottom-4 right-4 z-[500] flex flex-col items-end text-xs">
       {open ? (
-        <div className="w-64 p-3 rounded-2xl bg-black/85 text-white shadow-2xl backdrop-blur-md space-y-3">
+        <div ref={panel} className="w-64 max-h-[calc(100svh-8rem)] overflow-y-auto overscroll-contain p-3 rounded-2xl bg-black/85 text-white shadow-2xl backdrop-blur-md space-y-3">
           <div className="flex items-center justify-between">
             <span className="font-mono font-semibold uppercase tracking-[0.12em] text-yellow-300">Dev tools</span>
             <button onClick={() => setOpen(false)} aria-label="Close dev tools" className="p-1 rounded hover:bg-white/10"><X size={14} /></button>
@@ -164,6 +187,26 @@ export default function DevTools() {
           </div>
 
           <div className="space-y-1.5 pt-2 border-t border-white/10">
+            <p className="font-mono font-semibold uppercase tracking-[0.12em] text-white/60">Weather</p>
+            <div className="grid grid-cols-3 gap-1">
+              {WEATHER_OPTIONS.map(o => (
+                <button
+                  key={o.label}
+                  onClick={() => setDevWeatherOverride(o.value)}
+                  aria-pressed={weatherOverride === o.value}
+                  title={o.value === null ? "Follow the day's real weather" : o.value === "off" ? "No weather sketch" : `Sketch: ${o.label}`}
+                  className={cn(
+                    "px-1 py-1.5 rounded-lg",
+                    weatherOverride === o.value ? "bg-yellow-300 text-black font-semibold" : "bg-white/10 hover:bg-white/20"
+                  )}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5 pt-2 border-t border-white/10">
             <p className="font-mono font-semibold uppercase tracking-[0.12em] text-white/60">Map status</p>
             <div className="grid grid-cols-4 gap-1">
               {MAP_STATUSES.map(status => (
@@ -191,7 +234,7 @@ export default function DevTools() {
           aria-label="Open dev tools"
           className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-black/80 text-yellow-300 font-mono font-semibold shadow-lg"
         >
-          <Wrench size={14} /> DEV{offset !== 0 && ` ${offset > 0 ? "+" : ""}${offset}`}{eraOverride !== null && ` · era ${ERAS[eraOverride].numeral}`}{mapStatus && ` · map ${mapStatus}`}{personaOverride && ` · ${personaOverride}`}{specialOverride && ` · ${specialOverride}`}
+          <Wrench size={14} /> DEV{offset !== 0 && ` ${offset > 0 ? "+" : ""}${offset}`}{eraOverride !== null && ` · era ${ERAS[eraOverride].numeral}`}{mapStatus && ` · map ${mapStatus}`}{personaOverride && ` · ${personaOverride}`}{specialOverride && ` · ${specialOverride}`}{weatherOverride && ` · ${weatherOverride}`}
         </button>
       )}
     </div>

@@ -61,3 +61,39 @@ export function withDevXp<T extends { xp: number; level: number; levelProgress: 
   const level = Math.floor(xp / LEVEL_UP_XP) + 1;
   return { ...profile, xp, level, levelProgress: xp % LEVEL_UP_XP, title: rankForLevel(level) };
 }
+
+// Forced weather for the sketch over the clock (components/weather-sketch.tsx): one of
+// DEV_WEATHERS, "off" for none, or null to follow the day's real weather
+export const DEV_WEATHER_EVENT = "dev-weather-changed";
+const WEATHER_KEY = "tm_dev_weather";
+export const DEV_WEATHERS = [
+  { id: "clear", label: "Sun", weather: "Clear", night: false },
+  { id: "moon", label: "Moon", weather: "Clear", night: true },
+  { id: "partly", label: "Partly", weather: "Partly Cloudy", night: false },
+  { id: "fog", label: "Fog", weather: "Foggy", night: false },
+  { id: "rain", label: "Rain", weather: "Rainy", night: false },
+  { id: "snow", label: "Snow", weather: "Snowy", night: false },
+  { id: "storm", label: "Storm", weather: "Stormy", night: false },
+] as const;
+export type DevWeatherOverride = (typeof DEV_WEATHERS)[number]["id"] | "off" | null;
+
+export function getDevWeatherOverride(): DevWeatherOverride {
+  if (!DEV_TOOLS_ENABLED || typeof window === "undefined") return null;
+  try {
+    const value = localStorage.getItem(WEATHER_KEY);
+    return value === "off" || DEV_WEATHERS.some(w => w.id === value) ? (value as DevWeatherOverride) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setDevWeatherOverride(value: DevWeatherOverride) {
+  if (!DEV_TOOLS_ENABLED) return;
+  try {
+    if (value === null) localStorage.removeItem(WEATHER_KEY);
+    else localStorage.setItem(WEATHER_KEY, value);
+  } catch {
+    // Storage blocked: the override just won't persist
+  }
+  window.dispatchEvent(new Event(DEV_WEATHER_EVENT));
+}

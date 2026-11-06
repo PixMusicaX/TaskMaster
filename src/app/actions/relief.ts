@@ -59,11 +59,6 @@ async function reliefFor(
       where: and(eq(reliefRecommendation.userId, userId), eq(reliefRecommendation.date, today))
     });
 
-    // Mondays are raid day: the Tavern's row holds the week's raid instead
-    if (!recommendation && isRaidDay(today)) {
-      recommendation = await createRaid(userId, today, persona, exclude, cachedLocation);
-    }
-
     if (!recommendation) {
       const weatherInfo: { weather: string; temp: string; location: string; precipitation?: number; windSpeed?: number } = { 
         weather: cachedWeather || "Clear", 
@@ -128,7 +123,13 @@ async function reliefFor(
         }
       }
 
-      {
+      // Mondays are raid day: the Tavern's row holds the week's raid instead (with the day's
+      // weather, which the clock shows)
+      if (isRaidDay(today)) {
+        recommendation = await createRaid(userId, today, persona, exclude, weatherInfo);
+      }
+
+      if (!recommendation) {
         try {
           const clientNow = new Date(today);
           const twoWeeksAgo = subDays(clientNow, 14);
@@ -249,7 +250,10 @@ const CONTEXT_TIMEOUT_MS = 4_000;
 type RaidObjective = { title: string; description?: string; stat: StatName };
 
 // The week's raid (see lib/raid.ts): written by the AI when it can, picked offline when it can't
-async function createRaid(userId: string, today: string, persona: string | null | undefined, exclude: string[], location?: string): Promise<ReliefRow> {
+async function createRaid(
+  userId: string, today: string, persona: string | null | undefined, exclude: string[],
+  weather: { location: string; weather: string; temp: string },
+): Promise<ReliefRow> {
   const twoWeeksAgo = subDays(parseISO(today), 14);
   const [profile, habitData, taskData, notesData, history, personal] = await Promise.all([
     profileFor(userId, today),
@@ -297,7 +301,9 @@ async function createRaid(userId: string, today: string, persona: string | null 
     title: main.title,
     description: main.description ?? null,
     type: RAID_TYPE,
-    location: location || null,
+    location: weather.location,
+    weather: weather.weather,
+    temp: weather.temp.split("°")[0],
     alternatives: rest.map(o => ({ title: o.title, type: RAID_TYPE, description: o.description, stat: o.stat })),
     xpReward: RAID_XP,
     stat: main.stat,

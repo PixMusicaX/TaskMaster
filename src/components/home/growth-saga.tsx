@@ -672,10 +672,12 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   // turning backwards through the moods. The two pace rings turn with it in their own planes, one
   // each way, and so does the level ring while it is tipped over for the era (in the standing it
   // settles upright, so its arc starts at twelve o'clock). Only runs while the section is on screen.
+  // Not on phones and tablets: mobile Safari kept showing the turning rings at a stale angle and
+  // snapping them back, whatever drove the turn, so there the rings simply hold still.
   useEffect(() => {
     const el = root.current;
     const dial = dialRef.current;
-    if (!el || !dial || prefersReducedMotion()) return;
+    if (!el || !dial || prefersReducedMotion() || window.matchMedia("(hover: none) and (pointer: coarse)").matches) return;
     // In document order: race and time behind the centre text, then race and time in front of it
     const spins = Array.from(el.querySelectorAll<SVGSVGElement>("[data-saga=pace-spin]"));
     // The level ring turns by its arc's own rotation rather than a CSS transform (an attribute is

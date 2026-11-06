@@ -188,6 +188,9 @@ export default function HomeView({ initial }: { initial: Promise<HomeInitial | n
   const { text: quoteText, author: quoteAuthor } = splitQuote(rawQuote);
 
   const specialDays = tasks.filter(isTimedSpecialDay);
+  // The day's place and weather, once the Tavern (or the raid) has looked them up
+  const todaysLocation = relief?.location && relief.location !== "No location found" ? relief.location : null;
+  const todaysWeather = todaysLocation ? relief?.weather ?? null : null;
 
   const { themeReady } = useProgress();
 
@@ -457,7 +460,7 @@ export default function HomeView({ initial }: { initial: Promise<HomeInitial | n
       <section className="relative min-h-screen flex flex-col items-center pt-28 pb-32 px-6 gap-12">
         {/* Central Hero: Clock */}
         <div ref={heroRef} className="flex flex-col items-center text-center gap-2 z-10">
-          <Clock />
+          <Clock weather={todaysWeather} location={todaysLocation} />
 
           {specialDays.length > 0 && (
             <div className="flex flex-row items-center justify-center gap-3 my-2 flex-wrap text-lg md:text-xl font-bold uppercase tracking-tighter italic">

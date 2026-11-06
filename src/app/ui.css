@@ -107,3 +107,26 @@
   20% { opacity: 0.7; }
   to { transform: scale(1); opacity: 0; }
 }
+
+/* The weather sketched over the clock (components/weather-sketch.tsx): each stroke draws itself in
+   once, a beat after the one before */
+.tm-sketch path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: tm-sketch-draw 0.7s ease-out forwards;
+}
+@keyframes tm-sketch-draw {
+  to { stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tm-sketch path { animation: none; stroke-dashoffset: 0; }
+}
+
+/* A label that arrives late (the place over the clock) eases in rather than popping */
+.tm-fade-in { animation: tm-fade-in 0.8s ease-out both; }
+@keyframes tm-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tm-fade-in { animation: none; }
+}

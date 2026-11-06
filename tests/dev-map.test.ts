@@ -1,5 +1,13 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterEach } from "vitest";
+
+// Each test imports the module afresh, since it reads NODE_ENV as it loads. The first import is
+// the slow one (it has to be transformed), and on a busy full run it outlasted the first test's
+// time limit; done here, under the longer hook limit, the tests' own imports are quick.
+beforeAll(async () => {
+  await import("@/lib/dev-map");
+  vi.resetModules();
+});
 
 afterEach(() => {
   vi.unstubAllEnvs();
