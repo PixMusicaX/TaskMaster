@@ -13,6 +13,7 @@ import { plannerEventsByDateRange } from "@/lib/data/events";
 import { dailyQuoteFor } from "@/lib/data/daily-quote";
 import { safeGenerateContent } from "@/lib/ai-utils";
 import { AiUnavailableError } from "@/lib/ai-errors";
+import { AI_GENERATOR_DEADLINE_MS } from "@/lib/ai-guard";
 import { rollMissionBrief } from "@/lib/mission-dice";
 import { pickOfflineMission } from "@/lib/offline-missions";
 import { noteTextLines } from "@/lib/types";
@@ -81,7 +82,7 @@ async function missionFor(userId: string, clientDateStr?: string, persona?: stri
             model: "gemini-flash-latest",
             responseMimeType: "application/json",
             // The home page waits on this before the Tavern; past this the offline pick stands in
-            deadlineMs: 12_000,
+            deadlineMs: AI_GENERATOR_DEADLINE_MS,
           });
 
           if (content) {

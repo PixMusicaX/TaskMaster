@@ -8,12 +8,14 @@ import { aiRequestKey, guardAiRequest } from "./ai-guard";
 // through lib/ai-guard.ts (shared in-flight requests, optional caching, a daily budget and a
 // deadline). Every failure that means "no AI right now" is an AiUnavailableError (lib/ai-errors.ts).
 
-const GEMINI_MODELS = [
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5-flash-8b",
-  "gemini-flash-latest"
-];
+// Tried in turn after the player's own model (or the caller's suggestion). Google's "-latest"
+// aliases follow each new flash release, so they don't go dead the way pinned versions do: the
+// 1.5 and 2.0 models that used to lead this list now answer 404, and burnt the time limit before
+// a working model was reached.
+const GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"];
+
+// Models Google has said it doesn't have (404), skipped from then on in this server process
+const missingModels = new Set<string>();
 
 // Claude models that accept the server-side refusal fallback
 const CLAUDE_FALLBACK_MODELS = ["claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5", "claude-fable-5-1"];
@@ -70,7 +72,7 @@ async function generateWithGemini(prompt: string, options: ProviderOptions, apiK
 
   // Try the player's model (or the caller's suggestion) first, then fall back to our list
   const first = chosenModel || options.model;
-  const modelsToTry = first ? [first, ...GEMINI_MODELS] : GEMINI_MODELS;
+  const modelsToTry = [...new Set(first ? [first, ...GEMINI_MODELS] : GEMINI_MODELS)].filter(m => !missingModels.has(m));
 
   let lastError = null;
 
@@ -100,6 +102,7 @@ async function generateWithGemini(prompt: string, options: ProviderOptions, apiK
 
         // Check for 503 (Service Unavailable) or 429 (Rate Limit)
         const err = error as { status?: number; message?: string };
+        if (err.status === 404 || err.message?.includes("[404")) missingModels.add(modelName);
         const isTransient = err.status === 503 || err.status === 429 || err.message?.includes("503") || err.message?.includes("high demand");
 
         if (isTransient && retries > 1) {

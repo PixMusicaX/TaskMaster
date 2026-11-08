@@ -14,6 +14,7 @@ import { plannerEventsByDateRange } from "@/lib/data/events";
 import { reliefsWithCarriedLocation } from "@/lib/data/relief";
 import { safeGenerateContent } from "@/lib/ai-utils";
 import { AiUnavailableError } from "@/lib/ai-errors";
+import { AI_GENERATOR_DEADLINE_MS } from "@/lib/ai-guard";
 import { OFFLINE_TAG, pickOfflineRaid, pickOfflineRelief } from "@/lib/offline-missions";
 import { personalizationFor } from "@/lib/data/preferences";
 import { RAID_STAT_MEANING, RAID_TYPE, RAID_XP, isRaid, isRaidDay, raidTargets, type RaidRecap } from "@/lib/raid";
@@ -174,11 +175,12 @@ async function reliefFor(
               personal,
             }), {
               userId,
-              model: "gemini-3.1-flash-lite",
+              // The lite model: quick, and the Tavern's picks don't need deep thought
+              model: "gemini-flash-lite-latest",
               responseMimeType: "application/json",
               temperature: 1.15,
               // The second ask (for repeats) gets less time: the first answer is already in hand
-              deadlineMs: rejected.length ? 8_000 : 12_000,
+              deadlineMs: rejected.length ? AI_GENERATOR_DEADLINE_MS / 2 : AI_GENERATOR_DEADLINE_MS,
             });
             const data = JSON.parse(content) as { recommendations: ReliefPick[]; alternatives?: ReliefAlternative[] };
             return { main: data.recommendations[0], alternatives: data.alternatives || [] };
@@ -284,7 +286,7 @@ async function createRaid(
       today,
       persona: resolvePersonaStyle(persona, today),
       personal,
-    }), { userId, model: "gemini-flash-latest", responseMimeType: "application/json", deadlineMs: 12_000 });
+    }), { userId, model: "gemini-flash-latest", responseMimeType: "application/json", deadlineMs: AI_GENERATOR_DEADLINE_MS });
     const data = JSON.parse(content) as { objectives?: { title?: string; description?: string }[] };
     const written = (data.objectives ?? []).filter(o => o.title?.trim());
     // The stats are ours, whatever the model wrote back

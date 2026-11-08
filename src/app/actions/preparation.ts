@@ -12,6 +12,7 @@ import { subDays } from "date-fns";
 import { requireUserId } from "@/lib/current-user";
 import { profileFor, invalidateSnapshots } from "@/lib/data/stats";
 import { AiBudgetError, AiNotConfiguredError } from "@/lib/ai-errors";
+import { AI_GENERATOR_DEADLINE_MS } from "@/lib/ai-guard";
 import { pickOfflinePrepTip } from "@/lib/offline-missions";
 import { personalizationFor } from "@/lib/data/preferences";
 
@@ -79,9 +80,9 @@ async function tipFor(userId: string, clientDateStr?: string, persona?: string |
       try {
         const content = await safeGenerateContent(prompt, {
           userId,
-          model: "gemini-1.5-flash",
+          model: "gemini-flash-latest",
           responseMimeType: "application/json",
-          deadlineMs: 12_000,
+          deadlineMs: AI_GENERATOR_DEADLINE_MS,
         });
         if (content) data = JSON.parse(content);
       } catch (aiError) {

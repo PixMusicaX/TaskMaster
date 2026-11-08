@@ -11,7 +11,12 @@ import { AiBudgetError, AiTimeoutError } from "./ai-errors";
 // regenerating and the Taskmaster, so this only bites a runaway loop or a script.
 export const AI_DAILY_BUDGET = 60;
 // How long a request may take, retries and model fallbacks included, unless the caller says otherwise
-export const AI_DEFAULT_DEADLINE_MS = 25_000;
+export const AI_DEFAULT_DEADLINE_MS = 45_000;
+// The daily generators (mission, prep tip, Tavern, raid). They run after the page is up, behind
+// loading cards, so they can afford to wait; the limit is only there so a hung provider can't hold
+// the Tavern forever. Current Gemini flash models think before answering and often take more than
+// ten seconds: a 12 s limit (v8.0.0) cut nearly every answer off.
+export const AI_GENERATOR_DEADLINE_MS = 30_000;
 const CACHE_LIMIT = 200;
 
 const inFlight = new Map<string, Promise<string>>();
