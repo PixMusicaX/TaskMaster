@@ -1,7 +1,7 @@
 import { CloudSun, MapPin, RotateCw, Sparkles, Swords, TrendingDown, TrendingUp } from "lucide-react";
 import CompletionCheck from "@/components/ui/completion-check";
 import StrikeText from "@/components/ui/strike-text";
-import { formatReliefTemp } from "@/lib/weather";
+import { formatReliefTemp, isNamedPlace } from "@/lib/weather";
 import { cn } from "@/lib/utils";
 import { seatStats, statShort, type RaidRecap } from "@/lib/raid";
 import type { Relief, ReliefAlternative } from "@/lib/types";
@@ -105,7 +105,9 @@ export function TavernTitle({ relief, raid }: Pick<TavernProps, "relief" | "raid
           <RaidRecapLine recap={relief?.raidRecap} />
         ) : relief ? (
           <>
-            <span className={cn("flex items-center gap-1.5", relief.isCached && "text-tm-orange-light")}><MapPin size={12} /> {relief.location}</span>
+            {isNamedPlace(relief.location) && (
+              <span className={cn("flex items-center gap-1.5", relief.isCached && "text-tm-orange-light")}><MapPin size={12} /> {relief.location}</span>
+            )}
             <span className="flex items-center gap-1.5"><CloudSun size={12} /> {formatReliefTemp(relief.temp)}°C {relief.weather}</span>
           </>
         ) : "Rest and relief"}

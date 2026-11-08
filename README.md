@@ -84,7 +84,7 @@ npm install
 ```
 
 ### 3. Environment Variables
-Create a `.env` file in the root directory and add the following keys:
+Copy `.env.example` to `.env` in the root directory and fill in the keys:
 
 ```env
 # Database (Neon / Postgres)
@@ -102,8 +102,6 @@ AI_KEY_SECRET="another-long-random-string"
 # Optional: holidays on the calendar (Calendarific)
 calendarific_key="YOUR_CALENDARIFIC_KEY"
 
-# Optional: Unpooled connection for direct scripts
-DATABASE_URL_UNPOOLED="postgresql://user:password@host/neondb?sslmode=require"
 ```
 
 **Google sign-in:** create an OAuth client (type "Web application") in the

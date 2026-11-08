@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn, moodEmoji } from "@/lib/utils";
 import HabitIconRender from "@/components/HabitIconRender";
 import { SkeletonRows } from "@/components/loader";
-import { formatReliefTemp } from "@/lib/weather";
+import { NO_LOCATION, formatReliefTemp, isNamedPlace } from "@/lib/weather";
 import { parseNoteLines } from "@/lib/types";
 
 // Note rows with at least one non-empty line (JSON bullet notes or legacy plain text)
@@ -70,9 +70,11 @@ function DayCard({ day, delay }: { day: HistoryDay; delay: number }) {
             )}
           </div>
 
-          {day.relief && day.relief.location && day.relief.location !== "No location found" && (
+          {day.relief && day.relief.location && day.relief.location !== NO_LOCATION && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption font-mono font-semibold uppercase text-tm-blue-gray/70 tracking-[0.12em] mt-1.5">
-              <span className="flex items-center gap-1.5"><MapPin size={12} className="text-tm-yellow/60" /> {day.relief.location}</span>
+              {isNamedPlace(day.relief.location) && (
+                <span className="flex items-center gap-1.5"><MapPin size={12} className="text-tm-yellow/60" /> {day.relief.location}</span>
+              )}
               <span className="flex items-center gap-1.5"><CloudSun size={12} className="text-tm-yellow/60" /> {formatReliefTemp(day.relief.temp)}°C {day.relief.weather}</span>
             </div>
           )}

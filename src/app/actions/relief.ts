@@ -18,7 +18,8 @@ import { OFFLINE_TAG, pickOfflineRaid, pickOfflineRelief } from "@/lib/offline-m
 import { personalizationFor } from "@/lib/data/preferences";
 import { RAID_STAT_MEANING, RAID_TYPE, RAID_XP, isRaid, isRaidDay, raidTargets, type RaidRecap } from "@/lib/raid";
 import { noteTextLines, parseNoteLines, type Relief, type ReliefAlternative, type ReliefRow, type StatName } from "@/lib/types";
-import { eq, desc, gte, ne, and } from "drizzle-orm";
+import { eq, desc, gte, and, notInArray } from "drizzle-orm";
+import { NO_LOCATION, UNNAMED_AREA, placeName } from "@/lib/weather";
 
 // How far back the Tavern remembers what it has already suggested
 const RELIEF_MEMORY_DAYS = 120;
@@ -68,7 +69,8 @@ async function reliefFor(
 
       if (!cachedLocation || cachedLocation === "No location found") {
         const lastValid = await db.query.reliefRecommendation.findFirst({
-           where: and(eq(reliefRecommendation.userId, userId), ne(reliefRecommendation.location, "No location found")),
+           // An unnamed spot is no use as "the last place": it can't be shown
+           where: and(eq(reliefRecommendation.userId, userId), notInArray(reliefRecommendation.location, [NO_LOCATION, UNNAMED_AREA])),
            orderBy: [desc(reliefRecommendation.date)]
         });
         if (lastValid) {
@@ -116,7 +118,8 @@ async function reliefFor(
           }
 
           if (geoData.address) {
-            weatherInfo.location = geoData.address.suburb || geoData.address.city_district || geoData.address.city || geoData.address.town || "Area detected";
+            // The weather is real either way; the place just goes unnamed when the map has no name for it
+            weatherInfo.location = placeName(geoData.address) ?? UNNAMED_AREA;
           }
         } catch (e) {
           console.error("Relief context fetch failed:", e);

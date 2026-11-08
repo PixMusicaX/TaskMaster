@@ -2,7 +2,7 @@ import { CloudSun, Coffee, MapPin, RotateCw, Sparkles, Swords } from "lucide-rea
 import CompletionCheck from "@/components/ui/completion-check";
 import StrikeText from "@/components/ui/strike-text";
 import { SkeletonRows } from "@/components/loader";
-import { formatReliefTemp } from "@/lib/weather";
+import { formatReliefTemp, isNamedPlace } from "@/lib/weather";
 import { cn } from "@/lib/utils";
 import { seatStats, statLabel } from "@/lib/raid";
 import type { Relief, ReliefAlternative } from "@/lib/types";
@@ -38,8 +38,12 @@ export default function TavernCard({ relief, loading, failed, updating, onToggle
         </div>
       ) : relief && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption font-mono font-semibold uppercase text-tm-blue-gray/60 tracking-[0.12em]">
-          <span className={cn("flex items-center gap-1.5", relief.isCached ? "text-tm-orange-light/80" : "")}><MapPin size={12} className={relief.isCached ? "text-tm-orange-light" : "text-tm-yellow/40"} /> {relief.location}</span>
-          <span className="w-1 h-1 rounded-full bg-white/10" />
+          {isNamedPlace(relief.location) && (
+            <>
+              <span className={cn("flex items-center gap-1.5", relief.isCached ? "text-tm-orange-light/80" : "")}><MapPin size={12} className={relief.isCached ? "text-tm-orange-light" : "text-tm-yellow/40"} /> {relief.location}</span>
+              <span className="w-1 h-1 rounded-full bg-white/10" />
+            </>
+          )}
           <span className="flex items-center gap-1.5"><CloudSun size={12} className="text-tm-yellow/40" /> {formatReliefTemp(relief.temp)}°C {relief.weather}</span>
         </div>
       )}

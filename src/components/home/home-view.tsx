@@ -21,6 +21,7 @@ import { getPreparationTip, togglePreparationTip, regeneratePreparationTip } fro
 import { getSpecialDayColors } from "@/lib/utils";
 import { personaForToday } from "@/lib/persona";
 import { isRaid, isRaidDay } from "@/lib/raid";
+import { NO_LOCATION, isNamedPlace } from "@/lib/weather";
 import { useProgress } from "@/components/progress/progress-provider";
 import type { EventRow, HabitWithLogs, NoteRow, PrepTipRow, Profile, Relief, SeasonPace, SmartMissionRow } from "@/lib/types";
 import TaskmasterDialog from "@/components/taskmaster-dialog";
@@ -49,7 +50,8 @@ function fetchReliefWithLocation(fetcher: ReliefFetcher, todayStr: string): Prom
     // The Persona style on screen today (null on a normal day), so the Tavern speaks in its voice
     const relief = await fetcher(lat, lon, todayStr, cachedLocation, cachedWeather, cachedTemp, personaForToday());
 
-    if (lat && lon && relief && relief.location !== "No location found") {
+    // Only a named place is worth remembering for the next visit
+    if (lat && lon && relief && isNamedPlace(relief.location)) {
       localStorage.setItem('tm_lastLocation', relief.location || "");
       localStorage.setItem('tm_lastWeather', relief.weather || "");
       localStorage.setItem('tm_lastTemp', relief.temp || "");
@@ -188,9 +190,10 @@ export default function HomeView({ initial }: { initial: Promise<HomeInitial | n
   const { text: quoteText, author: quoteAuthor } = splitQuote(rawQuote);
 
   const specialDays = tasks.filter(isTimedSpecialDay);
-  // The day's place and weather, once the Tavern (or the raid) has looked them up
-  const todaysLocation = relief?.location && relief.location !== "No location found" ? relief.location : null;
-  const todaysWeather = todaysLocation ? relief?.weather ?? null : null;
+  // The day's place and weather, once the Tavern (or the raid) has looked them up. A spot the map
+  // has no name for still has real weather, just no place line.
+  const todaysLocation = isNamedPlace(relief?.location) ? relief.location : null;
+  const todaysWeather = relief?.location && relief.location !== NO_LOCATION ? relief.weather ?? null : null;
 
   const { themeReady } = useProgress();
 

@@ -2,11 +2,15 @@
 
 import { useLayoutEffect, useRef } from "react";
 import { animate, stagger } from "animejs";
-import { prefersReducedMotion } from "@/lib/scroll-fx";
+import { prefersReducedMotion, useScrollDissolve } from "@/lib/scroll-fx";
 
-// The daily quote, written in word by word whenever it changes
+// The daily quote, written in word by word whenever it changes, and fading into the page behind
+// the nav as it scrolls up, like the clock above it
 export default function HeroQuote({ text, author }: { text: string; author: string }) {
   const ref = useRef<HTMLParagraphElement>(null);
+  // The fade is on a wrapper, so it doesn't fight the quote's own dimmed opacity
+  const wrapper = useRef<HTMLDivElement>(null);
+  useScrollDissolve(wrapper);
   const full = `“${text}”${author ? ` - ${author}` : ""}`;
 
   useLayoutEffect(() => {
@@ -23,10 +27,12 @@ export default function HeroQuote({ text, author }: { text: string; author: stri
   }, [full]);
 
   return (
-    <p ref={ref} aria-label={full} className="text-sm text-center md:text-base font-medium text-tm-blue-gray italic opacity-80 max-w-xl mx-auto -mt-8 mb-12">
-      {full.split(" ").map((word, i) => (
-        <span key={`${i}-${word}`} aria-hidden data-word className="inline-block whitespace-pre">{word} </span>
-      ))}
-    </p>
+    <div ref={wrapper} className="max-w-xl mx-auto -mt-8 mb-12">
+      <p ref={ref} aria-label={full} className="text-sm text-center md:text-base font-medium text-tm-blue-gray italic opacity-80">
+        {full.split(" ").map((word, i) => (
+          <span key={`${i}-${word}`} aria-hidden data-word className="inline-block whitespace-pre">{word} </span>
+        ))}
+      </p>
+    </div>
   );
 }
