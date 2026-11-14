@@ -18,6 +18,9 @@ const BACKGROUND_GAP_MS = 45_000; // Under the client's one-minute poll, so a po
 const MANUAL_GAP_MS = 15_000;
 // Occurrences of a recurring event only arrive once they're inside the window, so it gets redrawn
 const FULL_SYNC_EVERY_MS = 30 * 86_400_000;
+// Connections last fully read before this moment get one fresh full read, which picks up the Gmail
+// reservations that earlier versions skipped (the incremental sync had already moved past them)
+const REDRAW_BEFORE = new Date("2026-11-14T00:00:00.000Z");
 const WINDOW_AHEAD_MS = 365 * 86_400_000;
 const MAX_ATTEMPTS = 8;
 
@@ -237,7 +240,8 @@ async function pull(connection: Connection, token: string) {
     }
   }
 
-  const fullDue = !connection.fullSyncedAt || now.getTime() - connection.fullSyncedAt.getTime() >= FULL_SYNC_EVERY_MS;
+  const fullDue = !connection.fullSyncedAt || connection.fullSyncedAt < REDRAW_BEFORE
+    || now.getTime() - connection.fullSyncedAt.getTime() >= FULL_SYNC_EVERY_MS;
   let fullSyncedAt = connection.fullSyncedAt;
   if (!syncToken || fullDue) {
     // A day of slack either side of the timezone; applyChanges holds the exact line at syncFrom

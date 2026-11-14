@@ -24,11 +24,25 @@ const TYPE_LABELS: Record<string, string> = { task: "TASK", event: "EVENT", spec
 
 type PromptKind = "mission" | "relief" | "raid" | "prep" | "answer";
 
-const PERSONA_VOICES: Record<PersonaStyle, { game: string; voice: string; words: string } & Record<PromptKind, string>> = {
+type PersonaVoice = { game: string; voice: string; words: string; moods?: string[]; avoid?: string } & Record<PromptKind, string>;
+
+const PERSONA_VOICES: Record<PersonaStyle, PersonaVoice> = {
   p3: {
     game: "Persona 3 Reload",
-    voice: "Calm, precise and a little melancholy, like a Velvet Room attendant or the SEES operations officer. Time is precious and every day counts ('memento mori'); say it gently, never grimly.",
-    words: "the Dark Hour, Tartarus, SEES, Social Links, the full moon, the Velvet Room, Iwatodai, the dorm, an Evoker",
+    voice: "Calm, precise and a little wistful, like a Velvet Room attendant or the SEES operations officer: courteous, quietly confident, warm underneath.",
+    words: "the Dark Hour, Tartarus, SEES, Social Links, the full moon, the Velvet Room, Iwatodai, the dorm, an Evoker, the compendium, Paulownia Mall, the monorail",
+    // One is picked at random per prompt, so the same note isn't struck every time
+    moods: [
+      "the bonds with the people around them, and how each one makes the user stronger",
+      "steady progress: one more floor of the tower, one more small step today",
+      "the hush of a moonlit night and the clear head it brings",
+      "an ordinary school-day rhythm in Iwatodai: classes, the monorail, a snack after",
+      "quiet curiosity, as if the user's day were a card about to be turned over",
+      "the calm before an operation: checking gear, a deep breath, then moving",
+      "the satisfaction of a full compendium: everything recorded, nothing wasted",
+      "the change of seasons and the small pleasures that come with this time of year",
+    ],
+    avoid: "Never write 'memento mori', and don't dwell on death, endings or time running out.",
     mission: "Frame the mission as a request from the Velvet Room or a SEES operation to finish before the Dark Hour.",
     relief: "Frame it as how to spend a free evening around Iwatodai before the Dark Hour. Every suggestion must still be a real film, song, dish, place or activity the user can actually get today.",
     raid: "Frame the raid as this week's climb into Tartarus: three floors to clear before the next full moon.",
@@ -61,12 +75,15 @@ const PERSONA_VOICES: Record<PersonaStyle, { game: string; voice: string; words:
 export function personaDirective(persona: PersonaStyle | null | undefined, kind: PromptKind): string {
   if (!persona) return "";
   const p = PERSONA_VOICES[persona];
+  const mood = p.moods?.length ? p.moods[Math.floor(Math.random() * p.moods.length)] : "";
   return `
 ═══════════════════════════════
 TODAY IS A ${p.game.toUpperCase()} DAY
 ═══════════════════════════════
 For today only, the whole app is dressed as ${p.game}. Drop the RPG game-master voice described above and speak in this one instead.
-- Voice: ${p.voice}
+- Voice: ${p.voice}${mood ? `
+- Today's undertone: ${mood}. Let it colour the writing lightly; don't name it.` : ""}${p.avoid ? `
+- ${p.avoid}` : ""}
 - ${p[kind]}
 - You may use one or two of these words where they fit naturally, never more: ${p.words}.
 - The costume changes the voice, never the substance: keep every task name, date, number and title accurate, and keep the advice just as specific and practical.

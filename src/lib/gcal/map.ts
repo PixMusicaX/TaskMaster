@@ -36,11 +36,14 @@ export const localDay = (instant: Date, timeZone: string) => instant.toLocaleDat
 export const isSyncable = (row: Pick<EventRow, "type" | "repeatsYearly">) =>
   (row.type === "task" || row.type === "event") && !row.repeatsYearly;
 
+// Real plans: ordinary events, and reservations Gmail adds by itself (food, flights, hotels)
+const WANTED_TYPES = new Set(["default", "fromGmail"]);
+
 // Entries that shouldn't be in the planner: cancelled, declined, or calendar furniture like
-// working-location blocks
+// working-location, focus-time and out-of-office blocks
 export function isUnwanted(item: GoogleEvent) {
   if (item.status === "cancelled") return true;
-  if (item.eventType && item.eventType !== "default") return true;
+  if (item.eventType && !WANTED_TYPES.has(item.eventType)) return true;
   return item.attendees?.some(a => a.self && a.responseStatus === "declined") ?? false;
 }
 
@@ -58,7 +61,8 @@ export function fromGoogle(item: GoogleEvent, timeZone: string) {
     startTime: start,
     endTime: end,
     gcalEtag: item.etag ?? null,
-    gcalReadOnly: !(item.organizer?.self || item.guestsCanModify),
+    // Google refuses edits to a Gmail reservation's title and times
+    gcalReadOnly: item.eventType === "fromGmail" || !(item.organizer?.self || item.guestsCanModify),
   };
 }
 
