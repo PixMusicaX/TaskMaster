@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUp, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { createScope, createTimeline, onScroll, stagger, utils } from "animejs";
 import { RPG_TITLES } from "@/lib/constants";
 import { ERAS } from "@/lib/eras";
@@ -157,6 +157,24 @@ const IDLE_BEFORE_ARRIVING = 20000;
 // Future Sight waits longer, so its scrolling list can be read through: a base, plus the time the
 // list takes to show each event (see TICK in saga-time-scenes.tsx), within these bounds
 const FUTURE_IDLE = { base: 8000, perEvent: 2600, min: 14000, max: 32000 };
+// Whether the saga scrolls by itself (arriving from above, and stepping on through the stops),
+// remembered per browser. Off is stored; on is the default.
+const AUTOSCROLL_KEY = "tm_autoScroll";
+const autoScrollListeners = new Set<() => void>();
+// Used when storage is blocked, so the toggle still works for the visit
+let autoScrollFallback = true;
+function getAutoScroll() {
+  try { return localStorage.getItem(AUTOSCROLL_KEY) !== "off"; } catch { return autoScrollFallback; }
+}
+function writeAutoScroll(on: boolean) {
+  autoScrollFallback = on;
+  try { localStorage.setItem(AUTOSCROLL_KEY, on ? "on" : "off"); } catch { /* blocked: the fallback holds it */ }
+  autoScrollListeners.forEach(fn => fn());
+}
+function subscribeAutoScroll(fn: () => void) {
+  autoScrollListeners.add(fn);
+  return () => { autoScrollListeners.delete(fn); };
+}
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 // The dial's turn rate in degrees a second: at rest, per px/s of scrolling, and the most scrolling can add
@@ -305,6 +323,9 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
   const p4 = !!P4;
   const p5 = !!P5;
   const standing = useEraStanding();
+  const autoScroll = useSyncExternalStore(subscribeAutoScroll, getAutoScroll, () => true);
+  const autoScrollOn = useRef(autoScroll);
+  useEffect(() => { autoScrollOn.current = autoScroll; }, [autoScroll]);
   // Index into the scenes
   const [scene, setScene] = useState(0);
   // The year the Chronicle is showing
@@ -840,7 +861,8 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
     const events = ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] as const;
     events.forEach(name => window.addEventListener(name, touch, { passive: true }));
     const timer = setInterval(() => {
-      if (document.hidden) return touch();
+      // Hidden, or autoscroll switched off: the wait starts over once it's back on
+      if (document.hidden || !autoScrollOn.current) return touch();
       const idle = performance.now() - lastInput.current;
       if (scrollAnim.current) return;
       const { timeNow, yOf } = measure();
@@ -1250,6 +1272,22 @@ export default function GrowthSaga({ profile, moodData, pace, xpBeforeToday, onT
                 </span>
                 {topStat && <span>Top stat <span className="text-foreground">{topStat}</span></span>}
               </p>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={autoScroll}
+                onClick={() => writeAutoScroll(!autoScroll)}
+                title={autoScroll ? "The saga moves on by itself when left idle" : "The saga stays put until you scroll"}
+                className={cn(
+                  CAPTION,
+                  "mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition active:scale-95 motion-reduce:hidden",
+                  autoScroll ? "border-tm-yellow/50 text-tm-yellow" : "border-tm-blue-gray/25 text-tm-blue-gray hover:text-tm-yellow",
+                  scenes[scene]?.id === "standing" && "pointer-events-auto"
+                )}
+              >
+                {autoScroll ? <Pause size={12} /> : <Play size={12} />}
+                Autoscroll {autoScroll ? "on" : "off"}
+              </button>
             </div>
 
             <div data-saga="era" className="col-start-1 row-start-1 flex flex-col items-center gap-2 motion-reduce:hidden">

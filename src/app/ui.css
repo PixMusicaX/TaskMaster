@@ -63,27 +63,40 @@
   100% { stroke-dashoffset: calc(0.12 - var(--fill, 1)); opacity: 0; }
 }
 
-/* Growth saga: a Future Sight day that holds several kinds of event cycles through their colours
-   (--c1 to --c4, with data-colors saying how many are set) */
-.tm-node-shimmer {
-  animation: tm-node-shimmer-2 2.4s ease-in-out infinite;
+/* Growth saga: a Precognition day holding several colours (a Google event's four, or more than
+   one kind of event) is liquid. Soft blobs of each colour, spaced evenly round the node, turn
+   together while each swells and shrinks in turn (delays set inline), so the colours keep flowing
+   into one another instead of taking turns. */
+.tm-liquid-blob {
+  transform-box: view-box;
+  animation: tm-liquid-orbit 6s linear infinite;
 }
-.tm-node-shimmer[data-colors="3"] { animation-name: tm-node-shimmer-3; animation-duration: 3.6s; }
-.tm-node-shimmer[data-colors="4"] { animation-name: tm-node-shimmer-4; animation-duration: 4.8s; }
-@keyframes tm-node-shimmer-2 {
-  0%, 100% { color: var(--c1); }
-  50% { color: var(--c2); }
+@keyframes tm-liquid-orbit {
+  to { transform: rotate(360deg); }
 }
-@keyframes tm-node-shimmer-3 {
-  0%, 100% { color: var(--c1); }
-  33% { color: var(--c2); }
-  66% { color: var(--c3); }
+.tm-liquid-swell {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tm-liquid-swell 3.4s ease-in-out infinite alternate;
 }
-@keyframes tm-node-shimmer-4 {
-  0%, 100% { color: var(--c1); }
-  25% { color: var(--c2); }
-  50% { color: var(--c3); }
-  75% { color: var(--c4); }
+@keyframes tm-liquid-swell {
+  from { transform: scale(0.8); }
+  to { transform: scale(1.2); }
+}
+/* A day with a Google event and other kinds besides: the other kinds' fill sits over Google's
+   liquid and fades in and out, so the node swaps between the two */
+.tm-node-swap {
+  animation: tm-node-swap 4.8s ease-in-out infinite;
+}
+@keyframes tm-node-swap {
+  0%, 40% { opacity: 0; }
+  50%, 90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Only while Precognition is on stage */
+.tm-liquid-paused :is(.tm-liquid-blob, .tm-liquid-swell, .tm-node-swap) { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .tm-liquid-blob, .tm-liquid-swell, .tm-node-swap { animation: none; }
 }
 
 /* Growth saga: the comet going round the Taskmaster's inner ring */

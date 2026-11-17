@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { addDays, format, parseISO } from "date-fns";
 import { CalendarDays, CheckSquare, Repeat, type LucideIcon } from "lucide-react";
@@ -212,10 +212,12 @@ export function ChronicleDetails({ years, active }: { years: ChronicleYear[]; ac
 // The ring is the next two weeks, tomorrow at twelve o'clock
 export const FUTURE_DAYS = 14;
 
+const GOOGLE_COLORS: string[] = [GOOGLE.blue, GOOGLE.red, GOOGLE.yellow, GOOGLE.green];
+
 // One colour per kind of event, shared by the dial's nodes and the list's dots
 function kindOf(e: EventRow) {
   // Not in TaskMaster yet, so it keeps Google's colours whatever the theme
-  if (e.gcalImported) return { label: "Google Event", colors: [GOOGLE.blue, GOOGLE.red, GOOGLE.yellow, GOOGLE.green] };
+  if (e.gcalImported) return { label: "Google Event", colors: GOOGLE_COLORS };
   if (e.type === "special_day") return { label: "Special Day", colors: ["var(--tm-orange-dark)"] };
   const tier = e.tier?.toLowerCase();
   const color = tier === "epic" ? "var(--tm-red)" : tier === "main" ? "var(--tm-yellow)" : "var(--tm-orange-light)";
@@ -277,30 +279,118 @@ export function futureSegments(marks: FutureMark[]) {
   return segments;
 }
 
-// Several colours cycle through .tm-node-shimmer, which reads them from these variables
-function shimmerProps(colors: string[]) {
-  return {
-    className: colors.length > 1 ? "tm-node-shimmer" : undefined,
-    "data-colors": Math.min(4, colors.length),
-    style: {
-      color: colors[0],
-      ...Object.fromEntries(colors.slice(0, 4).map((color, i) => [`--c${i + 1}`, color])),
-    } as React.CSSProperties,
-  };
+// Where a day or a line holds several colours (a Google event's four, or more than one kind of
+// event), they flow together like liquid instead of taking turns: inside a node, soft blobs of each
+// colour drift round and swell into one another (see .tm-liquid-blob in ui.css); along a line, the
+// colours stream from one end to the other.
+const LIQUID_MAX = 6;
+// Seconds per colour for a line's colours to stream past once
+const FLOW_PER_COLOR = 1.6;
+
+// Google's four go last, so the other kinds on a crowded day still make it under the cap
+function liquidColors(colors: string[]) {
+  return [...colors.filter(c => !GOOGLE_COLORS.includes(c)), ...colors.filter(c => GOOGLE_COLORS.includes(c))].slice(0, LIQUID_MAX);
+}
+
+// The halo shows at a fifth of the core's strength, like the plain nodes' halo
+function LiquidNode({ x, y, r, halo, colors }: { x: number; y: number; r: number; halo: number; colors: string[] }) {
+  const id = useId();
+  const shown = liquidColors(colors);
+  return (
+    <>
+      <defs>
+        <mask id={`${id}m`} maskUnits="userSpaceOnUse" x={x - halo} y={y - halo} width={halo * 2} height={halo * 2}>
+          <circle cx={x} cy={y} r={halo} fill="#333" />
+          <circle cx={x} cy={y} r={r} fill="#fff" />
+        </mask>
+        {shown.map((color, i) => (
+          <radialGradient key={i} id={`${id}g${i}`}>
+            <stop offset="0" stopColor={color} />
+            <stop offset="0.45" stopColor={color} />
+            <stop offset="1" stopColor={color} stopOpacity="0" />
+          </radialGradient>
+        ))}
+      </defs>
+      <g mask={`url(#${id}m)`}>
+        <circle cx={x} cy={y} r={halo} fill={shown[0]} />
+        {/* The blobs sit evenly round the centre and turn together, so every colour always holds
+            its own patch (drifting freely, they bunched up and the last drawn hid the rest); each
+            swells in turn, pushing into its neighbours */}
+        <g className="tm-liquid-blob" style={{ transformOrigin: `${x}px ${y}px`, animationDuration: "7s" }}>
+          {shown.map((_, i) => {
+            // polar() measures from the dial's centre; shift it to the node's
+            const at = polar((i / shown.length) * 360, r * 0.6);
+            return (
+              <circle
+                key={i}
+                className="tm-liquid-swell"
+                cx={at.x - C + x} cy={at.y - C + y} r={halo * 0.7}
+                fill={`url(#${id}g${i})`}
+                style={{ animationDelay: `${(-(i / shown.length) * 6.8).toFixed(2)}s` }}
+              />
+            );
+          })}
+        </g>
+      </g>
+    </>
+  );
+}
+
+// What fills a day's node: one colour plain, several as liquid. A day with a Google event and
+// other kinds besides swaps between the two (see .tm-node-swap): Google's liquid, then the others.
+function NodeFill({ x, y, r, halo, colors }: { x: number; y: number; r: number; halo: number; colors: string[] }) {
+  const google = colors.filter(c => GOOGLE_COLORS.includes(c));
+  const others = colors.filter(c => !GOOGLE_COLORS.includes(c));
+  const fill = (shown: string[]) => shown.length > 1 ? (
+    <LiquidNode x={x} y={y} r={r} halo={halo} colors={shown} />
+  ) : (
+    <g style={{ color: shown[0] }}>
+      <circle cx={x} cy={y} r={halo} fill="currentColor" opacity="0.2" />
+      <circle cx={x} cy={y} r={r} fill="currentColor" />
+    </g>
+  );
+  if (google.length === 0 || others.length === 0) return fill(colors);
+  return (
+    <>
+      {fill(google)}
+      <g className="tm-node-swap">{fill(others)}</g>
+    </>
+  );
 }
 
 // The line joining a multi-day event's days round the ring: a soft glow with a highlight running
 // along it (see .tm-gauge-shimmer). No blur: anything filtered would be repainted on every frame.
 function FutureArc({ from: fromDay, to: toDay, colors }: { from: number; to: number; colors: string[] }) {
+  const id = useId();
   const fromAngle = dayAngle(fromDay);
   const toAngle = dayAngle(toDay);
   const from = polar(fromAngle, RING);
   const to = polar(toAngle, RING);
   const d = `M ${from.x} ${from.y} A ${RING} ${RING} 0 ${toAngle - fromAngle > 180 ? 1 : 0} 1 ${to.x} ${to.y}`;
+  const shown = liquidColors(colors);
+  const liquid = shown.length > 1;
+  const paint = liquid ? `url(#${id})` : "currentColor";
+
   return (
-    <g data-saga="future-arc" data-angle={fromAngle} data-sweep={toAngle - fromAngle} {...shimmerProps(colors)}>
-      <path d={d} fill="none" stroke="currentColor" strokeWidth="12" strokeLinecap="round" opacity="0.2" />
-      <path d={d} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+    <g data-saga="future-arc" data-angle={fromAngle} data-sweep={toAngle - fromAngle} style={{ color: shown[0] }}>
+      {liquid && (
+        // A gradient that repeats every chord's length and slides along it, so the colours stream
+        // from one end to the other and round again without a seam
+        <defs>
+          <linearGradient id={id} gradientUnits="userSpaceOnUse" x1={from.x} y1={from.y} x2={to.x} y2={to.y} spreadMethod="repeat">
+            {[...shown, shown[0]].map((color, i) => (
+              <stop key={i} offset={i / shown.length} stopColor={color} />
+            ))}
+            <animateTransform
+              attributeName="gradientTransform" type="translate"
+              from="0 0" to={`${to.x - from.x} ${to.y - from.y}`}
+              dur={`${shown.length * FLOW_PER_COLOR}s`} repeatCount="indefinite"
+            />
+          </linearGradient>
+        </defs>
+      )}
+      <path d={d} fill="none" stroke={paint} strokeWidth="12" strokeLinecap="round" opacity="0.2" />
+      <path d={d} fill="none" stroke={paint} strokeWidth="4" strokeLinecap="round" />
       <path className="tm-gauge-shimmer" d={d} pathLength={1} fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeDasharray="0.12 1" style={{ "--fill": 1 } as React.CSSProperties} />
     </g>
   );
@@ -339,7 +429,7 @@ export function FutureEmblem({ marks, active }: { marks: FutureMark[]; active: b
 
   return (
     <div data-saga="future" aria-hidden className="absolute inset-0 motion-reduce:hidden">
-      <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full overflow-visible">
+      <svg viewBox="0 0 400 400" className={cn("absolute inset-0 w-full h-full overflow-visible", !active && "tm-liquid-paused")}>
         <path className="text-tm-blue-gray/30" d={IRIS_FIBRES} fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
         <circle className="text-tm-blue-gray/30" cx={C} cy={C} r={IRIS_INNER} fill="none" stroke="currentColor" strokeWidth="1.5" />
         {[0, 2, 4].map(delay => (
@@ -366,10 +456,9 @@ export function FutureEmblem({ marks, active }: { marks: FutureMark[]; active: b
               key={node.day}
               data-saga="future-node"
               data-angle={node.angle}
-              {...shimmerProps(node.colors)}
+              style={{ color: node.colors[0] }}
             >
-              <circle cx={at.x} cy={at.y} r={size + 7} fill="currentColor" opacity="0.2" />
-              <circle cx={at.x} cy={at.y} r={size} fill="currentColor" />
+              <NodeFill x={at.x} y={at.y} r={size} halo={size + 7} colors={node.colors} />
             </g>
           );
         })}
@@ -437,7 +526,10 @@ export function FutureDetails({ marks, active }: { marks: FutureMark[]; active: 
         >
           {rows.map((m, i) => (
             <div key={`${m.id}-${i}`} data-saga="future-row" className="flex items-center gap-3 text-left" style={{ height: ROW }}>
-              <span className="w-2 h-2 shrink-0 rounded-full" style={{ background: m.color }} />
+              <span
+                className="w-2 h-2 shrink-0 rounded-full"
+                style={{ background: m.colors.length > 1 ? `conic-gradient(${m.colors.map((c, i) => `${c} ${(i / m.colors.length) * 360}deg ${((i + 1) / m.colors.length) * 360}deg`).join(", ")})` : m.color }}
+              />
               <span className={cn(CAPTION, "shrink-0 text-foreground")}>{m.when ?? format(m.date, "MMM dd")}</span>
               <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground/90" title={m.kind}>{m.title}</span>
               <span className={cn(CAPTION, "shrink-0")}>{m.day === 1 ? "Tomorrow" : format(m.date, "EEE")}</span>
