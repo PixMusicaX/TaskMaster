@@ -99,6 +99,26 @@
   .tm-liquid-blob, .tm-liquid-swell, .tm-node-swap { animation: none; }
 }
 
+/* Text for something still only on Google's side (not added to TaskMaster): Google's four colours
+   flow through it, the same as the liquid on Precognition's lines. The gradient is twice the
+   text's width and holds the colours twice, so sliding it from 0% to 100% moves it exactly one
+   round of colours and the loop has no seam. */
+.tm-google-flow-text {
+  background-image: linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853, #4285F4, #EA4335, #FBBC05, #34A853, #4285F4);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: tm-google-flow-text 6.4s linear infinite;
+}
+@keyframes tm-google-flow-text {
+  from { background-position: 0% 0; }
+  to { background-position: 100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tm-google-flow-text { animation: none; }
+}
+
 /* Growth saga: the comet going round the Taskmaster's inner ring */
 .tm-ask-comet {
   transform-box: view-box;

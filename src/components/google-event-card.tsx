@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Clock, Edit2, Plus, Trash2, X } from "lucide-react";
 import { GOOGLE, GOOGLE_STRIPE, GoogleMark } from "@/components/google-mark";
+import GmailLink from "@/components/gmail-link";
+import { splitEventDescription } from "@/lib/event-description";
 import type { EventRow } from "@/lib/types";
 
 // One choice for each of Google's colours
@@ -26,6 +28,7 @@ interface GoogleEventCardProps {
 // TaskMaster, so it can't be mistaken for something that earns XP.
 export default function GoogleEventCard({ event, title, time, onEdit, onDelete, onAdd }: GoogleEventCardProps) {
   const [adding, setAdding] = useState(false);
+  const description = splitEventDescription(event.description);
 
   return (
     <div
@@ -48,7 +51,8 @@ export default function GoogleEventCard({ event, title, time, onEdit, onDelete, 
         </div>
       </div>
 
-      {event.description && <p className="text-xs line-clamp-2" style={{ color: GOOGLE.muted }}>{event.description}</p>}
+      {description.text && <p className="text-xs line-clamp-2" style={{ color: GOOGLE.muted }}>{description.text}</p>}
+      {description.gmailUrl && <GmailLink href={description.gmailUrl} className="self-start w-fit" style={{ color: GOOGLE.blue, background: `${GOOGLE.blue}1a` }} />}
 
       <div className="flex items-center gap-4 text-caption font-mono font-semibold uppercase tracking-[0.12em]" style={{ color: GOOGLE.muted }}>
         <span className="flex items-center gap-1.5"><Clock size={12} /> {time}</span>

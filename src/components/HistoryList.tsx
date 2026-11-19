@@ -11,6 +11,9 @@ import HabitIconRender from "@/components/HabitIconRender";
 import { SkeletonRows } from "@/components/loader";
 import { NO_LOCATION, formatReliefTemp, isNamedPlace } from "@/lib/weather";
 import { parseNoteLines } from "@/lib/types";
+import { splitEventDescription } from "@/lib/event-description";
+import GmailLink from "@/components/gmail-link";
+import { multiDayPart } from "@/lib/multi-day";
 
 // Note rows with at least one non-empty line (JSON bullet notes or legacy plain text)
 function visibleNotesFor(day: HistoryDay) {
@@ -45,7 +48,23 @@ function Section({ icon: Icon, title, className, children }: { icon: typeof Cale
   );
 }
 
+// An item's description after its title, with Google's Gmail boilerplate swapped for a short link
+// to the email (see event-description.ts). Events turned into tasks keep it, so tasks use this too.
+function Description({ text: description }: { text: string | null | undefined }) {
+  const { text, gmailUrl } = splitEventDescription(description);
+  return (
+    <>
+      {text && <span className="text-tm-blue-gray">- {text}</span>}
+      {gmailUrl && <GmailLink href={gmailUrl} />}
+    </>
+  );
+}
+
 const itemClass = "text-sm bg-tm-blue-gray/5 px-3 py-2 rounded-xl border border-tm-blue-gray/10";
+// Rows with a title and things after it (time, description, email): one gap between them all
+const rowClass = cn(itemClass, "flex items-center gap-2 flex-wrap");
+// The small boxes after an event's title: its day of several, its time (the email link matches)
+const CHIP = "text-caption text-tm-yellow font-black bg-tm-yellow/10 px-1.5 py-0.5 rounded";
 
 function DayCard({ day, delay }: { day: HistoryDay; delay: number }) {
   const visibleNotes = visibleNotesFor(day);
@@ -98,9 +117,9 @@ function DayCard({ day, delay }: { day: HistoryDay; delay: number }) {
             {day.tasks.length > 0 && (
               <Section icon={CheckSquare} title="Completed Tasks" className="text-tm-orange-light">
                 {day.tasks.map((t) => (
-                  <li key={t.id} className={itemClass}>
+                  <li key={t.id} className={rowClass}>
                     <span className="font-semibold">{t.title}</span>
-                    {t.description && <span className="text-tm-blue-gray ml-2">- {t.description}</span>}
+                    <Description text={t.description} />
                   </li>
                 ))}
               </Section>
@@ -108,22 +127,28 @@ function DayCard({ day, delay }: { day: HistoryDay; delay: number }) {
 
             {day.events.length > 0 && (
               <Section icon={Calendar} title="Events" className="text-tm-yellow">
-                {day.events.map((e) => (
-                  <li key={e.id} className={cn(itemClass, "flex items-center gap-2 flex-wrap")}>
-                    <span className={cn(e.tier === "side" ? "italic" : e.tier === "epic" ? "font-bold" : "font-normal")}>{e.title}</span>
-                    {e.startTime && <span className="text-caption text-tm-yellow font-black bg-tm-yellow/10 px-1.5 py-0.5 rounded">{format(new Date(e.startTime), "h:mm a")}</span>}
-                    {e.description && <span className="text-tm-blue-gray">- {e.description}</span>}
-                  </li>
-                ))}
+                {day.events.map((e) => {
+                  const part = multiDayPart(e, parseISO(day.date));
+                  return (
+                    <li key={e.id} className={rowClass}>
+                      {/* Still only on Google's side (not added to TaskMaster): its title flows in Google's colours */}
+                      <span className={cn(e.tier === "side" ? "italic" : e.tier === "epic" ? "font-bold" : "font-normal", e.gcalImported && "tm-google-flow-text font-semibold")}>{e.title}</span>
+                      {part && <span className={CHIP}>Day {part.day}/{part.total}</span>}
+                      {/* The start time belongs to the first day */}
+                      {e.startTime && (!part || part.day === 1) && <span className={CHIP}>{format(new Date(e.startTime), "h:mm a")}</span>}
+                      <Description text={e.description} />
+                    </li>
+                  );
+                })}
               </Section>
             )}
 
             {day.specialDays.length > 0 && (
               <Section icon={Star} title="Special Days" className="text-tm-orange-dark">
                 {day.specialDays.map((e) => (
-                  <li key={e.id} className={itemClass}>
+                  <li key={e.id} className={rowClass}>
                     <span className={cn(e.tier === "side" ? "italic" : e.tier === "epic" ? "font-bold" : "font-normal")}>{e.title}</span>
-                    {e.description && <span className="text-tm-blue-gray ml-2">- {e.description}</span>}
+                    <Description text={e.description} />
                   </li>
                 ))}
               </Section>

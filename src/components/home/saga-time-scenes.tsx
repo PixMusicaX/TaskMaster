@@ -358,8 +358,27 @@ function NodeFill({ x, y, r, halo, colors }: { x: number; y: number; r: number; 
   );
 }
 
+// A line's colours streaming along it: a gradient that repeats every chord's length and slides
+// along it, so they run from one end to the other and round again without a seam
+function FlowGradient({ id, from, to, colors }: { id: string; from: { x: number; y: number }; to: { x: number; y: number }; colors: string[] }) {
+  return (
+    <linearGradient id={id} gradientUnits="userSpaceOnUse" x1={from.x} y1={from.y} x2={to.x} y2={to.y} spreadMethod="repeat">
+      {[...colors, colors[0]].map((color, i) => (
+        <stop key={i} offset={i / colors.length} stopColor={color} />
+      ))}
+      <animateTransform
+        attributeName="gradientTransform" type="translate"
+        from="0 0" to={`${to.x - from.x} ${to.y - from.y}`}
+        dur={`${colors.length * FLOW_PER_COLOR}s`} repeatCount="indefinite"
+      />
+    </linearGradient>
+  );
+}
+
 // The line joining a multi-day event's days round the ring: a soft glow with a highlight running
 // along it (see .tm-gauge-shimmer). No blur: anything filtered would be repainted on every frame.
+// Like the nodes, a stretch shared by a Google event and other kinds swaps between Google's
+// flowing colours and the others' (see .tm-node-swap, which keeps it in step with the nodes).
 function FutureArc({ from: fromDay, to: toDay, colors }: { from: number; to: number; colors: string[] }) {
   const id = useId();
   const fromAngle = dayAngle(fromDay);
@@ -367,30 +386,29 @@ function FutureArc({ from: fromDay, to: toDay, colors }: { from: number; to: num
   const from = polar(fromAngle, RING);
   const to = polar(toAngle, RING);
   const d = `M ${from.x} ${from.y} A ${RING} ${RING} 0 ${toAngle - fromAngle > 180 ? 1 : 0} 1 ${to.x} ${to.y}`;
-  const shown = liquidColors(colors);
-  const liquid = shown.length > 1;
-  const paint = liquid ? `url(#${id})` : "currentColor";
+  const google = liquidColors(colors.filter(c => GOOGLE_COLORS.includes(c)));
+  const others = liquidColors(colors.filter(c => !GOOGLE_COLORS.includes(c)));
+  const swaps = google.length > 0 && others.length > 0;
+  // Each layer: one colour plain, several flowing
+  const layers = (swaps ? [google, others] : [liquidColors(colors)]).map((shown, i) => ({
+    shown,
+    gradient: shown.length > 1 ? `${id}f${i}` : null,
+  }));
 
   return (
-    <g data-saga="future-arc" data-angle={fromAngle} data-sweep={toAngle - fromAngle} style={{ color: shown[0] }}>
-      {liquid && (
-        // A gradient that repeats every chord's length and slides along it, so the colours stream
-        // from one end to the other and round again without a seam
-        <defs>
-          <linearGradient id={id} gradientUnits="userSpaceOnUse" x1={from.x} y1={from.y} x2={to.x} y2={to.y} spreadMethod="repeat">
-            {[...shown, shown[0]].map((color, i) => (
-              <stop key={i} offset={i / shown.length} stopColor={color} />
-            ))}
-            <animateTransform
-              attributeName="gradientTransform" type="translate"
-              from="0 0" to={`${to.x - from.x} ${to.y - from.y}`}
-              dur={`${shown.length * FLOW_PER_COLOR}s`} repeatCount="indefinite"
-            />
-          </linearGradient>
-        </defs>
-      )}
-      <path d={d} fill="none" stroke={paint} strokeWidth="12" strokeLinecap="round" opacity="0.2" />
-      <path d={d} fill="none" stroke={paint} strokeWidth="4" strokeLinecap="round" />
+    <g data-saga="future-arc" data-angle={fromAngle} data-sweep={toAngle - fromAngle}>
+      <defs>
+        {layers.map(l => l.gradient && <FlowGradient key={l.gradient} id={l.gradient} from={from} to={to} colors={l.shown} />)}
+      </defs>
+      {layers.map((l, i) => {
+        const paint = l.gradient ? `url(#${l.gradient})` : l.shown[0];
+        return (
+          <g key={i} className={i === 1 ? "tm-node-swap" : undefined}>
+            <path d={d} fill="none" stroke={paint} strokeWidth="12" strokeLinecap="round" opacity="0.2" />
+            <path d={d} fill="none" stroke={paint} strokeWidth="4" strokeLinecap="round" />
+          </g>
+        );
+      })}
       <path className="tm-gauge-shimmer" d={d} pathLength={1} fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeDasharray="0.12 1" style={{ "--fill": 1 } as React.CSSProperties} />
     </g>
   );

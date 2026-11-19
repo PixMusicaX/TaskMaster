@@ -20,10 +20,14 @@
 
 html[data-persona] .tm-normal-only { display: none !important; }
 
-/* No navbar on Persona or special days, so History's sticky month pill pins to the top instead of
-   leaving a navbar-sized gap above it. */
-html[data-persona] .tm-month-pill,
+/* No navbar on special days, so History's sticky month pill pins to the top instead of leaving a
+   navbar-sized gap above it. On Persona days the menu button and calendar float over the top of
+   the page (see persona-nav.tsx), so it pins just below them instead of sliding underneath. */
 html[data-special] .tm-month-pill { top: 0.5rem; }
+html[data-persona] .tm-month-pill { top: calc(max(0.6rem, env(safe-area-inset-top)) + 3.75rem); }
+@media (min-width: 640px) {
+  html[data-persona] .tm-month-pill { top: calc(max(0.6rem, env(safe-area-inset-top)) + 4.25rem); }
+}
 
 /* ============================================================
    Calendar: a Persona day's whole box, on normal days too. Background images only, so the

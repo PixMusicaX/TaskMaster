@@ -3,7 +3,8 @@
 import { db } from "@/db";
 import { event, note, habitLog, reliefRecommendation } from "@/db/schema";
 import { and, gte, lte, or, eq, desc, ilike, inArray } from "drizzle-orm";
-import { format, subDays } from "date-fns";
+import { addDays, format, parseISO, subDays } from "date-fns";
+import { multiDayLength } from "@/lib/multi-day";
 import { requireUserId } from "@/lib/current-user";
 import { reliefsWithCarriedLocation } from "@/lib/data/relief";
 
@@ -18,6 +19,9 @@ export type HistoryDay = {
 };
 
 // Events, special days, and completed tasks are what the history shows
+// How far back to look for a multi-day event that began before the range but runs into it
+const SPAN_LOOKBACK_DAYS = 60;
+
 const historyEventFilter = or(
   eq(event.type, "event"),
   eq(event.type, "special_day"),
@@ -88,6 +92,7 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
     
     const startStr = format(startDate, "yyyy-MM-dd");
     const endStr = format(endDate, "yyyy-MM-dd");
+    const lookbackStr = format(subDays(startDate, SPAN_LOOKBACK_DAYS), "yyyy-MM-dd");
 
     const [notesResult, eventsAndTasksResult, habitsResult, reliefs] = await Promise.all([
       // Notes in range
@@ -103,7 +108,9 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
       db.select().from(event).where(
         and(
           eq(event.userId, userId),
-          gte(event.date, startStr),
+          // From further back, for multi-day events already under way (groupHistory keeps only
+          // the days inside the range)
+          gte(event.date, lookbackStr),
           lte(event.date, endStr),
           historyEventFilter
         )
@@ -122,7 +129,7 @@ export async function getHistory(endDateStr: string, limitDays: number = 28, que
       // Relief recommendations for the covered dates, with valid locations carried forward
       reliefsWithCarriedLocation(userId, startStr, endStr)
     ]);
-    return groupHistory(notesResult, eventsAndTasksResult, habitsResult, reliefs);
+    return groupHistory(notesResult, eventsAndTasksResult, habitsResult, reliefs, date => date >= startStr && date <= endStr);
   }
 }
 
@@ -145,7 +152,8 @@ async function historyForDates(userId: string, dates: string[]): Promise<History
     ).orderBy(desc(habitLog.date)),
     reliefsWithCarriedLocation(userId, uniqueDates[0], uniqueDates[uniqueDates.length - 1])
   ]);
-  return groupHistory(notesResult, eventsAndTasksResult, habitsResult, reliefs);
+  const wanted = new Set(uniqueDates);
+  return groupHistory(notesResult, eventsAndTasksResult, habitsResult, reliefs, date => wanted.has(date));
 }
 
 // Today's date in earlier years, for the dashboard's "On This Day" card. Holidays and other
@@ -164,7 +172,9 @@ function groupHistory(
   notesResult: typeof note.$inferSelect[],
   eventsAndTasksResult: typeof event.$inferSelect[],
   habitsResult: typeof habitLog.$inferSelect[],
-  reliefs: Awaited<ReturnType<typeof reliefsWithCarriedLocation>>
+  reliefs: Awaited<ReturnType<typeof reliefsWithCarriedLocation>>,
+  // Which days the caller asked for: a multi-day event can reach outside them
+  inRange: (date: string) => boolean
 ): HistoryDay[] {
   const reliefMap = new Map(reliefs.map(r => [r.date, r]));
 
@@ -183,13 +193,20 @@ function groupHistory(
   });
 
   eventsAndTasksResult.forEach((e) => {
-    const day = addToMap(e.date);
-    if (e.type === "task") {
-      day.tasks.push(e);
-    } else if (e.type === "special_day") {
-      day.specialDays.push(e);
-    } else {
-      day.events.push(e);
+    // A multi-day event shows on each of its days (as "Day 2/3" and so on); anything else on its own
+    const first = parseISO(e.date);
+    const length = multiDayLength(e);
+    for (let i = 0; i < length; i++) {
+      const date = format(addDays(first, i), "yyyy-MM-dd");
+      if (!inRange(date)) continue;
+      const day = addToMap(date);
+      if (e.type === "task") {
+        day.tasks.push(e);
+      } else if (e.type === "special_day") {
+        day.specialDays.push(e);
+      } else {
+        day.events.push(e);
+      }
     }
   });
 

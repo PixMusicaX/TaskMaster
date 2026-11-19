@@ -9,6 +9,7 @@ import { DEV_PERSONA_EVENT, getDevPersonaOverride, setDevPersonaOverride, type D
 import { getDevMapStatus, rerollDevMap, setDevMapStatus, subscribeDevMap, type MapStatus } from "@/lib/dev-map";
 import { DEV_SPECIAL_EVENT, SPECIAL_DAYS, SPECIAL_IDS, getDevSpecialOverride, setDevSpecialOverride, type DevSpecialOverride } from "@/lib/special-days";
 import { cn } from "@/lib/utils";
+import { useTheme, type Rank } from "../theme-provider";
 import { useProgress } from "./progress-provider";
 
 const subscribe = (cb: () => void) => {
@@ -58,7 +59,8 @@ const MAP_STATUSES: (MapStatus | null)[] = [null, "low", "balanced", "peak"];
 
 // Development-only panel for spoofing XP and the map (client-side, nothing is saved) to try the animations
 export default function DevTools() {
-  const { profile, openRecap } = useProgress();
+  const { profile, openRecap, isManual, setManual } = useProgress();
+  const { rank, setRank } = useTheme();
   const [open, setOpen] = useState(false);
   const offset = useSyncExternalStore(subscribe, getDevXpOffset, () => 0);
   const mapStatus = useSyncExternalStore(subscribeDevMap, getDevMapStatus, () => null);
@@ -126,6 +128,23 @@ export default function DevTools() {
           >
             Reset to real XP
           </button>
+
+          <div className="space-y-1.5 pt-2 border-t border-white/10">
+            <p className="font-mono font-semibold uppercase tracking-[0.12em] text-white/60">Class scheme</p>
+            {/* Auto follows the real rank; picking one holds it for the rest of the season */}
+            <select
+              value={isManual ? rank : ""}
+              onChange={e => {
+                if (!e.target.value) return setManual(false);
+                setRank(e.target.value as Rank);
+                setManual(true);
+              }}
+              className="w-full px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 outline-none"
+            >
+              <option value="" className="text-black">Auto ({profile.title})</option>
+              {RPG_TITLES.map(t => <option key={t.title} value={t.title} className="text-black">{t.title}</option>)}
+            </select>
+          </div>
 
           <div className="space-y-1.5 pt-2 border-t border-white/10">
             <p className="font-mono font-semibold uppercase tracking-[0.12em] text-white/60">Era</p>
@@ -234,7 +253,7 @@ export default function DevTools() {
           aria-label="Open dev tools"
           className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-black/80 text-yellow-300 font-mono font-semibold shadow-lg"
         >
-          <Wrench size={14} /> DEV{offset !== 0 && ` ${offset > 0 ? "+" : ""}${offset}`}{eraOverride !== null && ` · era ${ERAS[eraOverride].numeral}`}{mapStatus && ` · map ${mapStatus}`}{personaOverride && ` · ${personaOverride}`}{specialOverride && ` · ${specialOverride}`}{weatherOverride && ` · ${weatherOverride}`}
+          <Wrench size={14} /> DEV{offset !== 0 && ` ${offset > 0 ? "+" : ""}${offset}`}{eraOverride !== null && ` · era ${ERAS[eraOverride].numeral}`}{isManual && ` · ${rank}`}{mapStatus && ` · map ${mapStatus}`}{personaOverride && ` · ${personaOverride}`}{specialOverride && ` · ${specialOverride}`}{weatherOverride && ` · ${weatherOverride}`}
         </button>
       )}
     </div>

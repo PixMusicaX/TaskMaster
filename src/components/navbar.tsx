@@ -5,15 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
-import { Home, CheckSquare, FileText, Calendar, Moon, Sun, Info, Shield, History, Volume2, VolumeX } from "lucide-react";
+import { Home, CheckSquare, FileText, Calendar, Moon, Sun, Info, History, Volume2, VolumeX } from "lucide-react";
 import { differenceInDays, endOfMonth } from "date-fns";
-import { useTheme, type Rank } from "./theme-provider";
+import { useTheme } from "./theme-provider";
 import { useProgress } from "./progress/progress-provider";
 import AnimatedNumber from "./progress/animated-number";
 import { GaseousDivider } from "./GaseousDivider";
 import { cn } from "@/lib/utils";
 import { SPRING } from "@/lib/motion";
-import { RPG_TITLES } from "@/lib/constants";
 import { isMuted, setMuted, subscribeMuted } from "@/lib/sfx";
 
 const navItems = [
@@ -34,8 +33,8 @@ function EraBadge({ className }: { className?: string }) {
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { theme, toggleTheme, rank, setRank } = useTheme();
-  const { profile, pulse, isManual, setManual } = useProgress();
+  const { theme, toggleTheme, rank } = useTheme();
+  const { profile, pulse } = useProgress();
   const muted = useSyncExternalStore(subscribeMuted, isMuted, () => false);
   const pulseControls = useAnimationControls();
   const [ribbonOpen, setRibbonOpen] = useState(false);
@@ -55,12 +54,6 @@ export default function Navbar() {
   const today = new Date();
   const daysLeft = differenceInDays(endOfMonth(today), today);
   const progress = profile ? (profile.levelProgress / profile.nextLevelXP) * 100 : 0;
-
-  const cycleRank = () => {
-    const ranks = RPG_TITLES.map(t => t.title) as Rank[];
-    setRank(ranks[(ranks.indexOf(rank) + 1) % ranks.length]);
-    setManual(true);
-  };
 
   const muteButton = (
     <button
@@ -192,20 +185,6 @@ export default function Navbar() {
           )}
 
           <div className="flex items-center gap-1 md:bg-white/5 md:p-1 rounded-full md:border border-white/10">
-            {process.env.NODE_ENV === "development" && (
-              <>
-                <button
-                  onClick={cycleRank}
-                  onContextMenu={(e) => { e.preventDefault(); setManual(false); }}
-                  className="hidden md:block p-2 rounded-full hover:bg-tm-blue-gray/10 text-tm-blue-gray transition-colors"
-                  title="Cycle Class Scheme (Left Click) | Reset to Auto (Right Click)"
-                >
-                  <Shield size={20} className={cn("transition-colors", isManual ? "text-tm-yellow" : "text-tm-orange-light")} />
-                </button>
-                <div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
-              </>
-            )}
-
             <div className="hidden md:block">{muteButton}</div>
 
             <button

@@ -18,6 +18,8 @@ import { getProfile } from "@/app/actions/gamification";
 import { getMoodsByDateRange } from "@/app/actions/notes";
 import { getReliefHistory } from "@/app/actions/relief";
 import { cn, getSpecialDayColors } from "@/lib/utils";
+import { splitEventDescription } from "@/lib/event-description";
+import GmailLink from "@/components/gmail-link";
 import { PageSkeleton } from "@/components/loader";
 import CompletionCheck from "@/components/ui/completion-check";
 import StrikeText from "@/components/ui/strike-text";
@@ -1026,9 +1028,15 @@ export default function CalendarView({ initial }: { initial: Promise<CalendarIni
                               </div>
                             </div>
                           </div>
-                          {event.description && (
-                            <p className="text-xs text-tm-blue-gray line-clamp-2">{event.description}</p>
-                          )}
+                          {(() => {
+                            const { text, gmailUrl } = splitEventDescription(event.description);
+                            return (
+                              <>
+                                {text && <p className="text-xs text-tm-blue-gray line-clamp-2">{text}</p>}
+                                {gmailUrl && <GmailLink href={gmailUrl} className="self-start w-fit" />}
+                              </>
+                            );
+                          })()}
                           <div className="flex items-center justify-between gap-4 text-caption font-mono font-semibold uppercase text-tm-blue-gray tracking-[0.12em]">
                             <div className="flex items-center gap-4">
                               <div className="flex items-center gap-1.5">
