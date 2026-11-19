@@ -173,12 +173,13 @@ const BIOMES: Record<BiomeKey, BiomePalette> = {
     road: [140, 120, 160], cityColor: [180, 150, 210], forestColor: [120, 40, 180], riverColor: [100, 150, 220],
     sporeTint: [180, 100, 255],
   },
+  // Hero rank: the rainbow in Google's four colours (blue water, green land, red heights, yellow fire)
   hero: {
     label: "Heroic", icon: "🌈", desc: "The Radiant Rainbow Realm",
-    deepWater: [40, 60, 150], shallowWater: [80, 120, 220], shore: [255, 230, 150],
-    lowland: [100, 255, 180], midland: [150, 150, 255], highland: [255, 150, 200], peak: [255, 255, 255],
-    volcano: [255, 100, 100], volcanoGlow: [255, 255, 100],
-    road: [255, 255, 255], cityColor: [255, 255, 200], forestColor: [150, 255, 100], riverColor: [100, 255, 255],
+    deepWater: [26, 72, 160], shallowWater: [66, 133, 244], shore: [253, 214, 99],
+    lowland: [52, 168, 83], midland: [30, 142, 62], highland: [234, 67, 53], peak: [255, 255, 255],
+    volcano: [234, 67, 53], volcanoGlow: [251, 188, 5],
+    road: [255, 255, 255], cityColor: [254, 247, 224], forestColor: [24, 128, 56], riverColor: [138, 180, 248],
     rainbowEffect: true,
   },
   deadlands: {
@@ -241,11 +242,14 @@ function cityName(rng: () => number) {
   return PREFIXES[Math.floor(rng() * PREFIXES.length)] + SUFFIXES[Math.floor(rng() * SUFFIXES.length)];
 }
 
-function rainbow(t: number): number[] {
-  const r = Math.sin(t * 6.28 + 0) * 127 + 128;
-  const g = Math.sin(t * 6.28 + 2.09) * 127 + 128;
-  const b = Math.sin(t * 6.28 + 4.18) * 127 + 128;
-  return [r, g, b];
+// Google's blue, red, yellow and green, blended round and round (t loops every 1)
+const GOOGLE_RAINBOW = [[66, 133, 244], [234, 67, 53], [251, 188, 5], [52, 168, 83]];
+function googleRainbow(t: number): number[] {
+  const u = ((t % 1) + 1) % 1 * GOOGLE_RAINBOW.length;
+  const i = Math.floor(u);
+  const a = GOOGLE_RAINBOW[i], b = GOOGLE_RAINBOW[(i + 1) % GOOGLE_RAINBOW.length];
+  const f = smoothstep(u - i);
+  return [lerp(a[0], b[0], f), lerp(a[1], b[1], f), lerp(a[2], b[2], f)];
 }
 
 // ─── Terrain colour ───────────────────────────────────────────────────────────
@@ -315,12 +319,12 @@ function generateMap(params: MapParams, W: number, H: number, h: Float32Array): 
     }
   }
 
-  // Rainbow haze (Hero rank exclusive)
+  // Rainbow haze (Hero rank exclusive), flowing through Google's colours
   if (pal.rainbowEffect) {
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const hv = h[y * W + x];
       if (hv > wl) {
-        const [rr, rg, rb] = rainbow(x / W * 0.5 + y / H * 0.5 + hv * 0.2);
+        const [rr, rg, rb] = googleRainbow(x / W * 0.5 + y / H * 0.5 + hv * 0.2);
         blendPixel(x, y, rr, rg, rb, 0.12);
       }
     }

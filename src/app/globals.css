@@ -122,18 +122,19 @@
 }
 
 :root[data-rank="Hero"] {
-  --tm-yellow: #F43F5E;
-  /* Rose/Red */
-  --tm-orange-light: #CA8208;
-  /* Amber/Orange */
-  --tm-orange-dark: #0EA674;
-  /* Emerald/Green */
-  --tm-blue-gray: #1E6FF5;
-  /* Blue */
-  --tm-purple-dark: #8B5CF6;
-  /* Purple */
-  --tm-red: #EC4899;
-  /* Pink */
+  /* Google's four, as a rainbow: blue leads, with red, green and yellow beside it */
+  --tm-yellow: #1A73E8;
+  /* Google Blue */
+  --tm-orange-light: #D93025;
+  /* Google Red */
+  --tm-orange-dark: #188038;
+  /* Google Green */
+  --tm-blue-gray: #5F6368;
+  /* Google Grey */
+  --tm-purple-dark: #202124;
+  /* Google Ink */
+  --tm-red: #F9AB00;
+  /* Google Yellow */
 }
 
 .dark {
@@ -225,12 +226,13 @@
 }
 
 .dark[data-rank="Hero"] {
-  --tm-yellow: #F87171;
-  --tm-orange-light: #FBBF24;
-  --tm-orange-dark: #34D399;
-  --tm-blue-gray: #60A5FA;
-  --tm-purple-dark: #A78BFA;
-  --tm-red: #F472B6;
+  /* Google's own dark-mode tones of the same four */
+  --tm-yellow: #8AB4F8;
+  --tm-orange-light: #F28B82;
+  --tm-orange-dark: #81C995;
+  --tm-blue-gray: #9AA0A6;
+  --tm-purple-dark: #202124;
+  --tm-red: #FDD663;
 }
 
 /* Ink drawn on accent surfaces (bg-tm-yellow). Defaults to the palette's dark ink;
@@ -243,8 +245,8 @@
 :root[data-rank="Champion"]:not(.dark) { --tm-on-accent: #FFFFFF; }
 :root[data-rank="Sentinel"]:not(.dark) { --tm-on-accent: #141014; }
 :root[data-rank="Paladin"]:not(.dark) { --tm-on-accent: #FFFFFF; }
-:root[data-rank="Hero"]:not(.dark) { --tm-on-accent: #141014; }
-.dark[data-rank="Hero"] { --tm-on-accent: #141014; }
+:root[data-rank="Hero"]:not(.dark) { --tm-on-accent: #FFFFFF; }
+.dark[data-rank="Hero"] { --tm-on-accent: #202124; }
 
 /* The reverse: the accent's colour on an ink surface (bg-tm-purple-dark). Unset, it is the accent
    itself; Knight's accent and ink are both black in light mode. */

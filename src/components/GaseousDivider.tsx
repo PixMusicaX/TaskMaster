@@ -87,6 +87,22 @@ export const GaseousDivider = ({ hoveredSide, variant = "default", className = "
       const blueGrayRGB = hexToRgb(blueGray);
       const orangeDarkRGB = hexToRgb(orangeDark);
 
+      // The colours the gas runs through, end to end. Normally the accent, the second accent and the
+      // muted grey; Hero's palette is Google's four, so it runs through all of them in the logo's
+      // order (blue, red, yellow, green) instead of ending in grey.
+      const hero = document.documentElement.dataset.rank === "Hero";
+      const red = rootStyles.getPropertyValue('--tm-red').trim() || "#f43f5e";
+      const gasColors = hero
+        ? [yellowRGB, orangeLightRGB, hexToRgb(red), orangeDarkRGB]
+        : [yellowRGB, orangeLightRGB, blueGrayRGB];
+      // Faded in from nothing at one end and out at the other, with the colours spread evenly between
+      const addGasStops = (grad: CanvasGradient, alpha: number) => {
+        const first = gasColors[0], last = gasColors[gasColors.length - 1];
+        grad.addColorStop(0, `rgba(${first.r},${first.g},${first.b},0)`);
+        gasColors.forEach((c, i) => grad.addColorStop(0.2 + (0.6 * i) / (gasColors.length - 1), `rgba(${c.r},${c.g},${c.b},${alpha})`));
+        grad.addColorStop(1, `rgba(${last.r},${last.g},${last.b},0)`);
+      };
+
       ctx.save();
       if (currentHoveredSide === "left") {
         ctx.beginPath();
@@ -154,11 +170,7 @@ export const GaseousDivider = ({ hoveredSide, variant = "default", className = "
 
         const g = ctx.createLinearGradient(0, 0, 0, H);
         if (variant === "artpaint") {
-          g.addColorStop(0, `rgba(${yellowRGB.r},${yellowRGB.g},${yellowRGB.b},0)`);
-          g.addColorStop(0.2, `rgba(${yellowRGB.r},${yellowRGB.g},${yellowRGB.b},${layer.alpha})`);
-          g.addColorStop(0.5, `rgba(${orangeLightRGB.r},${orangeLightRGB.g},${orangeLightRGB.b},${layer.alpha})`);
-          g.addColorStop(0.8, `rgba(${blueGrayRGB.r},${blueGrayRGB.g},${blueGrayRGB.b},${layer.alpha})`);
-          g.addColorStop(1, `rgba(${blueGrayRGB.r},${blueGrayRGB.g},${blueGrayRGB.b},0)`);
+          addGasStops(g, layer.alpha);
         } else if (variant === "dark") {
           g.addColorStop(0, `rgba(0,0,0,0)`);
           g.addColorStop(0.04, `rgba(0,0,0,${layer.alpha})`);
@@ -209,11 +221,7 @@ export const GaseousDivider = ({ hoveredSide, variant = "default", className = "
 
       const cg = ctx.createLinearGradient(0, 0, 0, H);
       if (variant === "artpaint") {
-        cg.addColorStop(0, `rgba(${yellowRGB.r},${yellowRGB.g},${yellowRGB.b},0)`);
-        cg.addColorStop(0.2, `rgba(${yellowRGB.r},${yellowRGB.g},${yellowRGB.b},1)`);
-        cg.addColorStop(0.5, `rgba(${orangeLightRGB.r},${orangeLightRGB.g},${orangeLightRGB.b},1)`);
-        cg.addColorStop(0.8, `rgba(${blueGrayRGB.r},${blueGrayRGB.g},${blueGrayRGB.b},1)`);
-        cg.addColorStop(1, `rgba(${blueGrayRGB.r},${blueGrayRGB.g},${blueGrayRGB.b},0)`);
+        addGasStops(cg, 1);
       } else {
         cg.addColorStop(0, 'rgba(255,255,255,0)');
         cg.addColorStop(0.04, 'rgba(255,255,255,1)');

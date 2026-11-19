@@ -64,6 +64,9 @@ export default function ClockAura({ state, dial }: { state: RefObject<AuraState>
     let frames = 0;
     let blank = false;
     let colors = [hexToRgb("#F2C230"), hexToRgb("#F2921D")];
+    // Hero's palette is Google's four: the gas takes all of them, flowing round the dial, instead of
+    // alternating two (needs conic gradients; without them it keeps the usual two)
+    let rainbow = false;
 
     const size = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
@@ -103,7 +106,10 @@ export default function ClockAura({ state, dial }: { state: RefObject<AuraState>
       // The theme's colours can change with the day, but not from frame to frame
       if (frames++ % 60 === 0) {
         const root = getComputedStyle(document.documentElement);
-        colors = ["--tm-yellow", "--tm-orange-light"].map(name => hexToRgb(root.getPropertyValue(name).trim()));
+        rainbow = document.documentElement.dataset.rank === "Hero" && typeof ctx.createConicGradient === "function";
+        // In the logo's order: blue, red, yellow, green
+        colors = (rainbow ? ["--tm-yellow", "--tm-orange-light", "--tm-red", "--tm-orange-dark"] : ["--tm-yellow", "--tm-orange-light"])
+          .map(name => hexToRgb(root.getPropertyValue(name).trim()));
       }
       const paint = ({ r, g, b }: { r: number; g: number; b: number }, alpha: number) => `rgba(${r},${g},${b},${alpha})`;
 
@@ -136,7 +142,8 @@ export default function ClockAura({ state, dial }: { state: RefObject<AuraState>
         // Thinning out to nothing at its edge, which is what makes it gas and not paint
         const reach = base + layer.spread * 1.4 + DRIFT;
         const fade = ctx.createRadialGradient(0, 0, Math.max(0, base - 24), 0, 0, reach);
-        const color = colors[i % 2];
+        // For the rainbow, only the gas's shape and thickness are drawn here; it is coloured below
+        const color = rainbow ? { r: 255, g: 255, b: 255 } : colors[i % 2];
         fade.addColorStop(0, paint(color, 1));
         fade.addColorStop(0.45, paint(color, 0.6));
         fade.addColorStop(1, paint(color, 0));
@@ -146,12 +153,25 @@ export default function ClockAura({ state, dial }: { state: RefObject<AuraState>
         ctx.restore();
       });
 
+      // The rainbow: the colours sweep round the dial, turning slowly, and are kept only where the
+      // gas is, as thick as it is there
+      let sweep: CanvasGradient | null = null;
+      if (rainbow) {
+        sweep = ctx.createConicGradient(t * 0.25, 0, 0);
+        [...colors, colors[0]].forEach((c, i) => sweep!.addColorStop(i / colors.length, paint(c, 1)));
+        ctx.save();
+        ctx.globalCompositeOperation = "source-in";
+        ctx.fillStyle = sweep;
+        ctx.fillRect(-HALF, -HALF, HALF * 2, HALF * 2);
+        ctx.restore();
+      }
+
       // The bright core line, and sparks travelling round it
       ctx.save();
       ctx.beginPath();
       trace(angle => base + 5 + fbm(angle, t * 1.6, 6) * 12);
       ctx.globalAlpha = 0.85 * presence;
-      ctx.strokeStyle = paint(colors[0], 1);
+      ctx.strokeStyle = sweep ?? paint(colors[0], 1);
       ctx.lineWidth = 2;
       ctx.stroke();
       for (let spark = 0; spark < 3; spark++) {
